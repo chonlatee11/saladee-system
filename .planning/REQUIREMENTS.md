@@ -130,17 +130,72 @@ Explicitly excluded (anti-features จาก research — ป้องกัน 
 
 ## Traceability
 
-จะถูกอัปเดตตอนสร้าง roadmap (แต่ละ REQ แมปเข้า 1 phase)
+แต่ละ v1 REQ แมปเข้า **1 phase** (ROADMAP.md, สร้าง 2026-07-01). 5 phases: 0 Foundation, 1 Commerce Core, 2 LINE Storefront/Payments/Delivery, 3 Back-office/Crop/B2B/Subscription, 4 Web/Marketing/Scale.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| _(mapped during roadmap creation)_ | — | Pending |
+| PLAT-01 | Phase 1 | Pending |
+| PLAT-02 | Phase 0 | Pending |
+| PLAT-03 | Phase 1 | Pending |
+| PLAT-04 | Phase 2 | Pending |
+| PLAT-05 | Phase 0 | Pending |
+| INV-01 | Phase 1 | Pending |
+| INV-02 | Phase 1 | Pending |
+| INV-03 | Phase 1 | Pending |
+| INV-04 | Phase 1 | Pending |
+| INV-05 | Phase 1 | Pending |
+| INV-06 | Phase 1 | Pending |
+| INV-07 | Phase 1 | Pending |
+| INV-08 | Phase 1 | Pending |
+| INV-09 | Phase 1 | Pending |
+| INV-10 | Phase 3 | Pending |
+| SALE-01 | Phase 1 | Pending |
+| SALE-02 | Phase 1 | Pending |
+| SALE-03 | Phase 3 | Pending |
+| SALE-04 | Phase 1 | Pending |
+| ORD-01 | Phase 2 | Pending |
+| ORD-02 | Phase 1 | Pending |
+| ORD-03 | Phase 3 | Pending |
+| ORD-04 | Phase 2 | Pending |
+| ORD-05 | Phase 4 | Pending |
+| PAY-01 | Phase 2 | Pending |
+| PAY-02 | Phase 2 | Pending |
+| PAY-03 | Phase 2 | Pending |
+| PAY-04 | Phase 1 | Pending |
+| DEL-01 | Phase 2 | Pending |
+| DEL-02 | Phase 2 | Pending |
+| DEL-03 | Phase 2 | Pending |
+| DEL-04 | Phase 2 | Pending |
+| DEL-05 | Phase 4 | Pending |
+| CUST-01 | Phase 1 | Pending |
+| CUST-02 | Phase 3 | Pending |
+| CUST-03 | Phase 4 | Pending |
+| CUST-04 | Phase 2 | Pending |
+| CUST-05 | Phase 3 | Pending |
+| MKT-01 | Phase 4 | Pending |
+| MKT-02 | Phase 3 | Pending |
+| MKT-03 | Phase 4 | Pending |
+| MKT-04 | Phase 3 | Pending |
+| ADM-01 | Phase 3 | Pending |
+| ADM-02 | Phase 3 | Pending |
+| ADM-03 | Phase 3 | Pending |
+| CROP-01 | Phase 3 | Pending |
+| CROP-02 | Phase 3 | Pending |
+| CROP-03 | Phase 3 | Pending |
+| CROP-04 | Phase 3 | Pending |
+| CROP-05 | Phase 3 | Pending |
+| CROP-06 | Phase 3 | Pending |
+| CROP-07 | Phase 4 | Pending |
+| LINE-01 | Phase 2 | Pending |
+| LINE-02 | Phase 2 | Pending |
+| LINE-03 | Phase 2 | Pending |
+| LINE-04 | Phase 4 | Pending |
 
 **Coverage:**
-- v1 requirements: 45 total (PLAT×5, INV×10, SALE×4, ORD×5, PAY×4, DEL×5, CUST×5, MKT×4, ADM×3, CROP×7, LINE×4 — บาง REQ อาจถูกแยกย่อยตอน plan)
-- Mapped to phases: TBD (roadmapper)
-- Unmapped: TBD
+- v1 requirements: 56 total (PLAT×5, INV×10, SALE×4, ORD×5, PAY×4, DEL×5, CUST×5, MKT×4, ADM×3, CROP×7, LINE×4). หมายเหตุ: บันทึกเดิมระบุ "45" เป็นการนับพลาด — REQ-ID จริงในเอกสารมี 56 รายการ
+- Mapped to phases: 56/56 ✓ (Phase 0: 2, Phase 1: 17, Phase 2: 14, Phase 3: 16, Phase 4: 7)
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-07-01*
-*Last updated: 2026-07-01 after initial definition*
+*Last updated: 2026-07-01 after roadmap creation (traceability mapped)*
