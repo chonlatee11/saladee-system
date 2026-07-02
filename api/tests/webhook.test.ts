@@ -5,9 +5,9 @@
 // the body before validating (e.g. a TypeBox schema re-serializes it), the raw
 // bytes change and this test fails — which is the whole point.
 import { afterAll, beforeAll, describe, expect, spyOn, test } from "bun:test";
+import { createHmac } from "node:crypto";
 import { messagingApi } from "@line/bot-sdk";
 import { Elysia } from "elysia";
-import { createHmac } from "node:crypto";
 import { webhookRoutes } from "../src/routes/webhook";
 
 // Mirrors api/.env.test (auto-loaded by `bun test`, NODE_ENV=test). The webhook
@@ -32,9 +32,7 @@ afterAll(() => {
 });
 
 function post(headers: Record<string, string>, body: string): Promise<Response> {
-  return app.handle(
-    new Request("http://localhost/webhook", { method: "POST", headers, body }),
-  );
+  return app.handle(new Request("http://localhost/webhook", { method: "POST", headers, body }));
 }
 
 describe("POST /webhook — raw-body signature validation + echo", () => {
@@ -57,12 +55,11 @@ describe("POST /webhook — raw-body signature validation + echo", () => {
 
     expect(res.status).toBe(200);
     expect(replySpy).toHaveBeenCalledTimes(1);
-    const arg = replySpy.mock.calls[0][0] as {
-      replyToken: string;
-      messages: { type: string; text: string }[];
-    };
-    expect(arg.replyToken).toBe("reply-token-abc");
-    expect(arg.messages[0].text).toBe("สวัสดีจากสวนสลัด");
+    const arg = replySpy.mock.calls.at(0)?.at(0) as
+      | { replyToken: string; messages: { type: string; text: string }[] }
+      | undefined;
+    expect(arg?.replyToken).toBe("reply-token-abc");
+    expect(arg?.messages.at(0)?.text).toBe("สวัสดีจากสวนสลัด");
   });
 
   test("wrong signature → 401 and no reply is sent", async () => {
