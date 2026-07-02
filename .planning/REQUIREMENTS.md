@@ -13,10 +13,10 @@
 ### PLAT — แพลตฟอร์ม & Compliance (พื้นฐาน + cross-cutting)
 
 - [ ] **PLAT-01**: ระบบมีแกนตัดสต็อกแบบ atomic (guarded decrement) กัน oversell ได้แม้มีออเดอร์เข้าพร้อมกัน (NFR-02)
-- [ ] **PLAT-02**: ระบบเก็บข้อมูลบน PostgreSQL เดียว + object storage สำหรับสลิป/รูป บนต้นทุนต่ำสุด (NFR-08)
+- [x] **PLAT-02**: ระบบเก็บข้อมูลบน PostgreSQL เดียว + object storage สำหรับสลิป/รูป บนต้นทุนต่ำสุด (NFR-08)
 - [ ] **PLAT-03**: รหัสผ่านถูกเข้ารหัส, จำกัดสิทธิ์ตามบทบาท, สลิป/ข้อมูลลูกค้าเข้าถึงได้เฉพาะผู้มีสิทธิ์ (private bucket + signed URL) (NFR-03)
 - [ ] **PLAT-04**: ระบบขอความยินยอม PDPA, มีนโยบายความเป็นส่วนตัว, รองรับสิทธิ์ขอ/ลบข้อมูล, เก็บ log การยินยอม แยก consent การตลาด (NFR-04)
-- [ ] **PLAT-05**: ทุกหน้าใช้งานบนมือถือได้ดี (mobile-first เริ่มจาก LIFF) และรองรับทราฟฟิกพุ่งช่วงไลฟ์/โปรโมชัน (NFR-07, NFR-01)
+- [x] **PLAT-05**: ทุกหน้าใช้งานบนมือถือได้ดี (mobile-first เริ่มจาก LIFF) และรองรับทราฟฟิกพุ่งช่วงไลฟ์/โปรโมชัน (NFR-07, NFR-01)
 
 ### INV — สินค้า ราคา และสต็อก
 
@@ -135,10 +135,10 @@ Explicitly excluded (anti-features จาก research — ป้องกัน 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | PLAT-01 | Phase 1 | Pending |
-| PLAT-02 | Phase 0 | Pending |
+| PLAT-02 | Phase 0 | Complete |
 | PLAT-03 | Phase 1 | Pending |
 | PLAT-04 | Phase 2 | Pending |
-| PLAT-05 | Phase 0 | Pending |
+| PLAT-05 | Phase 0 | Complete |
 | INV-01 | Phase 1 | Pending |
 | INV-02 | Phase 1 | Pending |
 | INV-03 | Phase 1 | Pending |

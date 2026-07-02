@@ -38,7 +38,7 @@ Plans:
 - [x] 00-03-PLAN.md — Cloudflare R2 storage: presigned PUT/GET round-trip (wave 2)
 - [x] 00-04-PLAN.md — LINE webhook: raw-body signature validation + echo (wave 2)
 - [x] 00-05-PLAN.md — Auth/RBAC scaffold: Bun.password + jose sessions + LINE idToken verify (wave 2)
-- [ ] 00-06-PLAN.md — Deploy config: Caddy + systemd + CI workflows + web/ Eden Treaty scaffold (wave 3)
+- [x] 00-06-PLAN.md — Deploy config: Caddy + systemd + CI workflows + web/ Eden Treaty scaffold (wave 3)
 - [ ] 00-07-PLAN.md — External provisioning + live production deploy verification (wave 4)
 
 ### Phase 1: Commerce Core
@@ -115,7 +115,7 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 0. Foundation & Platform | 5/7 | In Progress|  |
+| 0. Foundation & Platform | 6/7 | In Progress|  |
 | 1. Commerce Core | 0/TBD | Not started | - |
 | 2. LINE Storefront, Payments & Delivery | 0/TBD | Not started | - |
 | 3. Back-office, Crop Planning & B2B/Subscription | 0/TBD | Not started | - |
