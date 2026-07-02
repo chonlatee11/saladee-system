@@ -15,6 +15,7 @@ import { storagePlugin } from "./plugins/storage.plugin";
 import { authRoutes } from "./routes/auth";
 import { filesRoutes } from "./routes/files";
 import { healthRoutes } from "./routes/health";
+import { ordersRoutes } from "./routes/orders";
 import { webhookRoutes } from "./routes/webhook";
 
 // The un-listened app: importable in tests (app.handle) without binding a port.
@@ -35,7 +36,8 @@ export const app = new Elysia()
   .use(healthRoutes)
   .use(webhookRoutes)
   .use(filesRoutes)
-  .use(authRoutes);
+  .use(authRoutes)
+  .use(ordersRoutes);
 
 // Eden Treaty contract consumed by web/ (compile-time-safe API calls).
 export type App = typeof app;
