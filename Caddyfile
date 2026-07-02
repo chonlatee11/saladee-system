@@ -1,0 +1,23 @@
+# Caddyfile — prod reverse proxy in front of the Bun/Elysia API (committed,
+# deployed to the VPS). Caddy owns TLS: it auto-provisions and renews Let's
+# Encrypt certificates for the API domain and terminates HTTPS on :443. The Bun
+# process listens plain on localhost:3000 only and NEVER terminates TLS itself
+# (Architectural Responsibility Map; anti-pattern: TLS-in-Bun).
+#
+# Replace api.saladee.example with the real API domain in 00-07.
+# Source: caddyserver.com/docs/caddyfile/directives/reverse_proxy
+api.saladee.example {
+	# Proxy all requests to the local Bun process (localhost-only, no public port).
+	reverse_proxy localhost:3000
+
+	# Compress responses (LIFF is mobile-first, NFR-07).
+	encode gzip zstd
+
+	# Security headers. HSTS (T-00-21): force HTTPS for a year incl. subdomains.
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		# Caddy sets Server: Caddy by default; hide it.
+		-Server
+	}
+}

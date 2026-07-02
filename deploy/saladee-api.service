@@ -1,0 +1,29 @@
+# deploy/saladee-api.service — systemd unit supervising the Bun/Elysia API
+# (committed; installed to /etc/systemd/system on the VPS in 00-07).
+#
+# Secrets are NEVER stored in this unit (D-11, T-00-22). They live in
+# /opt/saladee/api/.env (mode 600), which the deploy workflow writes from GitHub
+# Secrets at deploy time. EnvironmentFile loads them into the process env; the
+# API validates them at boot (D-10) and refuses to start if any are missing.
+[Unit]
+Description=Saladee API (Bun/Elysia)
+After=network.target
+
+[Service]
+Type=simple
+# Dedicated non-root service account (least privilege).
+User=saladee
+Group=saladee
+WorkingDirectory=/opt/saladee/api
+# Secrets sourced from a mode-600 file written at deploy — no literals here.
+EnvironmentFile=/opt/saladee/api/.env
+ExecStart=/home/saladee/.bun/bin/bun run src/index.ts
+Restart=always
+RestartSec=2
+# Structured JSON logs → journald (D-15); no paid error-tracking in Phase 0.
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=saladee-api
+
+[Install]
+WantedBy=multi-user.target
