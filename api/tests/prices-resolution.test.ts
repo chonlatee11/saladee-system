@@ -129,10 +129,7 @@ describe("auto pack price (INV-04/D-13): whole-baht derived from the resolved kg
 describe("price history: both rows persist", () => {
   test("GET /prices lists the default AND the override for the (round,variety,tier)", async () => {
     const { varietyId, roundId } = await arrange();
-    const res = await req(
-      "GET",
-      `/prices?roundId=${roundId}&varietyId=${varietyId}&tier=b2c`,
-    );
+    const res = await req("GET", `/prices?roundId=${roundId}&varietyId=${varietyId}&tier=b2c`);
     expect(res.status).toBe(200);
     const rows = (await res.json()) as { pricePerKgSatang: number; effectiveDate: string | null }[];
     expect(rows.length).toBe(2);
