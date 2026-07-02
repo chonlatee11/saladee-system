@@ -5,6 +5,7 @@
 name: Deploy Web
 
 on:
+  workflow_dispatch: {}
   push:
     branches: [develop]
     paths:
