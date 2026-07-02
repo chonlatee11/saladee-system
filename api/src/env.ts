@@ -20,6 +20,13 @@ export const EnvSchema = t.Object({
   R2_ACCESS_KEY_ID: t.String({ minLength: 1 }),
   R2_SECRET_ACCESS_KEY: t.String({ minLength: 1 }),
   R2_BUCKET: t.String({ minLength: 1 }),
+  // Comma-separated CORS allowlist for cross-origin browser reads (e.g. the
+  // Cloudflare Pages web/ origin). Env-driven, NOT hardcoded in the composition:
+  // to change the deployed web origin, override this env var — do not edit code.
+  // The default keeps boot working without a new GitHub secret.
+  CORS_ORIGINS: t.String({
+    default: "https://saladee-web.pages.dev,http://localhost:5173,http://localhost:3000",
+  }),
 });
 
 export type Env = Static<typeof EnvSchema>;
