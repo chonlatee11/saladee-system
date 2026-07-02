@@ -74,7 +74,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 01-03-PLAN.md — Staff catalog CRUD: varieties/packs, rounds/quota, tiered daily pricing + auth boundary (wave 3)
+- [x] 01-03-PLAN.md — Staff catalog CRUD: varieties/packs, rounds/quota, tiered daily pricing + auth boundary (wave 3)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -154,7 +154,7 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 0. Foundation & Platform | 8/8 | Complete   | 2026-07-02 |
-| 1. Commerce Core | 2/5 | In Progress|  |
+| 1. Commerce Core | 3/5 | In Progress|  |
 | 2. LINE Storefront, Payments & Delivery | 0/TBD | Not started | - |
 | 3. Back-office, Crop Planning & B2B/Subscription | 0/TBD | Not started | - |
 | 4. Web Store, Marketing & Scale | 0/TBD | Not started | - |
