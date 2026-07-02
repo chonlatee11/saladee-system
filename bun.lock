@@ -29,6 +29,7 @@
       "name": "@saladee/web",
       "version": "0.0.0",
       "dependencies": {
+        "@elysiajs/eden": "1.4.9",
         "@line/liff": "2.29.0",
         "vue": "3.5.39",
       },
