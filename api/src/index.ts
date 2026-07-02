@@ -16,6 +16,7 @@ import { authRoutes } from "./routes/auth";
 import { filesRoutes } from "./routes/files";
 import { healthRoutes } from "./routes/health";
 import { ordersRoutes } from "./routes/orders";
+import { pricesRoutes } from "./routes/prices";
 import { roundsRoutes } from "./routes/rounds";
 import { varietiesRoutes } from "./routes/varieties";
 import { webhookRoutes } from "./routes/webhook";
@@ -41,7 +42,8 @@ export const app = new Elysia()
   .use(authRoutes)
   .use(ordersRoutes)
   .use(varietiesRoutes)
-  .use(roundsRoutes);
+  .use(roundsRoutes)
+  .use(pricesRoutes);
 
 // Eden Treaty contract consumed by web/ (compile-time-safe API calls).
 export type App = typeof app;
