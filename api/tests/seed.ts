@@ -158,10 +158,17 @@ export async function seedBox(
   opts: { name?: string; fixedPriceSatang?: number | null } = {},
 ): Promise<string> {
   const { name = `Box ${crypto.randomUUID()}`, fixedPriceSatang = null } = opts;
-  const [box] = await db.insert(boxes).values({ name, fixedPriceSatang }).returning({ id: boxes.id });
+  const [box] = await db
+    .insert(boxes)
+    .values({ name, fixedPriceSatang })
+    .returning({ id: boxes.id });
   if (!box) throw new Error("seedBox: box insert returned no row");
   await db.insert(boxComponents).values(
-    components.map((c) => ({ boxId: box.id, varietyId: c.varietyId, plantsPerBox: c.plantsPerBox })),
+    components.map((c) => ({
+      boxId: box.id,
+      varietyId: c.varietyId,
+      plantsPerBox: c.plantsPerBox,
+    })),
   );
   return box.id;
 }

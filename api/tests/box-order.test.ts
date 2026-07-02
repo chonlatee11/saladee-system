@@ -41,7 +41,12 @@ async function reservedPlants(roundId: string, varietyId: string): Promise<numbe
   return Number((rows[0] as { reserved_plants: number }).reserved_plants);
 }
 
-function postBoxOrder(boxId: string, roundId: string, qty: number, tier = "b2c"): Promise<Response> {
+function postBoxOrder(
+  boxId: string,
+  roundId: string,
+  qty: number,
+  tier = "b2c",
+): Promise<Response> {
   return orders.handle(
     new Request("http://localhost/orders", {
       method: "POST",
@@ -150,11 +155,16 @@ describe("GET /catalog — box availability = min across components (INV-07)", (
     });
     let res = await catalog.handle(new Request("http://localhost/catalog"));
     let body = (await res.json()) as {
-      boxes: { rounds: { roundId: string; availability: number; soldOut: boolean; soldOutLabel: string | null }[] }[];
+      boxes: {
+        rounds: {
+          roundId: string;
+          availability: number;
+          soldOut: boolean;
+          soldOutLabel: string | null;
+        }[];
+      }[];
     };
-    const before = body.boxes
-      .flatMap((bx) => bx.rounds)
-      .find((r) => r.roundId === roundId);
+    const before = body.boxes.flatMap((bx) => bx.rounds).find((r) => r.roundId === roundId);
     expect(before?.availability).toBe(1);
     expect(before?.soldOut).toBe(false);
 

@@ -80,11 +80,7 @@ export function makeBoxesRoutes(database: BoxesDb = defaultDb) {
       .get(
         "/boxes/:id",
         async ({ params, set }) => {
-          const [b] = await database
-            .select()
-            .from(boxes)
-            .where(eq(boxes.id, params.id))
-            .limit(1);
+          const [b] = await database.select().from(boxes).where(eq(boxes.id, params.id)).limit(1);
           if (!b) {
             set.status = 404;
             return { error: "box_not_found" };

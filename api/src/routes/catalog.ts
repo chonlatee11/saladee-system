@@ -23,8 +23,17 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { Elysia, t } from "elysia";
 import { db as defaultDb } from "../db/client";
 import type * as schema from "../db/schema";
-import { prices, roundStock, rounds, saleUnits, varieties } from "../db/schema";
+import {
+  boxComponents,
+  boxes,
+  prices,
+  roundStock,
+  rounds,
+  saleUnits,
+  varieties,
+} from "../db/schema";
 import { deriveUnitPriceSatang } from "../services/pricing";
+import { boxAvailability } from "../services/reservation";
 
 type CatalogDb = PostgresJsDatabase<typeof schema>;
 type Tier = "b2c" | "b2b";
@@ -110,7 +119,7 @@ export function makeCatalogRoutes(database: CatalogDb = defaultDb) {
       .get("/catalog", async () => {
         const today = new Date().toISOString().slice(0, 10);
         const openRounds = await database.select().from(rounds).where(eq(rounds.status, "open"));
-        if (openRounds.length === 0) return { varieties: [] };
+        if (openRounds.length === 0) return { varieties: [], boxes: [] };
         const roundIds = openRounds.map((r) => r.id);
         const roundById = new Map(openRounds.map((r) => [r.id, r]));
 
@@ -118,15 +127,16 @@ export function makeCatalogRoutes(database: CatalogDb = defaultDb) {
           .select()
           .from(roundStock)
           .where(inArray(roundStock.roundId, roundIds));
-        if (stock.length === 0) return { varieties: [] };
+        if (stock.length === 0) return { varieties: [], boxes: [] };
 
         const varietyIds = [...new Set(stock.map((s) => s.varietyId))];
         const vs = await database
           .select()
           .from(varieties)
           .where(and(inArray(varieties.id, varietyIds), eq(varieties.active, true)));
-        if (vs.length === 0) return { varieties: [] };
+        if (vs.length === 0) return { varieties: [], boxes: [] };
         const activeVarietyIds = new Set(vs.map((v) => v.id));
+        const varietyById = new Map(vs.map((v) => [v.id, v]));
 
         const units = await database
           .select()
@@ -173,9 +183,106 @@ export function makeCatalogRoutes(database: CatalogDb = defaultDb) {
             rounds: vRounds,
           };
         });
+        // ── Boxes (01-05, INV-07): each active box + its per-round availability ──
+        // A box is OFFERED in an open round only when every component has a stock row
+        // there; its availability = min(floor((quota−reserved)/plantsPerBox)) across
+        // components (the scarcest one governs), and its price is the fixed override
+        // else the sum of component prices (D-18) per tier — all resolved server-side.
+        const boxRows = await database.select().from(boxes).where(eq(boxes.active, true));
+        const boxComps = boxRows.length
+          ? await database
+              .select()
+              .from(boxComponents)
+              .where(
+                inArray(
+                  boxComponents.boxId,
+                  boxRows.map((b) => b.id),
+                ),
+              )
+          : [];
+        // roundId → (varietyId → stock counter), for the box availability lookup.
+        const stockByRoundVariety = new Map<string, Map<string, (typeof stock)[number]>>();
+        for (const s of stock) {
+          let m = stockByRoundVariety.get(s.roundId);
+          if (!m) {
+            m = new Map();
+            stockByRoundVariety.set(s.roundId, m);
+          }
+          m.set(s.varietyId, s);
+        }
+        const boxesOut = boxRows
+          .map((b) => {
+            const comps = boxComps.filter((c) => c.boxId === b.id);
+            const bomComponents = comps.map((c) => ({
+              varietyId: c.varietyId,
+              plantsPerBox: c.plantsPerBox,
+            }));
+            const roundsOut = openRounds
+              // Offer the box only in rounds where EVERY component is stocked.
+              .filter((round) => {
+                const m = stockByRoundVariety.get(round.id);
+                return comps.length > 0 && comps.every((c) => m?.has(c.varietyId));
+              })
+              .map((round) => {
+                const m = stockByRoundVariety.get(round.id) as Map<string, (typeof stock)[number]>;
+                const stockMap = new Map(
+                  comps.map((c) => {
+                    const s = m.get(c.varietyId) as (typeof stock)[number];
+                    return [
+                      c.varietyId,
+                      { quotaPlants: s.quotaPlants, reservedPlants: s.reservedPlants },
+                    ];
+                  }),
+                );
+                const availability = boxAvailability(bomComponents, stockMap);
+                const soldOut = availability <= 0;
+                const priceForTier = (tier: Tier): number | null => {
+                  if (b.fixedPriceSatang !== null) return b.fixedPriceSatang;
+                  let sum = 0;
+                  for (const c of comps) {
+                    const variety = varietyById.get(c.varietyId);
+                    if (!variety) return null;
+                    const relevant = priceRows.filter(
+                      (p) => p.roundId === round.id && p.varietyId === c.varietyId,
+                    );
+                    const pr = resolveTierPrice(relevant, tier, today);
+                    if (!pr) return null;
+                    sum += deriveUnitPriceSatang(
+                      pr.pricePerKgSatang,
+                      c.plantsPerBox * variety.avgGramsPerPlant,
+                    );
+                  }
+                  return sum;
+                };
+                return {
+                  roundId: round.id,
+                  roundName: round.name,
+                  harvestDate: round.harvestDate,
+                  deliveryDate: round.deliveryDate,
+                  saleMode: saleModeFor(round.harvestDate, today),
+                  availability,
+                  soldOut,
+                  soldOutLabel: soldOut ? SOLD_OUT_LABEL : null,
+                  priceSatang: { b2c: priceForTier("b2c"), b2b: priceForTier("b2b") },
+                };
+              });
+            return {
+              id: b.id,
+              name: b.name,
+              description: b.description,
+              imageUrl: b.imageUrl,
+              fixedPriceSatang: b.fixedPriceSatang,
+              components: bomComponents,
+              rounds: roundsOut,
+            };
+          })
+          // Only surface boxes actually offered in at least one open round.
+          .filter((b) => b.rounds.length > 0);
+
         // Only surface varieties that actually sell in at least one open round.
         return {
           varieties: result.filter((v) => activeVarietyIds.has(v.id) && v.rounds.length > 0),
+          boxes: boxesOut,
         };
       })
       // OPEN (D-03): the same surface scoped to one round (round-centric).

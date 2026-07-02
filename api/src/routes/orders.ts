@@ -18,11 +18,21 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { Elysia, t } from "elysia";
 import { db as defaultDb } from "../db/client";
 import type * as schema from "../db/schema";
-import { customers, orderLines, orders, prices, rounds, saleUnits, varieties } from "../db/schema";
+import {
+  boxComponents,
+  boxes,
+  customers,
+  orderLines,
+  orders,
+  prices,
+  rounds,
+  saleUnits,
+  varieties,
+} from "../db/schema";
 import { requireRole } from "../plugins/auth.plugin";
 import { canTransition, type OrderStatus } from "../services/order-status";
 import { deriveUnitPriceSatang } from "../services/pricing";
-import { release, reserve } from "../services/reservation";
+import { BoxShortfallError, release, reserve, reserveBox } from "../services/reservation";
 
 // The schema-typed drizzle handle (query builder + transaction runner). Matches
 // both the runtime db (client.ts) and an injected test pool typed with `schema`.
@@ -48,6 +58,14 @@ const OrderLineBody = t.Object({
   qty: t.Integer({ minimum: 1 }), // blocks negative/zero reserve (T-01-09 / V5)
 });
 
+// A mixed-box line (01-05, INV-07): identify the box + the round it draws stock
+// from; NEVER a price/BOM field — both are resolved server-side (T-01-20 / D-18).
+const BoxLineBody = t.Object({
+  boxId: t.String({ format: "uuid" }),
+  roundId: t.String({ format: "uuid" }),
+  qty: t.Integer({ minimum: 1 }),
+});
+
 const GuestCustomer = t.Object({
   name: t.String({ minLength: 1 }),
   phone: t.String({ minLength: 1 }),
@@ -62,7 +80,9 @@ const CreateOrderBody = t.Object({
   customer: t.Union([MemberCustomer, GuestCustomer]),
   substitutionPolicy: t.Optional(t.Union([t.Literal("allow"), t.Literal("disallow")])),
   taxId: t.Optional(t.String()),
-  lines: t.Array(OrderLineBody, { minItems: 1 }),
+  // At least one of lines / boxLines must be present (checked in the handler).
+  lines: t.Optional(t.Array(OrderLineBody, { minItems: 1 })),
+  boxLines: t.Optional(t.Array(BoxLineBody, { minItems: 1 })),
 });
 
 const StatusBody = t.Object({
@@ -92,6 +112,28 @@ interface ResolvedLine {
   plantsDecremented: number;
 }
 
+/** One resolved BOM component (server-derived; never client-supplied). */
+interface ResolvedBoxComponent {
+  varietyId: string;
+  varietyName: string;
+  plantsPerBox: number;
+  pricePerKgSatang: number | null;
+  componentPriceSatang: number | null;
+}
+
+/** A box line after the server has resolved its BOM + price (D-18) snapshot. */
+interface ResolvedBox {
+  roundId: string;
+  boxId: string;
+  boxName: string;
+  qty: number;
+  unitPriceSatang: number; // fixed override, else the sum of component prices
+  priceMode: "fixed" | "sum";
+  components: ResolvedBoxComponent[];
+  plantsPerBox: number; // total plants across all components (for one box)
+  plantsDecremented: number; // plantsPerBox × qty
+}
+
 export function makeOrdersRoutes(database: OrdersDb = defaultDb) {
   return (
     new Elysia()
@@ -104,7 +146,7 @@ export function makeOrdersRoutes(database: OrdersDb = defaultDb) {
           // 1. Resolve every line server-side (catalog + price + pack maths). These
           //    are read-only lookups — no side effects — so we do them before the tx.
           const resolved: ResolvedLine[] = [];
-          for (const line of body.lines) {
+          for (const line of body.lines ?? []) {
             const [su] = await database
               .select()
               .from(saleUnits)
@@ -156,6 +198,110 @@ export function makeOrdersRoutes(database: OrdersDb = defaultDb) {
             });
           }
 
+          // 1b. Resolve every BOX line server-side: load the box + its BOM, resolve
+          //     each component's tier price, and derive the box unit price (D-18: the
+          //     stored fixed override, else the SUM of component prices). The client
+          //     never supplies a price or BOM (T-01-20).
+          const resolvedBoxes: ResolvedBox[] = [];
+          for (const bl of body.boxLines ?? []) {
+            const [box] = await database
+              .select()
+              .from(boxes)
+              .where(and(eq(boxes.id, bl.boxId), eq(boxes.active, true)))
+              .limit(1);
+            if (!box) {
+              set.status = 400;
+              return { error: "box_not_found" };
+            }
+            const comps = await database
+              .select()
+              .from(boxComponents)
+              .where(eq(boxComponents.boxId, box.id));
+            if (comps.length === 0) {
+              set.status = 400;
+              return { error: "box_empty" };
+            }
+
+            const resolvedComponents: ResolvedBoxComponent[] = [];
+            for (const c of comps) {
+              const [variety] = await database
+                .select()
+                .from(varieties)
+                .where(eq(varieties.id, c.varietyId))
+                .limit(1);
+              if (!variety) {
+                set.status = 400;
+                return { error: "variety_not_found" };
+              }
+              // Resolve this component's per-kg price by tier (same OQ-2 rule).
+              const [price] = await database
+                .select({ pricePerKgSatang: prices.pricePerKgSatang })
+                .from(prices)
+                .where(
+                  and(
+                    eq(prices.roundId, bl.roundId),
+                    eq(prices.varietyId, c.varietyId),
+                    eq(prices.tier, tier),
+                    or(isNull(prices.effectiveDate), eq(prices.effectiveDate, today)),
+                  ),
+                )
+                .orderBy(sql`${prices.effectiveDate} DESC NULLS LAST`)
+                .limit(1);
+              // A component's value = the price of `plantsPerBox` whole plants of it
+              // (grams = plantsPerBox × avgGramsPerPlant), ceil-to-baht like a pack.
+              const componentPriceSatang = price
+                ? deriveUnitPriceSatang(
+                    price.pricePerKgSatang,
+                    c.plantsPerBox * variety.avgGramsPerPlant,
+                  )
+                : null;
+              resolvedComponents.push({
+                varietyId: c.varietyId,
+                varietyName: variety.name,
+                plantsPerBox: c.plantsPerBox,
+                pricePerKgSatang: price?.pricePerKgSatang ?? null,
+                componentPriceSatang,
+              });
+            }
+
+            // D-18: fixed override wins; else sum the component prices (all required).
+            let unitPriceSatang: number;
+            let priceMode: "fixed" | "sum";
+            if (box.fixedPriceSatang !== null) {
+              unitPriceSatang = box.fixedPriceSatang;
+              priceMode = "fixed";
+            } else {
+              if (resolvedComponents.some((rc) => rc.componentPriceSatang === null)) {
+                set.status = 400;
+                return { error: "no_price" };
+              }
+              unitPriceSatang = resolvedComponents.reduce(
+                (s, rc) => s + (rc.componentPriceSatang ?? 0),
+                0,
+              );
+              priceMode = "sum";
+            }
+
+            const plantsPerBox = resolvedComponents.reduce((s, rc) => s + rc.plantsPerBox, 0);
+            resolvedBoxes.push({
+              roundId: bl.roundId,
+              boxId: box.id,
+              boxName: box.name,
+              qty: bl.qty,
+              unitPriceSatang,
+              priceMode,
+              components: resolvedComponents,
+              plantsPerBox,
+              plantsDecremented: plantsPerBox * bl.qty,
+            });
+          }
+
+          // An order must carry at least one line (variety and/or box).
+          if (resolved.length === 0 && resolvedBoxes.length === 0) {
+            set.status = 400;
+            return { error: "no_lines" };
+          }
+
           // 2. Member validation (read-only) before entering the tx.
           const cust = body.customer as
             | { customerId: string }
@@ -178,7 +324,9 @@ export function makeOrdersRoutes(database: OrdersDb = defaultDb) {
             }
           }
 
-          const subtotalSatang = resolved.reduce((s, r) => s + r.unitPriceSatang * r.qty, 0);
+          const subtotalSatang =
+            resolved.reduce((s, r) => s + r.unitPriceSatang * r.qty, 0) +
+            resolvedBoxes.reduce((s, b) => s + b.unitPriceSatang * b.qty, 0);
 
           // 3. One transaction: (re)check cut-off (Pitfall 6), reserve atomically,
           //    then persist the order + frozen snapshot. Any throw rolls it all back.
@@ -202,8 +350,14 @@ export function makeOrdersRoutes(database: OrdersDb = defaultDb) {
                 recipientAddress = cust.recipientAddress;
               }
 
-              // Re-check each distinct round is open and before cut-off INSIDE the tx.
-              const roundIds = [...new Set(resolved.map((r) => r.roundId))];
+              // Re-check each distinct round (variety + box lines) is open and before
+              // cut-off INSIDE the tx.
+              const roundIds = [
+                ...new Set([
+                  ...resolved.map((r) => r.roundId),
+                  ...resolvedBoxes.map((b) => b.roundId),
+                ]),
+              ];
               for (const rid of roundIds) {
                 const [rnd] = await tx
                   .select({ status: rounds.status, cutoffAt: rounds.cutoffAt })
@@ -225,7 +379,27 @@ export function makeOrdersRoutes(database: OrdersDb = defaultDb) {
                 if (!ok) throw new OrderError("sold_out", 409);
               }
 
-              const orderRoundId = resolved[0]?.roundId as string;
+              // Reserve every box: all-or-nothing across ALL its components (INV-07).
+              // A shortfall throws BoxShortfallError → this tx rolls back → NOTHING
+              // decremented (neither the box's other components nor prior lines).
+              for (const b of resolvedBoxes) {
+                try {
+                  await reserveBox(
+                    tx,
+                    b.roundId,
+                    b.components.map((c) => ({
+                      varietyId: c.varietyId,
+                      plantsPerBox: c.plantsPerBox,
+                    })),
+                    b.qty,
+                  );
+                } catch (err) {
+                  if (err instanceof BoxShortfallError) throw new OrderError("sold_out", 409);
+                  throw err;
+                }
+              }
+
+              const orderRoundId = (resolved[0]?.roundId ?? resolvedBoxes[0]?.roundId) as string;
               const [ord] = await tx
                 .insert(orders)
                 .values({
@@ -243,21 +417,49 @@ export function makeOrdersRoutes(database: OrdersDb = defaultDb) {
                 .returning({ id: orders.id, status: orders.status });
               if (!ord) throw new Error("order insert returned no row");
 
-              await tx.insert(orderLines).values(
-                resolved.map((r) => ({
-                  orderId: ord.id,
-                  lineKind: "variety",
-                  varietyId: r.varietyId,
-                  varietyName: r.varietyName,
-                  unitLabel: r.unitLabel,
-                  plantsPerUnit: r.plantsPerUnit,
-                  pricePerKgSatang: r.pricePerKgSatang,
-                  tier,
-                  unitPriceSatang: r.unitPriceSatang,
-                  qty: r.qty,
-                  plantsDecremented: r.plantsDecremented,
-                })),
-              );
+              if (resolved.length > 0) {
+                await tx.insert(orderLines).values(
+                  resolved.map((r) => ({
+                    orderId: ord.id,
+                    lineKind: "variety",
+                    varietyId: r.varietyId,
+                    varietyName: r.varietyName,
+                    unitLabel: r.unitLabel,
+                    plantsPerUnit: r.plantsPerUnit,
+                    pricePerKgSatang: r.pricePerKgSatang,
+                    tier,
+                    unitPriceSatang: r.unitPriceSatang,
+                    qty: r.qty,
+                    plantsDecremented: r.plantsDecremented,
+                  })),
+                );
+              }
+
+              // Box lines carry a FROZEN BOM + resolved-price snapshot (PAY-04 / D-18)
+              // in box_bom_json; varietyId is null (the components live in the json).
+              if (resolvedBoxes.length > 0) {
+                await tx.insert(orderLines).values(
+                  resolvedBoxes.map((b) => ({
+                    orderId: ord.id,
+                    lineKind: "box",
+                    boxId: b.boxId,
+                    varietyName: b.boxName, // snapshot the box name for display
+                    unitLabel: b.boxName,
+                    tier,
+                    unitPriceSatang: b.unitPriceSatang,
+                    qty: b.qty,
+                    plantsDecremented: b.plantsDecremented,
+                    boxBomJson: {
+                      boxId: b.boxId,
+                      boxName: b.boxName,
+                      priceMode: b.priceMode,
+                      unitPriceSatang: b.unitPriceSatang,
+                      roundId: b.roundId,
+                      components: b.components,
+                    },
+                  })),
+                );
+              }
 
               return { id: ord.id, status: ord.status, subtotalSatang };
             });
@@ -303,11 +505,28 @@ export function makeOrdersRoutes(database: OrdersDb = defaultDb) {
             // — double-safe with the canTransition gate above (D-08 / Pitfall 5).
             if (next === "cancelled" && current !== "cancelled") {
               const lines = await tx
-                .select({ varietyId: orderLines.varietyId, plants: orderLines.plantsDecremented })
+                .select({
+                  lineKind: orderLines.lineKind,
+                  varietyId: orderLines.varietyId,
+                  plants: orderLines.plantsDecremented,
+                  qty: orderLines.qty,
+                  boxBomJson: orderLines.boxBomJson,
+                })
                 .from(orderLines)
                 .where(eq(orderLines.orderId, ord.id));
               for (const l of lines) {
-                if (l.varietyId) await release(tx, ord.roundId, l.varietyId, l.plants);
+                if (l.lineKind === "box") {
+                  // Release EVERY component of the box from its frozen BOM snapshot
+                  // (plantsPerBox × qty), so a cancelled box never strands stock.
+                  const bom = l.boxBomJson as {
+                    components?: { varietyId: string; plantsPerBox: number }[];
+                  } | null;
+                  for (const c of bom?.components ?? []) {
+                    await release(tx, ord.roundId, c.varietyId, c.plantsPerBox * l.qty);
+                  }
+                } else if (l.varietyId) {
+                  await release(tx, ord.roundId, l.varietyId, l.plants);
+                }
               }
             }
             await tx
