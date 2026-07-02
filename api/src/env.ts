@@ -40,9 +40,7 @@ export function validateEnv(source: Record<string, unknown>): ValidateEnvResult 
   if (Value.Check(EnvSchema, candidate)) {
     return { ok: true, errors: [] };
   }
-  const errors = [...Value.Errors(EnvSchema, candidate)].map(
-    (e) => `${e.path}: ${e.message}`,
-  );
+  const errors = [...Value.Errors(EnvSchema, candidate)].map((e) => `${e.path}: ${e.message}`);
   return { ok: false, errors };
 }
 
