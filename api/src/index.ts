@@ -13,6 +13,7 @@ import { dbPlugin } from "./plugins/db.plugin";
 import { linePlugin } from "./plugins/line.plugin";
 import { storagePlugin } from "./plugins/storage.plugin";
 import { authRoutes } from "./routes/auth";
+import { boxesRoutes } from "./routes/boxes";
 import { catalogRoutes } from "./routes/catalog";
 import { filesRoutes } from "./routes/files";
 import { healthRoutes } from "./routes/health";
@@ -47,7 +48,8 @@ export const app = new Elysia()
   .use(roundsRoutes)
   .use(pricesRoutes)
   .use(catalogRoutes)
-  .use(stockRoutes);
+  .use(stockRoutes)
+  .use(boxesRoutes);
 
 // Eden Treaty contract consumed by web/ (compile-time-safe API calls).
 export type App = typeof app;

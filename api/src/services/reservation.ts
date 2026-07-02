@@ -68,3 +68,79 @@ export async function release(
   `);
   return rows.length === 1;
 }
+
+// ── Mixed-salad box: all-or-nothing multi-component reservation (INV-07 / D-17) ─
+
+/** One BOM component: a variety and how many plants of it a single box consumes. */
+export interface BoxComponent {
+  varietyId: string;
+  plantsPerBox: number;
+}
+
+/**
+ * Thrown by `reserveBox()` when a component is short. Carries the offending
+ * variety for diagnostics. Callers catch it and map to their own HTTP error;
+ * because it is thrown INSIDE the surrounding `db.transaction`, throwing rolls
+ * back every earlier component decrement in the same box → zero net change.
+ */
+export class BoxShortfallError extends Error {
+  constructor(readonly varietyId: string) {
+    super(`box component short: ${varietyId}`);
+    this.name = "BoxShortfallError";
+  }
+}
+
+/**
+ * Reserve every BOM component of `boxQty` boxes in ONE transaction, all-or-nothing.
+ *
+ * Correctness (INV-07): components are sorted by `varietyId` so EVERY concurrent
+ * box order acquires its round_stock row locks in the SAME global order — this
+ * removes the deadlock window (RESEARCH Pattern 2 / T-01-19). Each component is
+ * reserved via the proven guarded `reserve()`; the first component that cannot be
+ * satisfied throws `BoxShortfallError`, which unwinds the caller's `db.transaction`
+ * and undoes any components already decremented in this box (T-01-18). There is
+ * deliberately NO partial success: either every component is reserved or none is.
+ *
+ * MUST be called inside a `db.transaction` (pass the `tx`) so the throw rolls back.
+ */
+export async function reserveBox(
+  tx: DbOrTx,
+  roundId: string,
+  components: BoxComponent[],
+  boxQty: number,
+): Promise<void> {
+  // Global lock order: sort by variety_id (stable uuid ordering) → no deadlock.
+  const ordered = [...components].sort((a, b) => a.varietyId.localeCompare(b.varietyId));
+  for (const c of ordered) {
+    const ok = await reserve(tx, roundId, c.varietyId, c.plantsPerBox * boxQty);
+    if (!ok) throw new BoxShortfallError(c.varietyId); // → whole tx rolls back
+  }
+}
+
+/** A round_stock counter for one variety (the numbers box availability reads). */
+export interface ComponentStock {
+  quotaPlants: number;
+  reservedPlants: number;
+}
+
+/**
+ * How many whole boxes are orderable right now = the scarcest component's limit:
+ * `min(floor((quota − reserved) / plantsPerBox))` across every component (INV-07).
+ * A component with no stock row in this round (undefined) makes the box
+ * unavailable (0). Used for catalog/display; the transaction is the authority at
+ * order time.
+ */
+export function boxAvailability(
+  components: BoxComponent[],
+  stockByVariety: Map<string, ComponentStock>,
+): number {
+  if (components.length === 0) return 0;
+  let min = Number.POSITIVE_INFINITY;
+  for (const c of components) {
+    const stock = stockByVariety.get(c.varietyId);
+    if (!stock) return 0; // component not stocked this round ⇒ box not orderable
+    const avail = Math.floor((stock.quotaPlants - stock.reservedPlants) / c.plantsPerBox);
+    if (avail < min) min = avail;
+  }
+  return Math.max(0, min === Number.POSITIVE_INFINITY ? 0 : min);
+}
