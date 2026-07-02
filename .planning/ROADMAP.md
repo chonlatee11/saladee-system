@@ -30,10 +30,16 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Database migrations apply and roll back cleanly against a single PostgreSQL instance.
   3. A file uploads to and downloads from object storage via the storage client using a short-lived signed URL.
   4. The LINE API client and RBAC scaffold are wired and the app boots without them being stubbed out.
-**Plans**: TBD
+**Plans**: 7 plans
 
 Plans:
-- [ ] 00-01: TBD (derived during plan-phase)
+- [ ] 00-01-PLAN.md — Monorepo + env-validated bootable API + /health liveness (wave 1)
+- [ ] 00-02-PLAN.md — PostgreSQL client + RBAC schema + reversible migrations + /health/ready (wave 2)
+- [ ] 00-03-PLAN.md — Cloudflare R2 storage: presigned PUT/GET round-trip (wave 2)
+- [ ] 00-04-PLAN.md — LINE webhook: raw-body signature validation + echo (wave 2)
+- [ ] 00-05-PLAN.md — Auth/RBAC scaffold: Bun.password + jose sessions + LINE idToken verify (wave 2)
+- [ ] 00-06-PLAN.md — Deploy config: Caddy + systemd + CI workflows + web/ Eden Treaty scaffold (wave 3)
+- [ ] 00-07-PLAN.md — External provisioning + live production deploy verification (wave 4)
 
 ### Phase 1: Commerce Core
 **Goal**: The oversell-safe, harvest-bound order engine is proven — an admin can set up varieties, fixed-weight packs, daily per-variety pricing, and selling rounds, and orders (including mixed boxes) reserve stock atomically without ever overselling, each with a frozen price snapshot.
