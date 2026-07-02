@@ -70,7 +70,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 01-02-PLAN.md — POST /orders + status pipeline, oversell-proven end-to-end at the endpoint (wave 2)
+- [x] 01-02-PLAN.md — POST /orders + status pipeline, oversell-proven end-to-end at the endpoint (wave 2)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -154,7 +154,7 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 0. Foundation & Platform | 8/8 | Complete   | 2026-07-02 |
-| 1. Commerce Core | 1/5 | In Progress|  |
+| 1. Commerce Core | 2/5 | In Progress|  |
 | 2. LINE Storefront, Payments & Delivery | 0/TBD | Not started | - |
 | 3. Back-office, Crop Planning & B2B/Subscription | 0/TBD | Not started | - |
 | 4. Web Store, Marketing & Scale | 0/TBD | Not started | - |
