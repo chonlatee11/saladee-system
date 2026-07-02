@@ -1,0 +1,36 @@
+// Composed Elysia application. Importing `env` FIRST runs boot-time env
+// validation (fail-fast) before anything else. The composition order below is
+// FIXED by plan 00-01 — wave-2 slices fill the plugin/route stub bodies only and
+// must NOT reorder or edit this file.
+import { Elysia } from "elysia";
+import { env } from "./env";
+import { log } from "./lib/logger";
+import { authPlugin } from "./plugins/auth.plugin";
+import { dbPlugin } from "./plugins/db.plugin";
+import { linePlugin } from "./plugins/line.plugin";
+import { storagePlugin } from "./plugins/storage.plugin";
+import { authRoutes } from "./routes/auth";
+import { filesRoutes } from "./routes/files";
+import { healthRoutes } from "./routes/health";
+import { webhookRoutes } from "./routes/webhook";
+
+// The un-listened app: importable in tests (app.handle) without binding a port.
+export const app = new Elysia()
+  .use(dbPlugin)
+  .use(storagePlugin)
+  .use(linePlugin)
+  .use(authPlugin)
+  .use(healthRoutes)
+  .use(webhookRoutes)
+  .use(filesRoutes)
+  .use(authRoutes);
+
+// Eden Treaty contract consumed by web/ (compile-time-safe API calls).
+export type App = typeof app;
+
+// Bind the port only when run as the entry point (not when imported by tests).
+if (import.meta.main) {
+  app.listen(Number(env.PORT), (server) => {
+    log.info("listening", { port: server.port, env: env.NODE_ENV });
+  });
+}
