@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: "Phase 0 shipped — PR #1"
+status: completed
 stopped_at: Completed 00-08-PLAN.md — Phase 0 gap-closure (CORS) done, UAT Test 8 closed
-last_updated: "2026-07-02T12:00:46.587Z"
-last_activity: "2026-07-02 — Phase 0 shipped, PR #1 (develop→main)"
+last_updated: "2026-07-02T12:06:32.209Z"
+last_activity: 2026-07-02 — Phase 0 complete on develop; branching policy fixed (PRs → develop only, main owner-managed)
 progress:
   total_phases: 5
   completed_phases: 1
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-06-28)
 
 Phase: 00 (foundation-platform) — COMPLETE
 Plan: 8 of 8 (00-08 CORS gap-closure done — UAT Test 8 closed)
-Status: Phase 0 shipped — PR #1
-Last activity: 2026-07-02 — Phase 0 shipped, PR #1 (develop→main)
+Status: Phase 0 complete — integrated on develop (PR #1 closed; main is owner-managed)
+Last activity: 2026-07-02 — Phase 0 complete on develop; branching policy fixed (PRs → develop only, main owner-managed)
 
 Progress: [██████████] 100%
 
