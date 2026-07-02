@@ -1,7 +1,10 @@
 // Composed Elysia application. Importing `env` FIRST runs boot-time env
 // validation (fail-fast) before anything else. The composition order below is
 // FIXED by plan 00-01 — wave-2 slices fill the plugin/route stub bodies only and
-// must NOT reorder or edit this file.
+// must NOT reorder or edit this file. EXCEPTION (gap-closure 00-08): `cors` is
+// intentionally composed as the FIRST plugin, before every route, so it handles
+// OPTIONS preflight and stamps Access-Control-Allow-Origin before any route runs.
+import { cors } from "@elysiajs/cors";
 import { Elysia } from "elysia";
 import { env } from "./env";
 import { log } from "./lib/logger";
@@ -16,6 +19,15 @@ import { webhookRoutes } from "./routes/webhook";
 
 // The un-listened app: importable in tests (app.handle) without binding a port.
 export const app = new Elysia()
+  // cors FIRST (before routes): env-driven explicit allowlist — never a reflected
+  // wildcard with credentials (threat T-00-25). Handles OPTIONS preflight too.
+  .use(
+    cors({
+      origin: env.CORS_ORIGINS.split(",").map((o) => o.trim()),
+      methods: ["GET", "POST", "OPTIONS"],
+      allowedHeaders: ["Content-Type", "Authorization"],
+    }),
+  )
   .use(dbPlugin)
   .use(storagePlugin)
   .use(linePlugin)
