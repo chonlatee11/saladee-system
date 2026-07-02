@@ -74,7 +74,11 @@ async function arrange() {
 
   const [rA] = await db
     .insert(rounds)
-    .values({ name: `รอบพรีออเดอร์ ${crypto.randomUUID()}`, status: "open", harvestDate: FUTURE_HARVEST })
+    .values({
+      name: `รอบพรีออเดอร์ ${crypto.randomUUID()}`,
+      status: "open",
+      harvestDate: FUTURE_HARVEST,
+    })
     .returning({ id: rounds.id });
   const [rB] = await db
     .insert(rounds)
@@ -82,8 +86,12 @@ async function arrange() {
     .returning({ id: rounds.id });
   if (!rA || !rB) throw new Error("round insert returned no row");
 
-  await db.insert(roundStock).values({ roundId: rA.id, varietyId, quotaPlants: 100, reservedPlants: 0 });
-  await db.insert(roundStock).values({ roundId: rB.id, varietyId, quotaPlants: 10, reservedPlants: 10 });
+  await db
+    .insert(roundStock)
+    .values({ roundId: rA.id, varietyId, quotaPlants: 100, reservedPlants: 0 });
+  await db
+    .insert(roundStock)
+    .values({ roundId: rB.id, varietyId, quotaPlants: 10, reservedPlants: 10 });
 
   for (const roundId of [rA.id, rB.id]) {
     await seedPrice(db, roundId, varietyId, "b2c", KG_B2C, null);
@@ -166,12 +174,15 @@ describe("GET /catalog/rounds/:id — single round view", () => {
     const { varietyId, readyRoundId } = await arrange();
     const res = await req("GET", `/catalog/rounds/${readyRoundId}`);
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { round: { id: string; saleMode: string }; varieties: RoundEntryResp[] & { id?: string }[] };
+    const body = (await res.json()) as {
+      round: { id: string; saleMode: string };
+      varieties: RoundEntryResp[] & { id?: string }[];
+    };
     expect(body.round.id).toBe(readyRoundId);
     expect(body.round.saleMode).toBe("ready");
-    const v = (body.varieties as unknown as { id: string; soldOut: boolean; soldOutLabel: string | null }[]).find(
-      (x) => x.id === varietyId,
-    );
+    const v = (
+      body.varieties as unknown as { id: string; soldOut: boolean; soldOutLabel: string | null }[]
+    ).find((x) => x.id === varietyId);
     expect(v?.soldOut).toBe(true);
     expect(v?.soldOutLabel).toBe("หมดรอบนี้");
   });
