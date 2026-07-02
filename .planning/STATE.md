@@ -4,8 +4,8 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 1 context gathered
-last_updated: "2026-07-02T15:42:28.538Z"
-last_activity: 2026-07-02 -- Phase 01 planning complete
+last_updated: "2026-07-02T16:30:35.564Z"
+last_activity: 2026-07-02 -- Phase 01 execution started
 progress:
   total_phases: 5
   completed_phases: 1
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-28)
 
 **Core value:** ลูกค้าสั่งผักสลัดผ่าน LINE แล้วจ่ายเงินจบในที่เดียว และจำนวนที่เปิดขายตรงกับผลผลิตจริงเสมอ (ไม่ oversell, ไม่เหลือทิ้ง)
-**Current focus:** Phase 00 — foundation-platform
+**Current focus:** Phase 01 — commerce-core
 
 ## Current Position
 
-Phase: 00 (foundation-platform) — COMPLETE
-Plan: 8 of 8 (00-08 CORS gap-closure done — UAT Test 8 closed)
-Status: Ready to execute
-Last activity: 2026-07-02 -- Phase 01 planning complete
+Phase: 01 (commerce-core) — EXECUTING
+Plan: 1 of 5
+Status: Executing Phase 01
+Last activity: 2026-07-02 -- Phase 01 execution started
 
 Progress: [██████████] 100%
 

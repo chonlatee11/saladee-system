@@ -66,7 +66,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 01-01-PLAN.md — Commerce schema + guarded reservation service, oversell-proven at service level (wave 1)
+- [x] 01-01-PLAN.md — Commerce schema + guarded reservation service, oversell-proven at service level (wave 1)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -154,7 +154,7 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 0. Foundation & Platform | 8/8 | Complete   | 2026-07-02 |
-| 1. Commerce Core | 0/5 | Planned | - |
+| 1. Commerce Core | 1/5 | In Progress|  |
 | 2. LINE Storefront, Payments & Delivery | 0/TBD | Not started | - |
 | 3. Back-office, Crop Planning & B2B/Subscription | 0/TBD | Not started | - |
 | 4. Web Store, Marketing & Scale | 0/TBD | Not started | - |
