@@ -86,7 +86,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
-| Infra (00-07) | Hetzner VPS host + DNS + Caddy/systemd install + `VPS_*` GitHub secrets | Deferred | 2026-07-02 |
+| Infra (00-07) | **DigitalOcean** droplet host (SGP1 $6/mo, sslip.io HTTPS) + `VPS_*` GitHub secrets — provisioning script + runbook ready at `deploy/provision-droplet.sh` + `deploy/DEPLOY-DO.md` | Deferred (tooling ready) | 2026-07-02 |
 | Verify (00-07) | Criterion 1 (live HTTPS `/health`) + Criterion 4 (live LINE echo/401) — both need the VPS | Deferred | 2026-07-02 |
 | Deploy (00-07) | LINE webhook URL set + web/ → Cloudflare Pages deploy run | Deferred | 2026-07-02 |
 
