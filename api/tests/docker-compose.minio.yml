@@ -1,0 +1,38 @@
+# Ephemeral MinIO (S3-compatible object storage) for the presigned-URL
+# round-trip test (00-03, Criterion 3). It stands in for Cloudflare R2 so the
+# test runs in CI without a real R2 account; the real R2 round-trip is verified
+# in 00-07.
+#
+# Root credentials and the bucket name MIRROR .env.test (R2_ACCESS_KEY_ID /
+# R2_SECRET_ACCESS_KEY / R2_BUCKET) so the SigV4 signatures produced by the
+# storage plugin — which reads those same vars from env — are accepted here.
+# The bucket is created PRIVATE (anonymous access "none"), matching the R2
+# private-bucket posture (Pitfall 4): objects are reachable only via a
+# short-lived presigned URL.
+#
+# Lifecycle (see plan verify):
+#   docker compose -f tests/docker-compose.minio.yml up -d
+#   bun test tests/storage.test.ts
+#   docker compose -f tests/docker-compose.minio.yml down -v
+services:
+  minio:
+    image: minio/minio:latest
+    command: server /data --address :9000
+    environment:
+      MINIO_ROOT_USER: test-access-key-id
+      MINIO_ROOT_PASSWORD: test-secret-access-key
+    ports:
+      - "9000:9000"
+
+  # One-shot sidecar: waits for MinIO, then creates the private test bucket.
+  createbucket:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 test-access-key-id test-secret-access-key; do echo 'waiting for minio...'; sleep 1; done;
+      mc mb --ignore-existing local/saladee-uploads-test;
+      mc anonymous set none local/saladee-uploads-test;
+      echo 'bucket ready';
+      "
