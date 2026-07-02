@@ -47,7 +47,9 @@ async function arrangeSoldOut() {
     .values({ name: `รอบ ${crypto.randomUUID()}`, status: "open" })
     .returning({ id: rounds.id });
   if (!r) throw new Error("round insert returned no row");
-  await db.insert(roundStock).values({ roundId: r.id, varietyId, quotaPlants: 5, reservedPlants: 5 });
+  await db
+    .insert(roundStock)
+    .values({ roundId: r.id, varietyId, quotaPlants: 5, reservedPlants: 5 });
   return { varietyId, roundId: r.id };
 }
 
@@ -82,7 +84,9 @@ describe("POST /stock/back-in-stock — data-only request record (INV-08/D-20)",
 
   test("storing the request does NOT send or auto-substitute: round_stock is unchanged (D-20)", async () => {
     const { varietyId, roundId } = await arrangeSoldOut();
-    await req("POST", "/stock/back-in-stock", { body: { roundId, varietyId, contact: "line:U999" } });
+    await req("POST", "/stock/back-in-stock", {
+      body: { roundId, varietyId, contact: "line:U999" },
+    });
     const after = await db.execute(
       sql`SELECT quota_plants, reserved_plants FROM round_stock WHERE round_id = ${roundId} AND variety_id = ${varietyId}`,
     );
@@ -119,7 +123,11 @@ describe("GET /stock/back-in-stock — staff-only list (T-01-16)", () => {
     expect(post.status).toBe(201);
     const res = await req("GET", "/stock/back-in-stock", { token: adminToken });
     expect(res.status).toBe(200);
-    const rows = (await res.json()) as { roundId: string; varietyId: string; contact: string | null }[];
+    const rows = (await res.json()) as {
+      roundId: string;
+      varietyId: string;
+      contact: string | null;
+    }[];
     const mine = rows.find((x) => x.contact === marker);
     expect(mine).toBeDefined();
     expect(mine?.roundId).toBe(roundId);
