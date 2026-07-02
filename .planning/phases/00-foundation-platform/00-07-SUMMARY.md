@@ -73,9 +73,12 @@ Deploy artifacts committed: `api/Dockerfile`, `deploy/docker-compose.prod.yml`,
 `deploy/Caddyfile.docker`, `deploy/provision-droplet-docker.sh`; CI `deploy-api.yml`
 deploys via `docker compose up -d --build` on push to `develop`.
 
-Optional enhancements (NOT Phase-0 success criteria): (1) web/ → Cloudflare Pages;
-(2) CI secrets (`VPS_*`, `DATABASE_URL_DIRECT`) + a real deploy key so push-to-develop
-auto-deploys; (3) set `NODE_ENV=production` in the droplet `api/.env`.
+Optional enhancements — ALL COMPLETED 2026-07-02:
+- ✅ web/ → **Cloudflare Pages** live at `https://saladee-web.pages.dev` (Eden Treaty client → live API; `VITE_API_URL` baked in). Workflow auto-creates the Pages project.
+- ✅ **CI auto-deploy**: push to `develop` deploys API (`deploy-api.yml`: Docker test gate → SSH → `docker compose up`) and web (`deploy-web.yml` → Pages). Verified end-to-end. Droplet converted to a git clone with a read-only deploy key; dedicated CI SSH key; GitHub secrets `VPS_HOST/VPS_USER/VPS_SSH_KEY`, `CLOUDFLARE_API_TOKEN/ACCOUNT_ID`, var `VITE_API_URL`; `workflow_dispatch` added for manual runs.
+- ✅ `NODE_ENV=production` on the droplet.
+
+Only remaining optional item: swap sslip.io for a real domain when desired.
 
 ## Self-Check: PASSED (all 4 Phase-0 criteria verified live)
 

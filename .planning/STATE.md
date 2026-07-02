@@ -86,11 +86,13 @@ Items acknowledged and carried forward from previous milestone close:
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
-| Enhancement (00-07) | web/ → Cloudflare Pages deploy run (`CLOUDFLARE_*` secrets) | Optional — not a Phase-0 criterion | 2026-07-02 |
-| Enhancement (00-07) | CI auto-deploy: `VPS_*` + `DATABASE_URL_DIRECT` GitHub secrets + droplet git deploy key (currently deployed via `git archive`, not a git clone) | Optional | 2026-07-02 |
-| Hardening (00-07) | Set `NODE_ENV=production` in droplet `api/.env` (currently `development`); consider a real domain instead of sslip.io | Optional | 2026-07-02 |
+| *(none — all optional enhancements completed 2026-07-02)* | | | |
 
-**Phase 0 host is LIVE:** DigitalOcean droplet `146.190.100.171` (SGP1), Docker (api + caddy), HTTPS `https://146.190.100.171.sslip.io`. All 4 success criteria verified live.
+**Phase 0 host is LIVE + fully wired:**
+- API: DigitalOcean droplet `146.190.100.171` (SGP1), Docker (api + caddy), HTTPS `https://146.190.100.171.sslip.io`. All 4 success criteria verified live.
+- Web: Cloudflare Pages `https://saladee-web.pages.dev` (Eden Treaty client → live API).
+- CI: push to `develop` auto-deploys API (SSH → docker compose) and web (→ Pages). `NODE_ENV=production` on the droplet. GitHub secrets set: `VPS_HOST/VPS_USER/VPS_SSH_KEY`, `CLOUDFLARE_API_TOKEN/ACCOUNT_ID`; var `VITE_API_URL`. Droplet is a git clone (read-only deploy key).
+- Remaining optional only: swap sslip.io for a real domain if/when desired.
 
 ## Session Continuity
 
