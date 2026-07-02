@@ -137,3 +137,6 @@ None. All delivered services are fully wired and tested; no placeholder/empty-re
 
 ## TDD Gate Compliance
 Both TDD tasks (2 and 3) followed RED → GREEN: a `test(...)` commit with failing tests (module-not-found) precedes each `feat(...)` implementation commit. No REFACTOR commits were needed (implementations were minimal and clean).
+
+## Self-Check: PASSED
+All 10 created files exist on disk; all 6 commits (`e4b60ef`, `505ea37`, `1398bf3`, `8587bbd`, `4a25d13`, `38d4b68`) are present in git history. Working tree clean.
