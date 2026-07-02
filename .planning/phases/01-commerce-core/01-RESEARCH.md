@@ -510,17 +510,19 @@ Requires the test PG pool `max >= N` to force real parallelism (Pitfall 2).
 | A4 | Cancel is permitted from `shipping` (releasing stock) | Pattern 3 / Open Questions | Medium — D-08 says cancel disallowed after `done` and that `shipping` "keeps reserved consumed"; whether a cancel from `shipping` releases stock is ambiguous. See Open Question 1. |
 | A5 | Round-open/cutoff re-checked inside the reservation path | Pitfall 6 | Low — cheap correctness; no auto-close job in Phase 1 makes the window tiny. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Cancel from `shipping` — does it release stock?**
+> All three resolved during planning — locked in `01-01-PLAN.md` `<planning_decisions>` and reflected across all Phase-1 plans.
+
+1. **Cancel from `shipping` — does it release stock?** — **RESOLVED: `shipping → cancelled` is FORBIDDEN** (transition table `TRANSITIONS.shipping = ["done"]`); no release-ambiguity branch. See 01-01 `<planning_decisions>`.
    - What we know: D-08 says only `cancelled` releases stock, `done`/`shipping` "keep reserved consumed (a real sale)", and cancel is disallowed once `done`.
    - What's unclear: whether `shipping → cancelled` is a legal edge, and if so whether it releases (`reserved--`) or keeps stock consumed (a shipped-then-returned item isn't resellable in this round).
    - Recommendation: default to **allowing `shipping → cancelled` but NOT releasing stock** (the plants already left the farm), OR forbid the edge entirely. Flag for the planner/user; the transition table (Pattern 3) currently lists it — adjust per decision. Low blast radius (one entry + one branch).
 
-2. **Daily price override storage (D-14 — Claude's discretion).**
+2. **Daily price override storage (D-14 — Claude's discretion).** — **RESOLVED: nullable `effective_date` on `prices` + `UNIQUE(round,variety,tier,effective_date)`** (dated row wins, else NULL-date default). See 01-01 `<planning_decisions>`.
    - Recommendation: a **nullable `effective_date` column on `prices`** with `UNIQUE(round_id, variety_id, tier, effective_date)` (NULL = the round default; a dated row overrides for that day). Simpler than a second table; resolution query picks the dated row for today else the NULL-date default. Planner may choose a separate table if history clarity is preferred.
 
-3. **`products` vs `varieties` surface (INV-01 / SALE-04).**
+3. **`products` vs `varieties` surface (INV-01 / SALE-04).** — **RESOLVED: no `products` table** — sellable surface = `varieties` (+ `sale_units`) and `boxes`; sale mode derived from round timing (SALE-04). See 01-01 `<planning_decisions>`.
    - What's unclear: whether `products` is a distinct catalog entity or `varieties` + `boxes` are the sellable units directly.
    - Recommendation: keep a thin `products` concept only if needed for SALE-04 multi-mode display; otherwise expose varieties+boxes directly and derive sale mode from round timing (D-11). Planner's call within D-11/D-17 shape.
 
