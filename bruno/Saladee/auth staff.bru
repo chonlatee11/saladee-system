@@ -1,0 +1,24 @@
+meta {
+  name: auth staff
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{URL}}/auth/staff
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "email": "a@b.com",
+    "password": "secret123",
+    "passwordHash": "$argon2id$v=19$m=65536,t=2,p=1$WODaL0PLGmrajRk2FWIusfQhvJbjwLeN8ezq69vOApA$454EtxLioTdmgT6QPUZaqDrT8FpLDQ/4YAvZFZIkWcE"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

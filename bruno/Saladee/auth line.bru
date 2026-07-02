@@ -1,0 +1,22 @@
+meta {
+  name: auth line
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{URL}}/auth/line
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idToken": "garbage"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
