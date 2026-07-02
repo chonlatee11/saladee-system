@@ -12,7 +12,7 @@ Saladee is built as a modular monolith on one low-cost always-on VPS, and the ro
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 0: Foundation & Platform** - Single deployable backend, DB, storage, LINE client, HTTPS on VPS
+- [x] **Phase 0: Foundation & Platform** - Single deployable backend, DB, storage, LINE client, HTTPS on VPS (completed 2026-07-02)
 - [ ] **Phase 1: Commerce Core** - Oversell-safe harvest-bound reservation engine, catalog, pricing, rounds, mixed box
 - [ ] **Phase 2: LINE Storefront, Payments & Delivery** - LIFF + Rich Menu ordering, PromptPay + verified slips, hold-expiry, delivery, PDPA
 - [ ] **Phase 3: Back-office, Crop Planning & B2B/Subscription** - Crop forecast auto-feeds stock, B2B quota, subscriptions, packing, dashboards, reports
@@ -39,7 +39,7 @@ Plans:
 - [x] 00-04-PLAN.md — LINE webhook: raw-body signature validation + echo (wave 2)
 - [x] 00-05-PLAN.md — Auth/RBAC scaffold: Bun.password + jose sessions + LINE idToken verify (wave 2)
 - [x] 00-06-PLAN.md — Deploy config: Caddy + systemd + CI workflows + web/ Eden Treaty scaffold (wave 3)
-- [~] 00-07-PLAN.md — External provisioning + live verification (wave 4) — LIVE on DigitalOcean/Docker: C1(HTTPS) C2(Neon) C3(R2) verified; C4 echo pending LINE webhook URL
+- [x] 00-07-PLAN.md — External provisioning + live verification (wave 4) — COMPLETE: all 4 criteria live (HTTPS, Neon, R2, LINE echo) on DigitalOcean/Docker
 
 ### Phase 1: Commerce Core
 **Goal**: The oversell-safe, harvest-bound order engine is proven — an admin can set up varieties, fixed-weight packs, daily per-variety pricing, and selling rounds, and orders (including mixed boxes) reserve stock atomically without ever overselling, each with a frozen price snapshot.
@@ -115,7 +115,7 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 0. Foundation & Platform | 6/7 | In Progress|  |
+| 0. Foundation & Platform | 7/7 | Complete   | 2026-07-02 |
 | 1. Commerce Core | 0/TBD | Not started | - |
 | 2. LINE Storefront, Payments & Delivery | 0/TBD | Not started | - |
 | 3. Back-office, Crop Planning & B2B/Subscription | 0/TBD | Not started | - |

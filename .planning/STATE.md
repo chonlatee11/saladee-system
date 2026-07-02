@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: 00-07 — API LIVE on DigitalOcean (Docker); C1/C2/C3 live-verified, C4 echo pending LINE webhook
+status: phase-complete
+stopped_at: Phase 0 COMPLETE — all 7 plans done; API live on DigitalOcean/Docker, all 4 criteria verified
 last_updated: "2026-07-02T08:24:09.379Z"
-last_activity: 2026-07-02 — Phase 0 waves 1-3 executed; all autonomous plans complete
+last_activity: 2026-07-02 — Phase 0 fully executed + live-verified (HTTPS, Neon, R2, LINE echo)
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 7
-  completed_plans: 6
-  percent: 86
+  completed_plans: 7
+  percent: 100
 ---
 
 # Project State
@@ -86,9 +86,11 @@ Items acknowledged and carried forward from previous milestone close:
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
-| Infra (00-07) | **DigitalOcean** droplet host (SGP1 $6/mo, sslip.io HTTPS) + `VPS_*` GitHub secrets — provisioning script + runbook ready at `deploy/provision-droplet.sh` + `deploy/DEPLOY-DO.md` | Deferred (tooling ready) | 2026-07-02 |
-| Verify (00-07) | Criterion 1 (live HTTPS `/health`) + Criterion 4 (live LINE echo/401) — both need the VPS | Deferred | 2026-07-02 |
-| Deploy (00-07) | LINE webhook URL set + web/ → Cloudflare Pages deploy run | Deferred | 2026-07-02 |
+| Enhancement (00-07) | web/ → Cloudflare Pages deploy run (`CLOUDFLARE_*` secrets) | Optional — not a Phase-0 criterion | 2026-07-02 |
+| Enhancement (00-07) | CI auto-deploy: `VPS_*` + `DATABASE_URL_DIRECT` GitHub secrets + droplet git deploy key (currently deployed via `git archive`, not a git clone) | Optional | 2026-07-02 |
+| Hardening (00-07) | Set `NODE_ENV=production` in droplet `api/.env` (currently `development`); consider a real domain instead of sslip.io | Optional | 2026-07-02 |
+
+**Phase 0 host is LIVE:** DigitalOcean droplet `146.190.100.171` (SGP1), Docker (api + caddy), HTTPS `https://146.190.100.171.sslip.io`. All 4 success criteria verified live.
 
 ## Session Continuity
 

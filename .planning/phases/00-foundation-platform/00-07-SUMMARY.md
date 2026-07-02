@@ -1,7 +1,7 @@
-# 00-07 SUMMARY — External provisioning + live verification (PARTIAL: cloud verified, VPS host deferred)
+# 00-07 SUMMARY — External provisioning + live verification (COMPLETE — all 4 criteria live)
 
 **Plan:** 00-07 (wave 4, `autonomous: false`)
-**Status:** ⏸️ **Partially complete** — cloud services provisioned + live-verified; Hetzner VPS host and the two host-dependent criteria are **deferred** by operator decision ("provision cloud, defer VPS").
+**Status:** ✅ **Complete** — all four Phase-0 success criteria verified on the LIVE stack. Host runs on **DigitalOcean (Docker)** with HTTPS via sslip.io. (Optional enhancements remain: web/ → Cloudflare Pages, and CI `VPS_*` secrets for auto-deploy.)
 **Date:** 2026-07-02
 
 ## Decision context
@@ -67,16 +67,17 @@ Live verification:
 - ✅ **Criterion 1** — `https://146.190.100.171.sslip.io/health` → `{"status":"ok"}`, TLS valid (Let's Encrypt, exp 2026-09-30).
 - ✅ **Criterion 2** — `/health/ready` → `{"status":"ready"}` (prod Neon reached from the container); `migrate` service applied `0000_init` (idempotent).
 - ✅ **Criterion 3** — R2 signed-URL round-trip (verified earlier via `smoke:r2`).
-- 🟡 **Criterion 4** — forged & absent `x-line-signature` → **401** (verified live). Real echo pending: set the LINE Messaging webhook URL to `https://146.190.100.171.sslip.io/webhook` + send a message.
+- ✅ **Criterion 4** — LINE webhook set to `https://146.190.100.171.sslip.io/webhook`; a real message to the OA gets an **echo reply** (confirmed by operator), and forged/absent `x-line-signature` → **401** (verified live).
 
 Deploy artifacts committed: `api/Dockerfile`, `deploy/docker-compose.prod.yml`,
 `deploy/Caddyfile.docker`, `deploy/provision-droplet-docker.sh`; CI `deploy-api.yml`
 deploys via `docker compose up -d --build` on push to `develop`.
 
-Remaining to fully close Phase 0: (1) set LINE webhook URL + confirm echo (Criterion 4);
-(2) optional web/ → Cloudflare Pages; (3) CI secrets (`VPS_*`) for auto-deploy.
+Optional enhancements (NOT Phase-0 success criteria): (1) web/ → Cloudflare Pages;
+(2) CI secrets (`VPS_*`, `DATABASE_URL_DIRECT`) + a real deploy key so push-to-develop
+auto-deploys; (3) set `NODE_ENV=production` in the droplet `api/.env`.
 
-## Self-Check: PARTIAL (3 of 4 criteria live; Criterion 4 echo pending LINE webhook)
+## Self-Check: PASSED (all 4 Phase-0 criteria verified live)
 
 - [x] Cloud services provisioned (Neon, R2 private bucket, Pages project, 2 LINE channels)
 - [x] Criterion 2 verified live on prod Neon (migrate + schema)
