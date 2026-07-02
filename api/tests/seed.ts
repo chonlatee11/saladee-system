@@ -4,7 +4,15 @@
 // the app so tests stay pure-DB (no Elysia boot, no env validation).
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type * as schema from "../src/db/schema";
-import { prices, roundStock, rounds, saleUnits, varieties } from "../src/db/schema";
+import {
+  boxComponents,
+  boxes,
+  prices,
+  roundStock,
+  rounds,
+  saleUnits,
+  varieties,
+} from "../src/db/schema";
 
 export type SeedDb = PostgresJsDatabase<typeof schema>;
 
@@ -139,4 +147,90 @@ export async function seedSellableLine(
     priceId,
     variety: { name, avgGramsPerPlant: 120 },
   };
+}
+
+// ── Mixed-salad box helpers (01-05, INV-07 / D-17 / D-18) ─────────────────────
+
+/** Insert a box + its fixed BOM (box_components) and return its id. */
+export async function seedBox(
+  db: SeedDb,
+  components: { varietyId: string; plantsPerBox: number }[],
+  opts: { name?: string; fixedPriceSatang?: number | null } = {},
+): Promise<string> {
+  const { name = `Box ${crypto.randomUUID()}`, fixedPriceSatang = null } = opts;
+  const [box] = await db.insert(boxes).values({ name, fixedPriceSatang }).returning({ id: boxes.id });
+  if (!box) throw new Error("seedBox: box insert returned no row");
+  await db.insert(boxComponents).values(
+    components.map((c) => ({ boxId: box.id, varietyId: c.varietyId, plantsPerBox: c.plantsPerBox })),
+  );
+  return box.id;
+}
+
+/**
+ * Arrange a complete orderable box scenario in ONE open round: each component is
+ * its own variety with a round_stock quota + b2c/b2b default prices, wired into a
+ * box with the given plantsPerBox. Returns every id the box order/catalog tests
+ * need. Box availability = min(floor((quota−reserved)/plantsPerBox)) across these.
+ */
+export async function seedBoxScenario(
+  db: SeedDb,
+  spec: {
+    components: {
+      quotaPlants: number;
+      plantsPerBox: number;
+      pricePerKgSatangB2c?: number;
+      pricePerKgSatangB2b?: number;
+      avgGramsPerPlant?: number;
+    }[];
+    fixedPriceSatang?: number | null;
+  },
+): Promise<{
+  roundId: string;
+  boxId: string;
+  components: {
+    varietyId: string;
+    plantsPerBox: number;
+    quotaPlants: number;
+    avgGramsPerPlant: number;
+    pricePerKgSatangB2c: number;
+    pricePerKgSatangB2b: number;
+  }[];
+}> {
+  const roundId = await seedRound(db, `Round ${crypto.randomUUID()}`);
+  const components: {
+    varietyId: string;
+    plantsPerBox: number;
+    quotaPlants: number;
+    avgGramsPerPlant: number;
+    pricePerKgSatangB2c: number;
+    pricePerKgSatangB2b: number;
+  }[] = [];
+  for (const c of spec.components) {
+    const avgGramsPerPlant = c.avgGramsPerPlant ?? 120;
+    const pricePerKgSatangB2c = c.pricePerKgSatangB2c ?? 20000;
+    const pricePerKgSatangB2b = c.pricePerKgSatangB2b ?? 18000;
+    const [vrow] = await db
+      .insert(varieties)
+      .values({ name: `Variety ${crypto.randomUUID()}`, avgGramsPerPlant })
+      .returning({ id: varieties.id });
+    if (!vrow) throw new Error("seedBoxScenario: variety insert returned no row");
+    const varietyId = vrow.id;
+    await seedRoundStock(db, roundId, varietyId, c.quotaPlants);
+    await seedPrice(db, roundId, varietyId, "b2c", pricePerKgSatangB2c, null);
+    await seedPrice(db, roundId, varietyId, "b2b", pricePerKgSatangB2b, null);
+    components.push({
+      varietyId,
+      plantsPerBox: c.plantsPerBox,
+      quotaPlants: c.quotaPlants,
+      avgGramsPerPlant,
+      pricePerKgSatangB2c,
+      pricePerKgSatangB2b,
+    });
+  }
+  const boxId = await seedBox(
+    db,
+    components.map((c) => ({ varietyId: c.varietyId, plantsPerBox: c.plantsPerBox })),
+    { fixedPriceSatang: spec.fixedPriceSatang ?? null },
+  );
+  return { roundId, boxId, components };
 }
