@@ -1,10 +1,11 @@
 ---
 phase: 0
 slug: foundation-platform
-status: draft
-nyquist_compliant: false
+status: approved
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-07-02
+reconciled: 2026-07-02
 ---
 
 # Phase 0 — Validation Strategy
@@ -36,17 +37,17 @@ created: 2026-07-02
 
 ## Per-Task Verification Map
 
-> Task IDs are assigned during planning (step 8). Rows map phase requirements/criteria to their proving test; the planner MUST attach each test file to a concrete task and update the Task ID column.
+> Reconciled 2026-07-02 against the finalized 7-plan set. Each Wave-0 test file is created by a concrete tdd task in the plan/task shown below.
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| TBD | TBD | 0 | Criterion 1 / PLAT-02 | — | Boot aborts with a clear message listing the missing env var | unit | `cd api && bun test tests/env.test.ts` | ❌ W0 | ⬜ pending |
-| TBD | TBD | 1 | Criterion 1 | — | `/health` returns 200 when process is up | integration | `cd api && bun test tests/health.test.ts` | ❌ W0 | ⬜ pending |
-| TBD | TBD | 1 | Criterion 1 / NFR-01 | — | `/health/ready` returns 200 when DB up, 503 when DB down | integration | `cd api && bun test tests/health.test.ts` | ❌ W0 | ⬜ pending |
-| TBD | TBD | 1 | Criterion 2 / PLAT-02 | — | migrate up → down → up applies cleanly (reversible) | integration (Docker PG) | `cd api && bun test tests/migrate.test.ts` | ❌ W0 | ⬜ pending |
-| TBD | TBD | 1 | Criterion 3 / PLAT-02 | T-priv-bucket | presigned PUT upload then GET download round-trips; bucket stays private | integration (R2 / S3-compat) | `cd api && bun test tests/storage.test.ts` | ❌ W0 | ⬜ pending |
-| TBD | TBD | 1 | Criterion 4 / D-06 | T-sig-forge | valid `x-line-signature` → echo 200; invalid/absent → 401 (raw-body HMAC) | unit | `cd api && bun test tests/webhook.test.ts` | ❌ W0 | ⬜ pending |
-| TBD | TBD | 1 | Criterion 4 / PLAT-03 / D-08 | T-weak-hash | `Bun.password` hash→verify round-trip; jose ES/HS sign→verify; LINE idToken (ES256) verify | unit | `cd api && bun test tests/auth.test.ts` | ❌ W0 | ⬜ pending |
+| 00-01 T2 | 00-01 | 1 | Criterion 1 / PLAT-02 | — | Boot aborts with a clear message listing the missing env var | unit | `cd api && bun test tests/env.test.ts` | 🔨 by task | ⬜ pending |
+| 00-01 T3 | 00-01 | 1 | Criterion 1 | — | `/health` returns 200 when process is up | integration | `cd api && bun test tests/health.test.ts` | 🔨 by task | ⬜ pending |
+| 00-02 T3 [BLOCKING] | 00-02 | 2 | Criterion 1 / NFR-01 | — | `/health/ready` returns 200 when DB up, 503 when DB down | integration | `cd api && bun test tests/health.test.ts` | 🔨 by task | ⬜ pending |
+| 00-02 T2 | 00-02 | 2 | Criterion 2 / PLAT-02 | — | migrate up → down → up applies cleanly (reversible) | integration (Docker PG) | `cd api && bun test tests/migrate.test.ts` | 🔨 by task | ⬜ pending |
+| 00-03 T2 | 00-03 | 2 | Criterion 3 / PLAT-02 | T-priv-bucket | presigned PUT upload then GET download round-trips; bucket stays private | integration (R2 / S3-compat) | `cd api && bun test tests/storage.test.ts` | 🔨 by task | ⬜ pending |
+| 00-04 T2 | 00-04 | 2 | Criterion 4 / D-06 | T-sig-forge | valid `x-line-signature` → echo 200; invalid/absent → 401 (raw-body HMAC) | unit | `cd api && bun test tests/webhook.test.ts` | 🔨 by task | ⬜ pending |
+| 00-05 T2 | 00-05 | 2 | Criterion 4 / PLAT-03 / D-08 | T-weak-hash | `Bun.password` hash→verify round-trip; jose ES/HS sign→verify; LINE idToken (ES256) verify | unit | `cd api && bun test tests/auth.test.ts` | 🔨 by task | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -77,11 +78,11 @@ created: 2026-07-02
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 60s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 60s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved 2026-07-02 (reconciled to finalized 7-plan set by plan-checker verdict)
