@@ -14,7 +14,7 @@ Saladee is built as a modular monolith on one low-cost always-on VPS, and the ro
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 0: Foundation & Platform** - Single deployable backend, DB, storage, LINE client, HTTPS on VPS (completed 2026-07-02)
-- [ ] **Phase 1: Commerce Core** - Oversell-safe harvest-bound reservation engine, catalog, pricing, rounds, mixed box
+- [x] **Phase 1: Commerce Core** - Oversell-safe harvest-bound reservation engine, catalog, pricing, rounds, mixed box (completed 2026-07-02)
 - [ ] **Phase 2: LINE Storefront, Payments & Delivery** - LIFF + Rich Menu ordering, PromptPay + verified slips, hold-expiry, delivery, PDPA
 - [ ] **Phase 3: Back-office, Crop Planning & B2B/Subscription** - Crop forecast auto-feeds stock, B2B quota, subscriptions, packing, dashboards, reports
 - [ ] **Phase 4: Web Store, Marketing & Scale** - Web storefront, promotions/loyalty, broadcast, multi-carrier delivery, demand-driven planting
@@ -82,7 +82,7 @@ Plans:
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [ ] 01-05-PLAN.md — Mixed salad box: all-or-nothing multi-component reservation, proven (wave 5)
+- [x] 01-05-PLAN.md — Mixed salad box: all-or-nothing multi-component reservation, proven (wave 5)
 
 ### Phase 2: LINE Storefront, Payments & Delivery
 
@@ -154,7 +154,7 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 0. Foundation & Platform | 8/8 | Complete   | 2026-07-02 |
-| 1. Commerce Core | 4/5 | In Progress|  |
+| 1. Commerce Core | 5/5 | Complete   | 2026-07-02 |
 | 2. LINE Storefront, Payments & Delivery | 0/TBD | Not started | - |
 | 3. Back-office, Crop Planning & B2B/Subscription | 0/TBD | Not started | - |
 | 4. Web Store, Marketing & Scale | 0/TBD | Not started | - |
