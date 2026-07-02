@@ -11,16 +11,15 @@
 # LINE webhook + temporary use; swap for a real domain later by editing Caddyfile).
 #
 # RUN AS ROOT on a fresh droplet. Safe to re-run (idempotent-ish):
-#     ssh root@<droplet-ip>
-#     curl -fsSLO https://raw.githubusercontent.com/chonlatee11/saladee-system/main/deploy/provision-droplet.sh
-#     # (or scp it up before main has the code)
-#     bash provision-droplet.sh
+#     # from your laptop (simplest — the script lives on the develop branch):
+#     scp deploy/provision-droplet.sh root@<droplet-ip>:~/
+#     ssh root@<droplet-ip> 'bash provision-droplet.sh'
 #
-# Override defaults via env vars, e.g.  DEPLOY_BRANCH=develop DOMAIN=api.example.com bash provision-droplet.sh
+# Override defaults via env vars, e.g.  DEPLOY_BRANCH=main DOMAIN=api.example.com bash provision-droplet.sh
 set -euo pipefail
 
 REPO_URL="${REPO_URL:-git@github.com:chonlatee11/saladee-system.git}"
-DEPLOY_BRANCH="${DEPLOY_BRANCH:-main}"   # deploy-api.yml triggers on main; see runbook note if using develop
+DEPLOY_BRANCH="${DEPLOY_BRANCH:-develop}"   # deploy-api.yml triggers on develop (foundation lives here)
 BUN_VERSION="${BUN_VERSION:-1.3.14}"
 APP_USER="saladee"
 APP_DIR="/opt/saladee"

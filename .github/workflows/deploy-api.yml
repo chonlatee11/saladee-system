@@ -7,7 +7,7 @@ name: Deploy API
 
 on:
   push:
-    branches: [main]
+    branches: [develop]
     paths:
       - "api/**"
       - ".github/workflows/deploy-api.yml"
@@ -30,8 +30,28 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      # The api integration tests (migrate/storage/health-ready) connect to a
+      # PostgreSQL 17 on :55432 and MinIO on :9000 — they do NOT self-spin the
+      # containers. ubuntu-latest ships Docker, so bring up the same compose
+      # stacks the tests target, then wait for the ports before running bun test.
+      - name: Start test services (PostgreSQL + MinIO)
+        run: |
+          docker compose -f api/tests/docker-compose.pg.yml -p ci_pg up -d
+          docker compose -f api/tests/docker-compose.minio.yml -p ci_minio up -d
+          echo "waiting for PostgreSQL :55432 …"
+          for i in $(seq 1 30); do (echo > /dev/tcp/localhost/55432) 2>/dev/null && break; sleep 1; done
+          echo "waiting for MinIO :9000 …"
+          for i in $(seq 1 30); do curl -sf http://localhost:9000/minio/health/live >/dev/null && break; sleep 1; done
+
       - name: Test (deploy gate)
+        working-directory: api
         run: bun test
+
+      - name: Stop test services
+        if: always()
+        run: |
+          docker compose -f api/tests/docker-compose.pg.yml -p ci_pg down -v || true
+          docker compose -f api/tests/docker-compose.minio.yml -p ci_minio down -v || true
 
       - name: Deploy over SSH (pull, migrate, restart)
         uses: appleboy/ssh-action@v1

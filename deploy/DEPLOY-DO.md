@@ -25,10 +25,9 @@ doctl compute droplet create saladee-api \
 ## 2. Run the provisioning script (as root, on the droplet)
 
 ```bash
-ssh root@<DROPLET_IP>
-# grab the script (works once main has the code; otherwise scp it up first):
-curl -fsSLO https://raw.githubusercontent.com/chonlatee11/saladee-system/main/deploy/provision-droplet.sh
-bash provision-droplet.sh
+# from your laptop (the script lives on the develop branch), copy it up then run:
+scp deploy/provision-droplet.sh root@<DROPLET_IP>:~/
+ssh root@<DROPLET_IP> 'bash provision-droplet.sh'
 ```
 It: creates the `saladee` user, installs Bun 1.3.14 + Caddy, generates a **GitHub
 deploy key** (prints the public key — add it under repo → Settings → Deploy keys,
@@ -36,7 +35,7 @@ then **re-run the script** to finish the clone), installs the systemd unit + Cad
 (domain auto-set to `<ip>.sslip.io`), opens the firewall, and enables passwordless
 `systemctl restart saladee-api` for CI.
 
-> Using branch `develop` instead of `main` for now? Run with `DEPLOY_BRANCH=develop bash provision-droplet.sh`.
+> Default deploy branch is `develop` (where the foundation lives). Override with `DEPLOY_BRANCH=main …` if you later promote to main.
 
 ## 3. Place the runtime secrets on the droplet
 
@@ -69,7 +68,7 @@ curl -sSf https://<ip>.sslip.io/health/ready   # {"status":"ready"} (prod Neon)
 
 ## 6. (Optional) Enable CI auto-deploy on push
 
-The `deploy-api.yml` workflow SSHes in on push to **`main`** touching `api/**`, then
+The `deploy-api.yml` workflow SSHes in on push to **`develop`** touching `api/**`, then
 `git pull` → `db:migrate` (DIRECT url) → `systemctl restart saladee-api`.
 
 1. Generate a CI keypair and authorize it on the droplet:
@@ -80,10 +79,9 @@ The `deploy-api.yml` workflow SSHes in on push to **`main`** touching `api/**`, 
 2. Add GitHub → Settings → Secrets and variables → Actions:
    `VPS_HOST=<DROPLET_IP>`, `VPS_USER=saladee`, `VPS_SSH_KEY=<contents of saladee-ci>`,
    `DATABASE_URL_DIRECT=…` (+ the rest already listed in 00-07-SUMMARY deferred items).
-3. **Get the code onto `main`:** the foundation currently lives on
-   `gsd/phase-00-foundation-platform` / `develop`. Merge it to `main` and push to
-   trigger the first deploy (or set `DEPLOY_BRANCH=develop` in step 2 and change the
-   workflow's `on.push.branches` to `develop`).
+3. The foundation is on **`develop`** and the workflow triggers on `develop`, so any
+   push to `develop` touching `api/**` runs the deploy. (The first push before VPS
+   secrets exist will fail at the SSH step — that's expected, harmless to the droplet.)
 
 ---
 
