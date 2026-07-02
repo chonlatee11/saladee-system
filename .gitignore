@@ -1,0 +1,11 @@
+# Secrets — real env file never committed (only .env.example / .env.test are tracked)
+.env
+
+# Dependencies
+node_modules
+
+# Build output
+dist
+
+# Bun
+.bun

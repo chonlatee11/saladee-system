@@ -1,0 +1,12 @@
+{
+  "name": "saladee-system",
+  "private": true,
+  "workspaces": ["api", "web"],
+  "scripts": {
+    "lint": "biome check .",
+    "format": "biome format --write ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.2"
+  }
+}
