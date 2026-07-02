@@ -110,6 +110,11 @@ _TDD task: test → feat._
 - RBAC scaffold wired and non-stubbed: hashing, sessions, LINE ES256 idToken verify, and role guard are ready for Phase 1 per-endpoint enforcement without an identity migration.
 - Phase 1 must: wire `/auth/staff` to the `users` table (drop the Phase-0 `passwordHash` body field), model the customer role for `/auth/line`, and confirm a real LIFF ES256 idToken verifies (manual, Assumption A4, tracked in 00-07).
 
+## Self-Check: PASSED
+- Files present: auth.plugin.ts, routes/auth.ts, tests/auth.test.ts, 00-05-SUMMARY.md
+- Commits present: 897eefc, 3bd38d3, 1578238, bdcef66
+- Invariants: api/src/index.ts UNCHANGED; STATE.md / ROADMAP.md UNTOUCHED
+
 ---
 *Phase: 00-foundation-platform*
 *Completed: 2026-07-02*
