@@ -1,0 +1,50 @@
+# Production Docker deployment for the Saladee API + Caddy (auto-HTTPS).
+# The database is external (Neon) — no DB container here.
+#
+# Run from THIS directory (so deploy/.env supplies API_DOMAIN and ../api/.env
+# supplies the app secrets):
+#   cd deploy && docker compose -f docker-compose.prod.yml up -d --build
+name: saladee
+
+services:
+  # One-shot: apply Drizzle migrations to Neon (DIRECT url) before the API starts.
+  # Exits 0 on success; the api service waits for that via depends_on.
+  migrate:
+    build:
+      context: ..
+      dockerfile: api/Dockerfile
+    env_file: ../api/.env
+    command: ["bun", "run", "db:migrate"]
+    restart: "no"
+
+  api:
+    build:
+      context: ..
+      dockerfile: api/Dockerfile
+    env_file: ../api/.env
+    expose:
+      - "3000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: always
+
+  caddy:
+    image: caddy:2
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      # Fail fast if the domain wasn't provided (deploy/.env or the shell).
+      API_DOMAIN: ${API_DOMAIN:?set API_DOMAIN (e.g. <ip>.sslip.io) in deploy/.env}
+    volumes:
+      - ./Caddyfile.docker:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data      # persists issued Let's Encrypt certs across restarts
+      - caddy_config:/config
+    depends_on:
+      - api
+    restart: always
+
+volumes:
+  caddy_data:
+  caddy_config:

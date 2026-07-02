@@ -1,0 +1,18 @@
+# Caddyfile for the Dockerized deploy. Caddy runs as a container and reverse-
+# proxies to the `api` service over the compose network. Domain + upstream come
+# from env vars so the same file works for any host (set API_DOMAIN in
+# deploy/.env; API_UPSTREAM defaults to the compose service `api:3000`).
+#
+# Caddy auto-provisions + renews the Let's Encrypt cert for {$API_DOMAIN} and
+# terminates HTTPS on :443; the Bun container never handles TLS.
+{$API_DOMAIN} {
+	reverse_proxy {$API_UPSTREAM:api:3000}
+
+	encode gzip zstd
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		-Server
+	}
+}

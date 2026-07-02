@@ -8,6 +8,32 @@ always-on host so the API is live over HTTPS.
 (closest to TH + same region as Neon `ap-southeast-1`), HTTPS via a free **sslip.io**
 hostname (`<ip>.sslip.io`, real Let's Encrypt cert — LINE-webhook compatible).
 
+**Deploy method: Docker** (chosen). Two containers — `api` (`oven/bun:1.3.14`) +
+`caddy` (auto-HTTPS) — plus a one-shot `migrate` service; no DB container (Neon is
+external). Files: `api/Dockerfile`, `deploy/docker-compose.prod.yml`,
+`deploy/Caddyfile.docker`, `deploy/provision-droplet-docker.sh`.
+
+## Docker quick path (recommended)
+
+```bash
+# 1. create the droplet (see §1), then as root on the droplet:
+scp deploy/provision-droplet-docker.sh root@<DROPLET_IP>:~/
+ssh root@<DROPLET_IP> 'bash provision-droplet-docker.sh'   # installs Docker, clones develop,
+                                                           # prints a GitHub deploy key → add it → re-run
+# 2. copy secrets up:
+scp api/.env root@<DROPLET_IP>:/opt/saladee/api/.env
+# 3. launch (the provision script does this automatically once api/.env exists):
+ssh root@<DROPLET_IP> 'cd /opt/saladee/deploy && docker compose -f docker-compose.prod.yml up -d --build'
+# 4. verify:
+curl -sSf https://<DROPLET_IP>.sslip.io/health         # {"status":"ok"}   Criterion 1
+curl -sSf https://<DROPLET_IP>.sslip.io/health/ready    # {"status":"ready"} prod Neon
+```
+CI (`deploy-api.yml`, on push to `develop`): SSHes in → `git pull` → `docker compose up -d --build`
+(the `migrate` service runs migrations first). The `saladee` user is in the `docker` group.
+
+> The bare-metal (systemd + host Caddy) path below is kept as an ALTERNATIVE — skip
+> it if you use Docker.
+
 ---
 
 ## 1. Create the droplet

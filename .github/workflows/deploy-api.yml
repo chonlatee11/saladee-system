@@ -53,20 +53,18 @@ jobs:
           docker compose -f api/tests/docker-compose.pg.yml -p ci_pg down -v || true
           docker compose -f api/tests/docker-compose.minio.yml -p ci_minio down -v || true
 
-      - name: Deploy over SSH (pull, migrate, restart)
+      - name: Deploy over SSH (pull + docker compose up)
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          # Migrate with the DIRECT (unpooled) Neon URL — drizzle-kit prepares
-          # statements and must not go through the PgBouncer pooled endpoint.
-          envs: DATABASE_URL_DIRECT
+          # Docker deploy: the `migrate` compose service applies Drizzle migrations
+          # (DIRECT/unpooled Neon url from ../api/.env) and exits before `api`
+          # starts; API_DOMAIN comes from deploy/.env. The saladee user is in the
+          # docker group (see provision-droplet-docker.sh), so no sudo is needed.
           script: |
             set -euo pipefail
             cd /opt/saladee && git pull --ff-only
-            cd api && bun install --frozen-lockfile
-            DATABASE_URL_DIRECT="$DATABASE_URL_DIRECT" bun run db:migrate
-            sudo systemctl restart saladee-api
-        env:
-          DATABASE_URL_DIRECT: ${{ secrets.DATABASE_URL_DIRECT }}
+            cd deploy && docker compose -f docker-compose.prod.yml up -d --build
+            docker image prune -f || true

@@ -1,0 +1,18 @@
+# Keep the build context small and NEVER bake secrets or deps into the image.
+**/node_modules
+.git
+.gitignore
+.github
+.planning
+.claude
+**/dist
+web/dist
+**/*.log
+# real secrets are provided at runtime via env_file — never copy them in
+**/.env
+# not needed inside the API image
+web/src
+web/public
+web/index.html
+deploy
+salad-shop-requirements.md
