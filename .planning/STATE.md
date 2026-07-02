@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Waves 1-3 done (00-01..00-06); 00-07 awaits manual provisioning
+stopped_at: 00-07 partial — cloud verified (Neon C2 + R2 C3 live); VPS host + Criteria 1/4 deferred
 last_updated: "2026-07-02T08:24:09.379Z"
 last_activity: 2026-07-02 — Phase 0 waves 1-3 executed; all autonomous plans complete
 progress:
@@ -86,7 +86,9 @@ Items acknowledged and carried forward from previous milestone close:
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
-| *(none)* | | | |
+| Infra (00-07) | Hetzner VPS host + DNS + Caddy/systemd install + `VPS_*` GitHub secrets | Deferred | 2026-07-02 |
+| Verify (00-07) | Criterion 1 (live HTTPS `/health`) + Criterion 4 (live LINE echo/401) — both need the VPS | Deferred | 2026-07-02 |
+| Deploy (00-07) | LINE webhook URL set + web/ → Cloudflare Pages deploy run | Deferred | 2026-07-02 |
 
 ## Session Continuity
 
