@@ -172,3 +172,6 @@ None. Every delivered path (reserveBox, box CRUD, box ordering, box catalog, box
 ---
 *Phase: 01-commerce-core*
 *Completed: 2026-07-02*
+
+## Self-Check: PASSED
+All 3 created files + the SUMMARY exist on disk; all 4 commits (`d60e74b`, `473bafc`, `61a4801`, `0e3b620`) are present in git history. Working tree clean.
