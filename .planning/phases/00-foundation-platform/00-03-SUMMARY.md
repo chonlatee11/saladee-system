@@ -118,6 +118,14 @@ None for this test path (MinIO is ephemeral and self-provisions). Real Cloudflar
 - The `/files/presign` and `/files/:key/url` endpoints are unguarded by auth in this slice (Phase 0 groundwork); Phase 2 must gate GET presigns behind an owner/role check before serving customer slips (Pitfall 4 note).
 - Real R2 round-trip verification remains for 00-07 (needs the provisioned bucket).
 
+## Self-Check: PASSED
+
+- All 5 target files exist on disk (2 created, 2 filled, 1 SUMMARY).
+- All 4 commits present: `9b5c145` (plugin), `05e0864` (test/RED), `f0bcf86` (routes/GREEN), `68bff36` (SUMMARY).
+- `api/src/index.ts` byte-identical to base `3023468` (0 diff lines).
+- `.planning/STATE.md` and `.planning/ROADMAP.md` untouched (orchestrator-owned).
+- MinIO stack torn down (`down -v`); no leftover `tests-minio`/`tests-createbucket` containers.
+
 ---
 *Phase: 00-foundation-platform*
 *Completed: 2026-07-02*
