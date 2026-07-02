@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: phase-complete
-stopped_at: Phase 0 COMPLETE — all 7 plans done; API live on DigitalOcean/Docker, all 4 criteria verified
-last_updated: "2026-07-02T08:24:09.379Z"
-last_activity: 2026-07-02 — Phase 0 fully executed + live-verified (HTTPS, Neon, R2, LINE echo)
+stopped_at: Phase 0 COMPLETE — 8/8 plans done (00-08 CORS gap-closure closed UAT Test 8, live-verified)
+last_updated: "2026-07-02T11:47:12.068Z"
+last_activity: 2026-07-02 — 00-08 CORS fix deployed + live-verified; UAT Test 8 PASSED (8/8)
 progress:
   total_phases: 5
   completed_phases: 1
-  total_plans: 7
-  completed_plans: 7
+  total_plans: 8
+  completed_plans: 8
   percent: 100
 ---
 
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-06-28)
 
 ## Current Position
 
-Phase: 00 (foundation-platform) — EXECUTING
-Plan: 6 of 7 (00-07 awaits manual external provisioning)
-Status: Waves 1-3 complete; Wave 4 (00-07) blocked on user provisioning
+Phase: 00 (foundation-platform) — COMPLETE
+Plan: 8 of 8 (00-08 CORS gap-closure done — UAT Test 8 closed)
+Status: All 8 plans complete; API + web live, all 4 criteria verified, UAT 8/8 passed
 Last activity: 2026-07-02
 
-Progress: [█████████░] 86%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -53,6 +53,7 @@ Progress: [█████████░] 86%
 
 *Updated after each plan completion*
 | Phase 00 P01 | 8 | 3 tasks | 25 files |
+| Phase 00 P08 | 20 | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -89,6 +90,7 @@ Items acknowledged and carried forward from previous milestone close:
 | *(none — all optional enhancements completed 2026-07-02)* | | | |
 
 **Phase 0 host is LIVE + fully wired:**
+
 - API: DigitalOcean droplet `146.190.100.171` (SGP1), Docker (api + caddy), HTTPS `https://146.190.100.171.sslip.io`. All 4 success criteria verified live.
 - Web: Cloudflare Pages `https://saladee-web.pages.dev` (Eden Treaty client → live API).
 - CI: push to `develop` auto-deploys API (SSH → docker compose) and web (→ Pages). `NODE_ENV=production` on the droplet. GitHub secrets set: `VPS_HOST/VPS_USER/VPS_SSH_KEY`, `CLOUDFLARE_API_TOKEN/ACCOUNT_ID`; var `VITE_API_URL`. Droplet is a git clone (read-only deploy key).
@@ -96,6 +98,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-02T08:24:09.365Z
-Stopped at: Completed 00-01-PLAN.md
+Last session: 2026-07-02T11:46:46.523Z
+Stopped at: Completed 00-08-PLAN.md — Phase 0 gap-closure (CORS) done, UAT Test 8 closed
 Resume file: None

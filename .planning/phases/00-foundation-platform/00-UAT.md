@@ -1,5 +1,5 @@
 ---
-status: diagnosed
+status: resolved
 phase: 00-foundation-platform
 source: [00-01-SUMMARY.md, 00-02-SUMMARY.md, 00-03-SUMMARY.md, 00-04-SUMMARY.md, 00-05-SUMMARY.md, 00-06-SUMMARY.md, 00-07-SUMMARY.md]
 started: 2026-07-02T10:42:42Z
@@ -43,15 +43,14 @@ result: pass
 
 ### 8. Web LIFF scaffold live บน Cloudflare Pages
 expected: เปิด https://saladee-web.pages.dev → หน้าโหลดได้ และเรียก live API /health ผ่าน Eden Treaty typed client (VITE_API_URL baked in)
-result: issue
-reported: "ได้ Saladee API health: unreachable: health check failed (status 503) ที่หน้าจอ"
-severity: major
+result: pass
+resolved_by: "00-08 (CORS gap-closure) — เพิ่ม @elysiajs/cors@1.4.2 ต่อก่อน routes ด้วย allowlist จาก env CORS_ORIGINS. ยืนยัน live หลัง CI deploy (run 28587162483): OPTIONS /health → 204 พร้อม access-control-allow-methods + access-control-allow-origin, GET /health → 200 + access-control-allow-origin สำหรับ Pages origin, origin ต้องห้ามไม่ถูก reflect, และหน้า https://saladee-web.pages.dev แสดง 'Saladee API health: ok'."
 
 ## Summary
 
 total: 8
-passed: 7
-issues: 1
+passed: 8
+issues: 0
 pending: 0
 skipped: 0
 blocked: 0
@@ -59,7 +58,8 @@ blocked: 0
 ## Gaps
 
 - truth: "หน้าเว็บ Cloudflare Pages เรียก live API /health แล้วแสดงสถานะ ok"
-  status: failed
+  status: closed
+  resolved_by: "00-08"
   reason: "User reported: ได้ Saladee API health: unreachable: health check failed (status 503) ที่หน้าจอ"
   severity: major
   test: 8
