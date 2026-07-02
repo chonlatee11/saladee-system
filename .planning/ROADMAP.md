@@ -115,7 +115,7 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 0. Foundation & Platform | 0/TBD | Not started | - |
+| 0. Foundation & Platform | 0/7 | Planned    |  |
 | 1. Commerce Core | 0/TBD | Not started | - |
 | 2. LINE Storefront, Payments & Delivery | 0/TBD | Not started | - |
 | 3. Back-office, Crop Planning & B2B/Subscription | 0/TBD | Not started | - |
