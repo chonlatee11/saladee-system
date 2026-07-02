@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: phase-complete
-stopped_at: Phase 0 COMPLETE — 8/8 plans done (00-08 CORS gap-closure closed UAT Test 8, live-verified)
-last_updated: "2026-07-02T11:47:12.068Z"
-last_activity: 2026-07-02 — 00-08 CORS fix deployed + live-verified; UAT Test 8 PASSED (8/8)
+status: "Phase 0 shipped — PR #1"
+stopped_at: Completed 00-08-PLAN.md — Phase 0 gap-closure (CORS) done, UAT Test 8 closed
+last_updated: "2026-07-02T12:00:46.587Z"
+last_activity: "2026-07-02 — Phase 0 shipped, PR #1 (develop→main)"
 progress:
   total_phases: 5
   completed_phases: 1
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-06-28)
 
 Phase: 00 (foundation-platform) — COMPLETE
 Plan: 8 of 8 (00-08 CORS gap-closure done — UAT Test 8 closed)
-Status: All 8 plans complete; API + web live, all 4 criteria verified, UAT 8/8 passed
-Last activity: 2026-07-02
+Status: Phase 0 shipped — PR #1
+Last activity: 2026-07-02 — Phase 0 shipped, PR #1 (develop→main)
 
 Progress: [██████████] 100%
 
