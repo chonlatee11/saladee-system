@@ -14,6 +14,7 @@ export async function seedVariety(db: SeedDb, name = "Test Green Oak"): Promise<
     .insert(varieties)
     .values({ name, avgGramsPerPlant: 120 })
     .returning({ id: varieties.id });
+  if (!row) throw new Error("seedVariety: insert returned no row");
   return row.id;
 }
 
@@ -24,6 +25,7 @@ export async function seedRound(db: SeedDb, name = "Test Round"): Promise<string
     .insert(rounds)
     .values({ name, status: "open", cutoffAt: future })
     .returning({ id: rounds.id });
+  if (!row) throw new Error("seedRound: insert returned no row");
   return row.id;
 }
 
@@ -38,6 +40,7 @@ export async function seedRoundStock(
     .insert(roundStock)
     .values({ roundId, varietyId, quotaPlants })
     .returning({ id: roundStock.id });
+  if (!row) throw new Error("seedRoundStock: insert returned no row");
   return row.id;
 }
 
