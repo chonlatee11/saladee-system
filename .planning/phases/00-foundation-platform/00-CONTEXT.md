@@ -115,6 +115,17 @@ platform scaffolding only.
 
 </deferred>
 
+## Provisioning Status (updated 2026-07-02)
+
+External accounts for Wave 4 (plan 00-07). Waves 1–3 do NOT need these — they run against local Docker (PostgreSQL 17 + MinIO).
+
+- ✅ **Neon** (prod PostgreSQL) — project created; pooled `DATABASE_URL` + direct `DATABASE_URL_DIRECT` obtained.
+- ✅ **Cloudflare R2** — private bucket `saladee-uploads` created; `R2_ACCOUNT_ID` / `R2_BUCKET` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` obtained.
+- ✅ **LINE** — Messaging channel (`LINE_CHANNEL_SECRET`, `LINE_CHANNEL_ACCESS_TOKEN`) + Login channel (`LINE_LOGIN_CHANNEL_ID`, the idToken `aud`) created. Webhook URL not set yet (needs prod domain — Wave 4).
+- ⏸ **Prod host + domain — DEFERRED (decision not made).** User not ready to commit. Candidates: GCP e2-micro Always Free (US region, keeps SSH-deploy plans intact) / Oracle Cloud Always Free ARM (Singapore, closer) / Hetzner CAX11 (~€3.79/mo, EU). Cloudflare Tunnel + own machine is a no-cloud fallback but would require adjusting plan 00-06's SSH-deploy model. Revisit before executing Wave 4 (00-07). Deploy plans (00-06) assume an Ubuntu VM reachable over SSH — all three cloud candidates satisfy that.
+
+**Secret handling reminder:** keep the collected credentials in a password manager / secure note — do NOT commit them. They land in `api/.env` (gitignored, created in Wave 1 / plan 00-01) for local, and in GitHub Actions Secrets for prod.
+
 ---
 
 *Phase: 0-Foundation & Platform*
