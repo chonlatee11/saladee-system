@@ -1,0 +1,17 @@
+# Ephemeral PostgreSQL 17 for migrate/health integration tests.
+# Throwaway credentials + a non-default host port (55432) so it never collides
+# with a developer's local PG on 5432. `down -v` after tests wipes the volume.
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: saladee_test
+      POSTGRES_PASSWORD: saladee_test
+      POSTGRES_DB: saladee_test
+    ports:
+      - "55432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U saladee_test -d saladee_test"]
+      interval: 1s
+      timeout: 3s
+      retries: 30

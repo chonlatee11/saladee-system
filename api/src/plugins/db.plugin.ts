@@ -1,6 +1,8 @@
-// STUB — filled by 00-02 (postgres.js pooled + drizzle, /health/ready DB ping).
-// Wave-2 replaces the body of THIS file only; it must NOT edit index.ts.
-// The named Elysia instance + export symbol are the fixed contract.
+// DB plugin — decorates the Elysia context with the drizzle `db` instance so
+// routes/handlers resolve it from context instead of importing the client
+// directly. The named instance ("db") + `dbPlugin` export symbol are the fixed
+// contract from 00-01; only this body is filled by 00-02. Must NOT edit index.ts.
 import { Elysia } from "elysia";
+import { db } from "../db/client";
 
-export const dbPlugin = new Elysia({ name: "db" });
+export const dbPlugin = new Elysia({ name: "db" }).decorate("db", db);
