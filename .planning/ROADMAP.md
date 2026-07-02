@@ -52,11 +52,15 @@ Plans:
   3. A mixed salad box is orderable only up to its scarcest component's quantity, and ordering it decrements every component in one all-or-nothing transaction.
   4. Each order captures a frozen price/pack snapshot at creation, supports pre-order-by-round and ready-to-ship modes, and moves through the status pipeline (created → awaiting payment → paid → packing → shipping → done/cancelled) with an invoice-ready record.
   5. A sold-out item shows "หมดรอบนี้" and a customer can request a back-in-stock alert; per-order substitution policy and per-role access (hashed passwords, private buckets) are enforced.
-**Plans**: TBD
+**Plans**: 5 plans
 **UI hint**: yes
 
 Plans:
-- [ ] 01-01: TBD (derived during plan-phase)
+- [ ] 01-01-PLAN.md — Commerce schema + guarded reservation service, oversell-proven at service level (wave 1)
+- [ ] 01-02-PLAN.md — POST /orders + status pipeline, oversell-proven end-to-end at the endpoint (wave 2)
+- [ ] 01-03-PLAN.md — Staff catalog CRUD: varieties/packs, rounds/quota, tiered daily pricing + auth boundary (wave 3)
+- [ ] 01-04-PLAN.md — Public catalog reads: availability, sold-out "หมดรอบนี้", multi-mode + back-in-stock request (wave 4)
+- [ ] 01-05-PLAN.md — Mixed salad box: all-or-nothing multi-component reservation, proven (wave 5)
 
 ### Phase 2: LINE Storefront, Payments & Delivery
 **Goal**: A customer can order salad end-to-end inside LINE — browse the round in LIFF, choose a delivery round/method, pay by PromptPay, upload a verified slip, and receive automatic status updates — while unpaid holds release stock on expiry.
