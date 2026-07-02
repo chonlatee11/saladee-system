@@ -10,7 +10,9 @@
     "test": "bun test",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:down": "bun run src/lib/migrate-down.ts"
+    "db:down": "bun run src/lib/migrate-down.ts",
+    "smoke:r2": "bun run scripts/r2-smoke.ts",
+    "smoke:neon": "bun run scripts/neon-smoke.ts"
   },
   "dependencies": {
     "@line/bot-sdk": "11.0.2",
