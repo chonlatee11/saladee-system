@@ -56,7 +56,27 @@ Carry forward — these are all VPS-host-dependent:
 
 Resume with `/gsd-execute-phase 0 --wave 4` (or continue 00-07 directly) once the VPS is ready.
 
-## Self-Check: PARTIAL
+## Live host deploy (DigitalOcean + Docker) — 2026-07-02
+
+Operator switched the host from Hetzner to **DigitalOcean** and chose a **Docker**
+deploy. Droplet: Ubuntu 24.04, 1vCPU/1GB, **SGP1**, IP `146.190.100.171`, HTTPS via
+`146.190.100.171.sslip.io` (free Let's Encrypt cert). Stack = `migrate` (one-shot) →
+`api` (`oven/bun:1.3.14`) → `caddy` (auto-HTTPS); DB external on Neon; all `restart: always`.
+
+Live verification:
+- ✅ **Criterion 1** — `https://146.190.100.171.sslip.io/health` → `{"status":"ok"}`, TLS valid (Let's Encrypt, exp 2026-09-30).
+- ✅ **Criterion 2** — `/health/ready` → `{"status":"ready"}` (prod Neon reached from the container); `migrate` service applied `0000_init` (idempotent).
+- ✅ **Criterion 3** — R2 signed-URL round-trip (verified earlier via `smoke:r2`).
+- 🟡 **Criterion 4** — forged & absent `x-line-signature` → **401** (verified live). Real echo pending: set the LINE Messaging webhook URL to `https://146.190.100.171.sslip.io/webhook` + send a message.
+
+Deploy artifacts committed: `api/Dockerfile`, `deploy/docker-compose.prod.yml`,
+`deploy/Caddyfile.docker`, `deploy/provision-droplet-docker.sh`; CI `deploy-api.yml`
+deploys via `docker compose up -d --build` on push to `develop`.
+
+Remaining to fully close Phase 0: (1) set LINE webhook URL + confirm echo (Criterion 4);
+(2) optional web/ → Cloudflare Pages; (3) CI secrets (`VPS_*`) for auto-deploy.
+
+## Self-Check: PARTIAL (3 of 4 criteria live; Criterion 4 echo pending LINE webhook)
 
 - [x] Cloud services provisioned (Neon, R2 private bucket, Pages project, 2 LINE channels)
 - [x] Criterion 2 verified live on prod Neon (migrate + schema)

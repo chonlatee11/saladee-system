@@ -39,7 +39,7 @@ Plans:
 - [x] 00-04-PLAN.md — LINE webhook: raw-body signature validation + echo (wave 2)
 - [x] 00-05-PLAN.md — Auth/RBAC scaffold: Bun.password + jose sessions + LINE idToken verify (wave 2)
 - [x] 00-06-PLAN.md — Deploy config: Caddy + systemd + CI workflows + web/ Eden Treaty scaffold (wave 3)
-- [~] 00-07-PLAN.md — External provisioning + live verification (wave 4) — PARTIAL: cloud verified (Neon C2 + R2 C3 live); VPS host + Criteria 1/4 deferred
+- [~] 00-07-PLAN.md — External provisioning + live verification (wave 4) — LIVE on DigitalOcean/Docker: C1(HTTPS) C2(Neon) C3(R2) verified; C4 echo pending LINE webhook URL
 
 ### Phase 1: Commerce Core
 **Goal**: The oversell-safe, harvest-bound order engine is proven — an admin can set up varieties, fixed-weight packs, daily per-variety pricing, and selling rounds, and orders (including mixed boxes) reserve stock atomically without ever overselling, each with a frozen price snapshot.

@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: 00-07 partial — cloud verified (Neon C2 + R2 C3 live); VPS host + Criteria 1/4 deferred
+stopped_at: 00-07 — API LIVE on DigitalOcean (Docker); C1/C2/C3 live-verified, C4 echo pending LINE webhook
 last_updated: "2026-07-02T08:24:09.379Z"
 last_activity: 2026-07-02 — Phase 0 waves 1-3 executed; all autonomous plans complete
 progress:
