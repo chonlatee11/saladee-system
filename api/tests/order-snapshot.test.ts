@@ -38,9 +38,7 @@ function postOrder(body: unknown): Promise<Response> {
 }
 
 async function lineRow(orderId: string): Promise<Record<string, unknown>> {
-  const rows = await db.execute(
-    sql`SELECT * FROM order_lines WHERE order_id = ${orderId}`,
-  );
+  const rows = await db.execute(sql`SELECT * FROM order_lines WHERE order_id = ${orderId}`);
   return rows[0] as Record<string, unknown>;
 }
 
@@ -75,7 +73,9 @@ describe("POST /orders — server-resolved frozen snapshot (D-16)", () => {
         recipientPhone: "0810000000",
         recipientAddress: "123 ถนนสลัด กรุงเทพ",
       },
-      lines: [{ roundId: seed.roundId, varietyId: seed.varietyId, saleUnitId: seed.saleUnitId, qty: 1 }],
+      lines: [
+        { roundId: seed.roundId, varietyId: seed.varietyId, saleUnitId: seed.saleUnitId, qty: 1 },
+      ],
     });
     expect(res.status).toBe(201);
     const created = (await res.json()) as { id: string; subtotalSatang: number; status: string };
@@ -104,7 +104,9 @@ describe("POST /orders — server-resolved frozen snapshot (D-16)", () => {
         recipientPhone: "0820000000",
         recipientAddress: "456 ถนนผัก",
       },
-      lines: [{ roundId: seed.roundId, varietyId: seed.varietyId, saleUnitId: seed.saleUnitId, qty: 1 }],
+      lines: [
+        { roundId: seed.roundId, varietyId: seed.varietyId, saleUnitId: seed.saleUnitId, qty: 1 },
+      ],
     });
     expect(res.status).toBe(201);
     const created = (await res.json()) as { id: string };
@@ -117,10 +119,10 @@ describe("POST /orders — server-resolved frozen snapshot (D-16)", () => {
     // The order rebuilds from its own snapshot columns — unchanged.
     const after = Number((await lineRow(created.id)).unit_price_satang);
     expect(after).toBe(before);
-    const [ord] = (await db.execute(
+    const ordRows = (await db.execute(
       sql`SELECT subtotal_satang FROM orders WHERE id = ${created.id}`,
     )) as unknown as { subtotal_satang: number }[];
-    expect(Number(ord.subtotal_satang)).toBe(after); // subtotal reconstructable from snapshot alone
+    expect(Number(ordRows[0]?.subtotal_satang)).toBe(after); // subtotal reconstructable from snapshot alone
   });
 
   test("client-supplied price is ignored — server derives the stored price", async () => {

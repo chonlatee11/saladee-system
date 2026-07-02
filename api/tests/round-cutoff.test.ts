@@ -62,7 +62,9 @@ function orderBody(seed: { roundId: string; varietyId: string; saleUnitId: strin
       recipientPhone: "0800000000",
       recipientAddress: "1 ถนนสลัด",
     },
-    lines: [{ roundId: seed.roundId, varietyId: seed.varietyId, saleUnitId: seed.saleUnitId, qty: 1 }],
+    lines: [
+      { roundId: seed.roundId, varietyId: seed.varietyId, saleUnitId: seed.saleUnitId, qty: 1 },
+    ],
   };
 }
 
