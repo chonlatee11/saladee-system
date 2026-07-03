@@ -22,6 +22,15 @@ import { authPlugin } from "../plugins/auth.plugin";
 
 type AuthDb = PostgresJsDatabase<typeof schema>;
 
+// A fixed, valid Argon2id hash (of a throwaway random value — NOT a secret and
+// no real password verifies against it) used ONLY to equalize timing on the
+// unknown-email path. Running the expensive verify in BOTH branches removes the
+// user-enumeration timing side-channel: an attacker can no longer distinguish
+// "email exists" from "email unknown" by measuring response latency (WR-01 /
+// T-01-23). Precomputed once so it costs nothing at boot.
+const DUMMY_PASSWORD_HASH =
+  "$argon2id$v=19$m=65536,t=2,p=1$Ctw68ZVqlQz7yieuNFlzGAVr2UTJwbW/pudEQq3SQ38$mKqAbQz7w5ZzYn643DDtXa2AsgAvtFI5aY91Ak3SLDA";
+
 export function makeAuthRoutes(database: AuthDb = defaultDb) {
   return new Elysia({ prefix: "/auth" })
     .use(authPlugin)
@@ -37,12 +46,15 @@ export function makeAuthRoutes(database: AuthDb = defaultDb) {
           .from(users)
           .where(eq(users.email, body.email))
           .limit(1);
-        if (!row) {
-          set.status = 401;
-          return { error: "invalid_credentials" };
-        }
-        const ok = await auth.verifyPassword(body.password, row.passwordHash);
-        if (!ok) {
+        // Always run Argon2id verify — against the stored hash if the row exists,
+        // else against a fixed dummy hash — so BOTH the unknown-email and
+        // wrong-password paths spend comparable time. Constant, generic 401 for
+        // both cases: no enumeration signal in body OR timing (WR-01 / T-01-23).
+        const ok = await auth.verifyPassword(
+          body.password,
+          row?.passwordHash ?? DUMMY_PASSWORD_HASH,
+        );
+        if (!row || !ok) {
           set.status = 401;
           return { error: "invalid_credentials" };
         }
