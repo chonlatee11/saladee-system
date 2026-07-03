@@ -302,6 +302,21 @@ export function makeOrdersRoutes(database: OrdersDb = defaultDb) {
             return { error: "no_lines" };
           }
 
+          // Enforce the documented single-round-per-order invariant (01-02-SUMMARY).
+          // The order row persists ONE round_id and cancel releases every line
+          // against it, so an order whose lines (variety AND box components) span
+          // two or more distinct rounds would strand reserved stock on cancel
+          // (CR-01 / NFR-02). Reject such an order cleanly BEFORE any reservation
+          // happens — never partially reserve.
+          const distinctRounds = new Set([
+            ...resolved.map((r) => r.roundId),
+            ...resolvedBoxes.map((b) => b.roundId),
+          ]);
+          if (distinctRounds.size > 1) {
+            set.status = 400;
+            return { error: "multi_round_order_unsupported" };
+          }
+
           // 2. Member validation (read-only) before entering the tx.
           const cust = body.customer as
             | { customerId: string }
