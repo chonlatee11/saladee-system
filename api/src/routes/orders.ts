@@ -32,7 +32,7 @@ import {
 import { requireRole } from "../plugins/auth.plugin";
 import { canTransition, type OrderStatus } from "../services/order-status";
 import { deriveUnitPriceSatang } from "../services/pricing";
-import { BoxShortfallError, release, reserve, reserveBox } from "../services/reservation";
+import { release, reserve } from "../services/reservation";
 
 // The schema-typed drizzle handle (query builder + transaction runner). Matches
 // both the runtime db (client.ts) and an injected test pool typed with `schema`.
@@ -388,30 +388,41 @@ export function makeOrdersRoutes(database: OrdersDb = defaultDb) {
                 }
               }
 
-              // Reserve every line atomically; a zero-row guarded UPDATE ⇒ sold out.
-              for (const r of resolved) {
-                const ok = await reserve(tx, r.roundId, r.varietyId, r.plantsDecremented);
-                if (!ok) throw new OrderError("sold_out", 409);
-              }
-
-              // Reserve every box: all-or-nothing across ALL its components (INV-07).
-              // A shortfall throws BoxShortfallError → this tx rolls back → NOTHING
-              // decremented (neither the box's other components nor prior lines).
+              // Establish ONE global lock ordering for EVERY reservation in this
+              // order — variety lines AND box components together (WR-03 / T-01-19).
+              // Previously variety lines reserved in request order while box
+              // components were sorted only within their own box, so two concurrent
+              // checkouts could acquire the same round_stock row locks in opposite
+              // order and deadlock (a 500 to a legitimate customer, worst during a
+              // promo spike — NFR-01). Merge duplicate (round, variety) draws, then
+              // sort by (roundId, varietyId) and issue the guarded reserve() calls in
+              // that single global order. The whole order is one transaction, so any
+              // shortfall (guarded UPDATE matches zero rows) rolls back every prior
+              // decrement — the same all-or-nothing box semantics (INV-07), now with
+              // a consistent lock order across the entire order.
+              const draws = new Map<
+                string,
+                { roundId: string; varietyId: string; plants: number }
+              >();
+              const addDraw = (roundId: string, varietyId: string, plants: number) => {
+                const key = `${roundId}:${varietyId}`;
+                const existing = draws.get(key);
+                if (existing) existing.plants += plants;
+                else draws.set(key, { roundId, varietyId, plants });
+              };
+              for (const r of resolved) addDraw(r.roundId, r.varietyId, r.plantsDecremented);
               for (const b of resolvedBoxes) {
-                try {
-                  await reserveBox(
-                    tx,
-                    b.roundId,
-                    b.components.map((c) => ({
-                      varietyId: c.varietyId,
-                      plantsPerBox: c.plantsPerBox,
-                    })),
-                    b.qty,
-                  );
-                } catch (err) {
-                  if (err instanceof BoxShortfallError) throw new OrderError("sold_out", 409);
-                  throw err;
+                for (const c of b.components) {
+                  addDraw(b.roundId, c.varietyId, c.plantsPerBox * b.qty);
                 }
+              }
+              const orderedDraws = [...draws.values()].sort(
+                (a, b) =>
+                  a.roundId.localeCompare(b.roundId) || a.varietyId.localeCompare(b.varietyId),
+              );
+              for (const d of orderedDraws) {
+                const ok = await reserve(tx, d.roundId, d.varietyId, d.plants);
+                if (!ok) throw new OrderError("sold_out", 409);
               }
 
               const orderRoundId = (resolved[0]?.roundId ?? resolvedBoxes[0]?.roundId) as string;
