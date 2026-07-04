@@ -37,6 +37,7 @@ import {
   saleUnits,
 } from "../db/schema";
 import { type Session, verifySession } from "../plugins/auth.plugin";
+import { applyTransition, OrderError } from "../services/order-transition";
 import { deriveUnitPriceSatang } from "../services/pricing";
 
 type MeOrdersDb = PostgresJsDatabase<typeof schema>;
@@ -189,6 +190,48 @@ export function makeMeOrdersRoutes(database: MeOrdersDb = defaultDb) {
             },
             lines,
           };
+        },
+        { params: IdParams, beforeHandle: memberGuard },
+      )
+      // ── Cancel: the member cancels their OWN unpaid held order (WR-01) ──────────
+      // The LIFF pay screen previously called the staff-only PATCH /orders/:id/status
+      // (requireRole owner|admin) with no token, so a customer cancel ALWAYS failed
+      // silently. This member-scoped path lets the order's own customer cancel it:
+      // ownership is enforced (404 hides another customer's order, T-02-33 IDOR) and
+      // onlyIfHold means only a {created, awaiting_payment} order is cancelled +
+      // released — a paid/packing/shipping order is a safe no-op (never releases
+      // already-sold stock). Reuses the SHARED guarded applyTransition (D-09).
+      .post(
+        "/me/orders/:id/cancel",
+        async ({ params, session, set }) => {
+          if (!session) {
+            set.status = 401;
+            return { error: "unauthorized" };
+          }
+          const customerId = session.sub;
+          try {
+            const result = await database.transaction(async (tx) => {
+              const [own] = await tx
+                .select({ customerId: orders.customerId })
+                .from(orders)
+                .where(eq(orders.id, params.id))
+                .limit(1);
+              // 404 (not 403) when the order is not theirs — never confirm the
+              // existence of another customer's order (T-02-33 IDOR).
+              if (!own || own.customerId !== customerId) {
+                throw new OrderError("not_found", 404);
+              }
+              return applyTransition(tx, params.id, "cancelled", { onlyIfHold: true });
+            });
+            set.status = 200;
+            return { id: params.id, status: result.status, cancelled: result.applied };
+          } catch (e) {
+            if (e instanceof OrderError) {
+              set.status = e.httpStatus;
+              return { error: e.code };
+            }
+            throw e;
+          }
         },
         { params: IdParams, beforeHandle: memberGuard },
       )

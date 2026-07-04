@@ -17,6 +17,7 @@ import { useRoute } from "vue-router";
 import { api } from "../api";
 import SlipUploader, { type SlipResult } from "../components/SlipUploader.vue";
 import { baht } from "../lib/checkout";
+import { getSessionToken } from "../liff";
 
 interface QrData {
   id: string;
@@ -46,14 +47,27 @@ const qrLoad =
     )({
       id,
     }).qr.get());
+// WR-01: cancel via the member-scoped POST /me/orders/:id/cancel with the LINE
+// session Bearer token — NOT the staff-only PATCH /orders/:id/status, which a
+// customer could never authorise (it always 401'd and failed silently). onlyIfHold
+// on the server means only an unpaid held order is actually cancelled + released.
 const cancelOrder =
   props.canceler ??
-  ((id: string) =>
-    (
-      api.orders as unknown as (p: { id: string }) => {
-        status: { patch: (b: { status: string }) => Promise<Loaded<unknown>> };
+  ((id: string) => {
+    const token = getSessionToken();
+    return (
+      api.me.orders as unknown as (p: { id: string }) => {
+        cancel: {
+          post: (
+            b: undefined,
+            o: { headers: Record<string, string> },
+          ) => Promise<Loaded<unknown>>;
+        };
       }
-    )({ id }).status.patch({ status: "cancelled" }));
+    )({ id }).cancel.post(undefined, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+  });
 
 // ── Initial fetch (idempotent QR) ─────────────────────────────────────────────
 const res = await qrLoad(orderId).catch(
