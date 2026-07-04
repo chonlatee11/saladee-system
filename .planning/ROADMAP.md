@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 0: Foundation & Platform** - Single deployable backend, DB, storage, LINE client, HTTPS on VPS (completed 2026-07-02)
 - [x] **Phase 1: Commerce Core** - Oversell-safe harvest-bound reservation engine, catalog, pricing, rounds, mixed box (completed 2026-07-02)
-- [ ] **Phase 2: LINE Storefront, Payments & Delivery** - LIFF + Rich Menu ordering, PromptPay + verified slips, hold-expiry, delivery, PDPA
+- [x] **Phase 2: LINE Storefront, Payments & Delivery** - LIFF + Rich Menu ordering, PromptPay + verified slips, hold-expiry, delivery, PDPA (completed 2026-07-04)
 - [ ] **Phase 3: Back-office, Crop Planning & B2B/Subscription** - Crop forecast auto-feeds stock, B2B quota, subscriptions, packing, dashboards, reports
 - [ ] **Phase 4: Web Store, Marketing & Scale** - Web storefront, promotions/loyalty, broadcast, multi-carrier delivery, demand-driven planting
 
@@ -98,7 +98,7 @@ Plans:
   4. The customer receives automatic LINE notifications on status changes and can view order history and reorder.
   5. Delivery fee computes by method/zone with free shipping over 500 baht, disallowed methods are blocked per product type, and PDPA consent (with separate marketing consent) is captured while slips stay in a private, signed-URL-only bucket.
 
-**Plans**: 8/9 plans executed
+**Plans**: 9/9 plans complete
 **UI hint**: yes
 
 Plans:
@@ -123,7 +123,7 @@ Plans:
 
 **Wave 5** *(blocked on Wave 4)*
 
-- [ ] 02-08-PLAN.md — LIFF checkout wizard + PromptPay pay screen + slip uploader (all payment states) (wave 5)
+- [x] 02-08-PLAN.md — LIFF checkout wizard + PromptPay pay screen + slip uploader (all payment states) (wave 5)
 - [x] 02-09-PLAN.md — Member order history + reorder (re-priced, unavailable flagged) (wave 5)
 
 ### Phase 3: Back-office, Crop Planning & B2B/Subscription
@@ -176,6 +176,6 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 0. Foundation & Platform | 8/8 | Complete   | 2026-07-02 |
 | 1. Commerce Core | 5/5 | Complete   | 2026-07-02 |
-| 2. LINE Storefront, Payments & Delivery | 8/9 | In Progress|  |
+| 2. LINE Storefront, Payments & Delivery | 9/9 | Complete   | 2026-07-04 |
 | 3. Back-office, Crop Planning & B2B/Subscription | 0/TBD | Not started | - |
 | 4. Web Store, Marketing & Scale | 0/TBD | Not started | - |
