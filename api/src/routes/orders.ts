@@ -16,6 +16,7 @@
 import { and, eq, isNull, or, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { Elysia, t } from "elysia";
+import { deliveryConfig } from "../config/delivery";
 import { db as defaultDb } from "../db/client";
 import type * as schema from "../db/schema";
 import {
@@ -29,11 +30,36 @@ import {
   saleUnits,
   varieties,
 } from "../db/schema";
+import { env } from "../env";
+import { boss } from "../jobs/boss";
+import { log } from "../lib/logger";
 import { requireRole } from "../plugins/auth.plugin";
+import {
+  allowedMethodsForCart,
+  computeDeliveryFee,
+  type DeliveryClass,
+  type DeliveryMethod,
+} from "../services/delivery";
 import type { OrderStatus } from "../services/order-status";
 import { applyTransition, OrderError } from "../services/order-transition";
 import { deriveUnitPriceSatang } from "../services/pricing";
+import { buildPromptPayPayload, renderQrDataUrl } from "../services/promptpay";
 import { reserve } from "../services/reservation";
+
+/**
+ * Schedules the pg-boss hold-expiry timer for an order (PAY-03 / D-11). Injected
+ * so tests can assert scheduling without a running worker; the runtime default
+ * uses `singletonKey=orderId` so re-showing the QR never adds a second timer.
+ */
+export type HoldExpiryScheduler = (orderId: string, holdWindowSeconds: number) => Promise<void>;
+
+export const defaultScheduleHoldExpiry: HoldExpiryScheduler = async (orderId, holdWindowSeconds) => {
+  await boss.send(
+    "hold-expiry",
+    { orderId },
+    { startAfter: holdWindowSeconds, singletonKey: orderId },
+  );
+};
 
 // The schema-typed drizzle handle (query builder + transaction runner). Matches
 // both the runtime db (client.ts) and an injected test pool typed with `schema`.
@@ -83,6 +109,22 @@ const CreateOrderBody = t.Object({
   // At least one of lines / boxLines must be present (checked in the handler).
   lines: t.Optional(t.Array(OrderLineBody, { minItems: 1 })),
   boxLines: t.Optional(t.Array(BoxLineBody, { minItems: 1 })),
+  // ── Phase-2 LINE checkout (02-04) ───────────────────────────────────────────
+  // Delivery choice. When BOTH are present the order becomes a real checkout:
+  // the fee is RE-COMPUTED server-side (never trusted from the client — the client
+  // sends no money field), the freshness intersection is re-enforced, status lands
+  // `awaiting_payment`, a PromptPay QR for (subtotal+fee) is stored, and a
+  // hold-expiry timer is scheduled. Omitting them keeps the Phase-1 `created`
+  // behaviour (staff/legacy path) unchanged.
+  deliveryMethod: t.Optional(
+    t.Union([
+      t.Literal("self"),
+      t.Literal("cold"),
+      t.Literal("on_demand"),
+      t.Literal("general"),
+    ]),
+  ),
+  deliveryZone: t.Optional(t.String({ minLength: 1 })),
 });
 
 const StatusBody = t.Object({
@@ -110,6 +152,7 @@ interface ResolvedLine {
   unitPriceSatang: number;
   qty: number;
   plantsDecremented: number;
+  deliveryClass: DeliveryClass; // freshness gating at checkout (D-13)
 }
 
 /** One resolved BOM component (server-derived; never client-supplied). */
@@ -119,6 +162,7 @@ interface ResolvedBoxComponent {
   plantsPerBox: number;
   pricePerKgSatang: number | null;
   componentPriceSatang: number | null;
+  deliveryClass: DeliveryClass; // freshness gating at checkout (D-13)
 }
 
 /** A box line after the server has resolved its BOM + price (D-18) snapshot. */
@@ -134,7 +178,10 @@ interface ResolvedBox {
   plantsDecremented: number; // plantsPerBox × qty
 }
 
-export function makeOrdersRoutes(database: OrdersDb = defaultDb) {
+export function makeOrdersRoutes(
+  database: OrdersDb = defaultDb,
+  scheduleHoldExpiry: HoldExpiryScheduler = defaultScheduleHoldExpiry,
+) {
   return (
     new Elysia()
       .post(
@@ -201,6 +248,7 @@ export function makeOrdersRoutes(database: OrdersDb = defaultDb) {
               unitPriceSatang,
               qty: line.qty,
               plantsDecremented: su.plantsPerUnit * line.qty,
+              deliveryClass: variety.deliveryClass as DeliveryClass,
             });
           }
 
@@ -269,6 +317,7 @@ export function makeOrdersRoutes(database: OrdersDb = defaultDb) {
                 plantsPerBox: c.plantsPerBox,
                 pricePerKgSatang: price?.pricePerKgSatang ?? null,
                 componentPriceSatang,
+                deliveryClass: variety.deliveryClass as DeliveryClass,
               });
             }
 
@@ -350,6 +399,50 @@ export function makeOrdersRoutes(database: OrdersDb = defaultDb) {
           const subtotalSatang =
             resolved.reduce((s, r) => s + r.unitPriceSatang * r.qty, 0) +
             resolvedBoxes.reduce((s, b) => s + b.unitPriceSatang * b.qty, 0);
+
+          // 2b. LINE checkout (02-04): when a delivery choice is supplied, this is a
+          //     real checkout. Re-enforce the freshness intersection (T-02-13), RE-
+          //     COMPUTE the fee server-side (T-02-12 — the client never sends money),
+          //     and build the amount-specified PromptPay QR for the FULL total
+          //     (subtotal + fee, T-02-16 / Pitfall 5). Snapshot everything onto the
+          //     order so status lands `awaiting_payment` with a scheduled hold. Omit
+          //     the delivery choice and the order keeps the Phase-1 `created` path.
+          const isCheckout =
+            body.deliveryMethod !== undefined && body.deliveryZone !== undefined;
+          let deliveryFeeSatang: number | null = null;
+          let totalSatang = subtotalSatang;
+          let holdWindowSeconds = 0;
+          let holdExpiresAt: Date | null = null;
+          let qrPayload: string | null = null;
+          if (isCheckout) {
+            const method = body.deliveryMethod as DeliveryMethod;
+            const zone = body.deliveryZone as string;
+            // Freshness gating: the chosen method MUST be allowed for the cart's
+            // strictest class (very_fresh → self/cold only). Re-enforced here, not
+            // only in the display-only quote (02-03).
+            const classes: DeliveryClass[] = [
+              ...resolved.map((r) => r.deliveryClass),
+              ...resolvedBoxes.flatMap((b) => b.components.map((c) => c.deliveryClass)),
+            ];
+            if (!allowedMethodsForCart(classes).includes(method)) {
+              set.status = 422;
+              return { error: "method_not_allowed_freshness" };
+            }
+            // Server-authoritative fee — an (zone, method) pair the config does not
+            // offer is a clean 422, never a 500.
+            try {
+              deliveryFeeSatang = computeDeliveryFee(zone, method, subtotalSatang, deliveryConfig);
+            } catch {
+              set.status = 422;
+              return { error: "method_not_available_in_zone" };
+            }
+            totalSatang = subtotalSatang + deliveryFeeSatang;
+            holdWindowSeconds = Number(env.HOLD_WINDOW_SECONDS);
+            holdExpiresAt = new Date(Date.now() + holdWindowSeconds * 1000);
+            // QR amount = full total in baht (/100). Whole-baht prices + whole-baht
+            // fees guarantee X.00. CRC-16 is produced by the library, never here.
+            qrPayload = buildPromptPayPayload(env.PROMPTPAY_PAYEE_ID, totalSatang / 100);
+          }
 
           // 3. One transaction: (re)check cut-off (Pitfall 6), reserve atomically,
           //    then persist the order + frozen snapshot. Any throw rolls it all back.
@@ -439,7 +532,8 @@ export function makeOrdersRoutes(database: OrdersDb = defaultDb) {
                 .values({
                   customerId,
                   roundId: orderRoundId,
-                  status: "created",
+                  // Checkout lands `awaiting_payment` (D-10); legacy path stays `created`.
+                  status: isCheckout ? "awaiting_payment" : "created",
                   tier,
                   substitutionPolicy: body.substitutionPolicy ?? "disallow",
                   recipientName,
@@ -447,6 +541,14 @@ export function makeOrdersRoutes(database: OrdersDb = defaultDb) {
                   recipientAddress,
                   taxId: body.taxId ?? null,
                   subtotalSatang,
+                  // Phase-2 delivery + payment-hold snapshot (nullable on the legacy
+                  // path). holdExpiresAt is the authoritative deadline the 02-07
+                  // safety-net sweep + expiry job read.
+                  deliveryMethod: isCheckout ? (body.deliveryMethod as string) : null,
+                  deliveryZone: isCheckout ? (body.deliveryZone as string) : null,
+                  deliveryFeeSatang,
+                  holdExpiresAt,
+                  qrPayload,
                 })
                 .returning({ id: orders.id, status: orders.status });
               if (!ord) throw new Error("order insert returned no row");
@@ -495,10 +597,33 @@ export function makeOrdersRoutes(database: OrdersDb = defaultDb) {
                 );
               }
 
-              return { id: ord.id, status: ord.status, subtotalSatang };
+              return {
+                id: ord.id,
+                status: ord.status,
+                subtotalSatang,
+                deliveryFeeSatang,
+                totalSatang,
+              };
             });
+
+            // 4. Post-commit (checkout only): render the stored QR and schedule the
+            //    hold-expiry timer. The order is ALREADY committed, so a scheduling
+            //    failure must NOT roll it back (T-02-14) — holdExpiresAt is snapshotted
+            //    and the 02-07 periodic sweep is the authoritative self-heal.
+            let qr: string | null = null;
+            if (isCheckout && qrPayload) {
+              qr = await renderQrDataUrl(qrPayload);
+              try {
+                await scheduleHoldExpiry(result.id, holdWindowSeconds);
+              } catch (err) {
+                log.warn("hold-expiry schedule failed; sweep will self-heal", {
+                  orderId: result.id,
+                  error: String(err),
+                });
+              }
+            }
             set.status = 201;
-            return result;
+            return { ...result, qr, holdExpiresAt };
           } catch (e) {
             if (e instanceof OrderError) {
               set.status = e.httpStatus;

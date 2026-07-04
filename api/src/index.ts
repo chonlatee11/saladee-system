@@ -20,6 +20,7 @@ import { deliveryRoutes } from "./routes/delivery";
 import { filesRoutes } from "./routes/files";
 import { healthRoutes } from "./routes/health";
 import { ordersRoutes } from "./routes/orders";
+import { paymentsRoutes } from "./routes/payments";
 import { pricesRoutes } from "./routes/prices";
 import { roundsRoutes } from "./routes/rounds";
 import { stockRoutes } from "./routes/stock";
@@ -52,7 +53,8 @@ export const app = new Elysia()
   .use(catalogRoutes)
   .use(stockRoutes)
   .use(boxesRoutes)
-  .use(deliveryRoutes);
+  .use(deliveryRoutes)
+  .use(paymentsRoutes);
 
 // Eden Treaty contract consumed by web/ (compile-time-safe API calls).
 export type App = typeof app;
