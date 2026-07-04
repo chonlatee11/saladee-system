@@ -28,9 +28,12 @@ async function reservedPlants(roundId: string, varietyId: string): Promise<numbe
   return Number((rows[0] as { reserved_plants: number }).reserved_plants);
 }
 
-/** Place a real order via the open POST endpoint; returns its ids + reserved. */
-async function placeOrder() {
-  const seed = await seedSellableLine(db, { quotaPlants: 100, plantsPerUnit: 2 });
+/** Place one order for a given (round, variety, saleUnit) line; returns its id. */
+async function placeOrderOn(seed: {
+  roundId: string;
+  varietyId: string;
+  saleUnitId: string;
+}): Promise<string> {
   const res = await routes.handle(
     new Request("http://localhost/orders", {
       method: "POST",
@@ -52,7 +55,14 @@ async function placeOrder() {
   );
   expect(res.status).toBe(201);
   const { id } = (await res.json()) as { id: string };
-  return { orderId: id, roundId: seed.roundId, varietyId: seed.varietyId };
+  return id;
+}
+
+/** Place a real order via the open POST endpoint; returns its ids + reserved. */
+async function placeOrder() {
+  const seed = await seedSellableLine(db, { quotaPlants: 100, plantsPerUnit: 2 });
+  const orderId = await placeOrderOn(seed);
+  return { orderId, roundId: seed.roundId, varietyId: seed.varietyId, saleUnitId: seed.saleUnitId };
 }
 
 function patchStatus(id: string, status: string, token?: string): Promise<Response> {
@@ -132,6 +142,41 @@ describe("PATCH /orders/:id/status — cancel releases stock idempotently (D-08/
     const c2 = await patchStatus(orderId, "cancelled", admin);
     expect(c2.status).toBe(400); // cancelled is terminal → illegal_transition
     expect(await reservedPlants(roundId, varietyId)).toBe(0);
+  });
+
+  test("CONCURRENT double-cancel releases stock exactly once (CR-01/WR-05)", async () => {
+    // Regression for the TOCTOU window: two cancels fired in parallel on the same
+    // order must NOT both run release(). Before the fix both read status outside the
+    // tx, both passed canTransition('created','cancelled'), and both decremented
+    // reserved_plants — freeing OTHER orders' reservations (oversell). With the
+    // SELECT ... FOR UPDATE re-read inside the tx, exactly one cancel wins (200) and
+    // the loser re-reads 'cancelled' → 400, so reserved lands at 0, never negative.
+    const admin = await issueSession("staff-admin", "admin");
+    // One shared round_stock counter, two live orders on it (2 plants each).
+    const seed = await seedSellableLine(db, { quotaPlants: 100, plantsPerUnit: 2 });
+    const orderId = await placeOrderOn(seed);
+    const otherOrderId = await placeOrderOn(seed);
+    const { roundId, varietyId } = seed;
+    // The OTHER order's 2 reserved plants are exactly what a buggy double-release of
+    // the first order would silently free. They must remain reserved.
+    expect(await reservedPlants(roundId, varietyId)).toBe(4); // 2 + 2 reserved
+
+    const [c1, c2] = await Promise.all([
+      patchStatus(orderId, "cancelled", admin),
+      patchStatus(orderId, "cancelled", admin),
+    ]);
+    const statuses = [c1.status, c2.status].sort();
+    expect(statuses).toEqual([200, 400]); // exactly one wins, the other is rejected
+
+    // The cancelled order released its 2 plants exactly once; the OTHER order's 2
+    // plants are untouched. A double-release would have driven this to 0 (or the
+    // CHECK would have aborted at reserved < 0) — either way ≠ 2.
+    expect(await reservedPlants(roundId, varietyId)).toBe(2);
+    // The still-live order is unaffected.
+    const [row] = (await db.execute(
+      sql`SELECT status FROM orders WHERE id = ${otherOrderId}`,
+    )) as unknown as { status: string }[];
+    expect(row?.status).toBe("created");
   });
 
   test("done → cancelled is rejected (D-08); stock stays reserved", async () => {

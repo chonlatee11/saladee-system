@@ -506,63 +506,81 @@ export function makeOrdersRoutes(database: OrdersDb = defaultDb) {
       .patch(
         "/orders/:id/status",
         async ({ params, body, set }) => {
-          const [ord] = await database
-            .select({ id: orders.id, status: orders.status, roundId: orders.roundId })
-            .from(orders)
-            .where(eq(orders.id, params.id))
-            .limit(1);
-          if (!ord) {
-            set.status = 404;
-            return { error: "order_not_found" };
-          }
-          const current = ord.status as OrderStatus;
           const next = body.status as OrderStatus;
-          // Only legal transitions apply. `cancelled` from a terminal state (done)
-          // or a repeat cancel is illegal here → 400, so stock is never re-released.
-          if (!canTransition(current, next)) {
-            set.status = 400;
-            return { error: "illegal_transition" };
-          }
+          try {
+            const finalStatus = await database.transaction(async (tx) => {
+              // CR-01 / WR-05: lock the order row and read the AUTHORITATIVE status
+              // INSIDE the tx (SELECT ... FOR UPDATE). Reading status outside the tx
+              // and validating against that stale value opened a TOCTOU window where
+              // two concurrent cancels both passed canTransition('paid','cancelled')
+              // and both ran release() — double-decrementing reserved_plants and
+              // freeing OTHER orders' reservations (oversell, NFR-02 / INV-06). With
+              // the row lock, the second racer blocks until the first commits, then
+              // re-reads status = 'cancelled' and fails the transition gate below, so
+              // release() runs exactly once. This also closes the general
+              // lost-update window for ANY two concurrent transitions (WR-05).
+              const [locked] = await tx
+                .select({ status: orders.status, roundId: orders.roundId })
+                .from(orders)
+                .where(eq(orders.id, params.id))
+                .for("update")
+                .limit(1);
+              if (!locked) throw new OrderError("order_not_found", 404);
+              const current = locked.status as OrderStatus;
+              // Re-validate the transition against the LOCKED row, not a stale read.
+              // `cancelled` from a terminal state (done) or a repeat cancel is illegal
+              // here → 400, so stock is never re-released.
+              if (!canTransition(current, next)) {
+                throw new OrderError("illegal_transition", 400);
+              }
 
-          await database.transaction(async (tx) => {
-            // A `cancelled` entry (from a non-cancelled state) releases the order's
-            // reserved plants in the SAME tx. release() is itself guarded
-            // (reserved >= n) so a double-release can never drive reserved negative
-            // — double-safe with the canTransition gate above (D-08 / Pitfall 5).
-            if (next === "cancelled" && current !== "cancelled") {
-              const lines = await tx
-                .select({
-                  lineKind: orderLines.lineKind,
-                  varietyId: orderLines.varietyId,
-                  plants: orderLines.plantsDecremented,
-                  qty: orderLines.qty,
-                  boxBomJson: orderLines.boxBomJson,
-                })
-                .from(orderLines)
-                .where(eq(orderLines.orderId, ord.id));
-              for (const l of lines) {
-                if (l.lineKind === "box") {
-                  // Release EVERY component of the box from its frozen BOM snapshot
-                  // (plantsPerBox × qty), so a cancelled box never strands stock.
-                  const bom = l.boxBomJson as {
-                    components?: { varietyId: string; plantsPerBox: number }[];
-                  } | null;
-                  for (const c of bom?.components ?? []) {
-                    await release(tx, ord.roundId, c.varietyId, c.plantsPerBox * l.qty);
+              // A `cancelled` entry (from a non-cancelled state) releases the order's
+              // reserved plants in the SAME tx. The row lock above serialises racers,
+              // so this branch runs at most once per order (D-08 / Pitfall 5).
+              if (next === "cancelled" && current !== "cancelled") {
+                const lines = await tx
+                  .select({
+                    lineKind: orderLines.lineKind,
+                    varietyId: orderLines.varietyId,
+                    plants: orderLines.plantsDecremented,
+                    qty: orderLines.qty,
+                    boxBomJson: orderLines.boxBomJson,
+                  })
+                  .from(orderLines)
+                  .where(eq(orderLines.orderId, params.id));
+                for (const l of lines) {
+                  if (l.lineKind === "box") {
+                    // Release EVERY component of the box from its frozen BOM snapshot
+                    // (plantsPerBox × qty), so a cancelled box never strands stock.
+                    const bom = l.boxBomJson as {
+                      components?: { varietyId: string; plantsPerBox: number }[];
+                    } | null;
+                    for (const c of bom?.components ?? []) {
+                      await release(tx, locked.roundId, c.varietyId, c.plantsPerBox * l.qty);
+                    }
+                  } else if (l.varietyId) {
+                    await release(tx, locked.roundId, l.varietyId, l.plants);
                   }
-                } else if (l.varietyId) {
-                  await release(tx, ord.roundId, l.varietyId, l.plants);
                 }
               }
-            }
-            await tx
-              .update(orders)
-              .set({ status: next, updatedAt: new Date() })
-              .where(eq(orders.id, ord.id));
-          });
+              await tx
+                .update(orders)
+                .set({ status: next, updatedAt: new Date() })
+                .where(eq(orders.id, params.id));
+              return next;
+            });
 
-          set.status = 200;
-          return { id: ord.id, status: next };
+            set.status = 200;
+            // IN-03: `finalStatus` is the committed status read/written under the
+            // row lock — a lost/rejected transition can no longer report success.
+            return { id: params.id, status: finalStatus };
+          } catch (e) {
+            if (e instanceof OrderError) {
+              set.status = e.httpStatus;
+              return { error: e.code };
+            }
+            throw e;
+          }
         },
         {
           params: t.Object({ id: t.String({ format: "uuid" }) }),
