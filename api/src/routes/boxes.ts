@@ -20,7 +20,7 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { Elysia, t } from "elysia";
 import { db as defaultDb } from "../db/client";
 import type * as schema from "../db/schema";
-import { boxComponents, boxes } from "../db/schema";
+import { boxComponents, boxes, varieties } from "../db/schema";
 
 import { requireRole } from "../plugins/auth.plugin";
 
@@ -61,6 +61,24 @@ async function loadBoxWithComponents(database: BoxesDb, boxIds: string[]) {
 
 export function makeBoxesRoutes(database: BoxesDb = defaultDb) {
   const staff = requireRole("owner", "admin");
+
+  // WR-04: validate the BOM BEFORE any insert so FK / unique-index violations
+  // surface as a clean 400 on this staff-facing write, not an uncaught Postgres
+  // 500. Two failure modes: (a) two components with the same varietyId violate
+  // the box_components_box_variety_idx unique index; (b) a non-existent varietyId
+  // violates the box_components FK. Returns an error code, or null when valid.
+  async function validateComponents(
+    components: { varietyId: string; plantsPerBox: number }[],
+  ): Promise<string | null> {
+    const ids = components.map((c) => c.varietyId);
+    if (new Set(ids).size !== ids.length) return "duplicate_component";
+    const existing = await database
+      .select({ id: varieties.id })
+      .from(varieties)
+      .where(inArray(varieties.id, ids));
+    if (existing.length !== new Set(ids).size) return "invalid_component";
+    return null;
+  }
 
   return (
     new Elysia()
@@ -105,6 +123,11 @@ export function makeBoxesRoutes(database: BoxesDb = defaultDb) {
       .post(
         "/boxes",
         async ({ body, set }) => {
+          const bad = await validateComponents(body.components);
+          if (bad) {
+            set.status = 400;
+            return { error: bad };
+          }
           const created = await database.transaction(async (tx) => {
             const [b] = await tx
               .insert(boxes)
@@ -140,6 +163,11 @@ export function makeBoxesRoutes(database: BoxesDb = defaultDb) {
       .put(
         "/boxes/:id",
         async ({ params, body, set }) => {
+          const bad = await validateComponents(body.components);
+          if (bad) {
+            set.status = 400;
+            return { error: bad };
+          }
           const result = await database.transaction(async (tx) => {
             const [b] = await tx
               .update(boxes)
