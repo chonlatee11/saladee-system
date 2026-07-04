@@ -422,8 +422,16 @@ export function makeOrdersRoutes(
             body.deliveryMethod !== undefined && body.deliveryZone !== undefined;
           let deliveryFeeSatang: number | null = null;
           let totalSatang = subtotalSatang;
-          let holdWindowSeconds = 0;
-          let holdExpiresAt: Date | null = null;
+          // CR-02: EVERY order created here reserves stock atomically below — so
+          // every order, INCLUDING the legacy `created` path (no delivery choice),
+          // MUST carry a holdExpiresAt so the 02-07 safety-net sweep can always
+          // reclaim it. Without a deadline, the open/unauthenticated POST /orders
+          // could reserve stock forever via public catalog UUIDs and permanently
+          // exhaust a round (stock-exhaustion weaponising oversell-prevention,
+          // NFR-02). The status still lands `created` on this path (Phase-1
+          // behaviour preserved); only the reclaim deadline is added.
+          const holdWindowSeconds = Number(env.HOLD_WINDOW_SECONDS);
+          const holdExpiresAt: Date | null = new Date(Date.now() + holdWindowSeconds * 1000);
           let qrPayload: string | null = null;
           if (isCheckout) {
             const method = body.deliveryMethod as DeliveryMethod;
@@ -448,8 +456,6 @@ export function makeOrdersRoutes(
               return { error: "method_not_available_in_zone" };
             }
             totalSatang = subtotalSatang + deliveryFeeSatang;
-            holdWindowSeconds = Number(env.HOLD_WINDOW_SECONDS);
-            holdExpiresAt = new Date(Date.now() + holdWindowSeconds * 1000);
             // QR amount = full total in baht (/100). Whole-baht prices + whole-baht
             // fees guarantee X.00. CRC-16 is produced by the library, never here.
             qrPayload = buildPromptPayPayload(env.PROMPTPAY_PAYEE_ID, totalSatang / 100);

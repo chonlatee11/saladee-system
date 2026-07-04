@@ -36,9 +36,12 @@ function workerDb(): WorkerDb {
 }
 
 // The unpaid-hold states whose expiry may release stock. applyTransition's
-// onlyIfHold gate re-enforces this under a row lock — the list here is only the
-// sweep's coarse pre-filter.
-const HOLD_STATUS = "awaiting_payment" as const;
+// onlyIfHold gate re-enforces this under a row lock (HOLD_STATES = {created,
+// awaiting_payment}) — the list here is only the sweep's coarse pre-filter.
+// CR-02: `created` is included so a stock-reserving legacy/guest order (which
+// now always carries a holdExpiresAt) is reclaimed too, closing the permanent
+// stock-hold hole where a `created` order was never swept (NFR-02).
+const HOLD_STATUSES = ["created", "awaiting_payment"] as const;
 
 /**
  * Expire ONE order's payment hold (PAY-03 release half / D-09).
@@ -91,7 +94,7 @@ export async function sweepExpiredHolds(database: WorkerDb, now: Date = new Date
   const stranded = await database
     .select({ id: orders.id })
     .from(orders)
-    .where(and(eq(orders.status, HOLD_STATUS), lt(orders.holdExpiresAt, now)));
+    .where(and(inArray(orders.status, HOLD_STATUSES), lt(orders.holdExpiresAt, now)));
 
   let cancelled = 0;
   for (const o of stranded) {
