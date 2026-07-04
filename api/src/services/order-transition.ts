@@ -11,9 +11,52 @@
 import { eq } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type * as schema from "../db/schema";
-import { orderLines, orders } from "../db/schema";
+import { customers, orderLines, orders } from "../db/schema";
+import { log } from "../lib/logger";
 import { canTransition, type OrderStatus } from "./order-status";
 import { release } from "./reservation";
+
+// ── Milestone notification seam (ORD-04 / D-21) ───────────────────────────────
+// The push must fire EXACTLY ONCE per transition and from a SINGLE place so staff
+// PATCH, slip-verify (02-06), and hold-expiry (02-07) all notify consistently.
+// applyTransition is that single place. It runs INSIDE the caller's tx, so the
+// notifier is invoked fire-and-forget (never awaited, never allowed to throw into
+// the tx) with the data captured by value — a push failure can never roll back a
+// committed transition, and a guest (no line_user_id) is skipped by the notifier.
+
+/** Customer-facing milestones (a subset of statuses trigger a Flex card). */
+export type Milestone = "paid" | "shipping" | "done" | "cancelled";
+
+/** The by-value payload a notifier needs to build + target a milestone Flex card. */
+export interface OrderNotifyData {
+  id: string;
+  status: OrderStatus;
+  lineUserId: string | null;
+  subtotalSatang: number;
+  deliveryFeeSatang: number | null;
+  totalSatang: number;
+}
+
+export type OrderNotifier = (order: OrderNotifyData, milestone: Milestone) => void | Promise<void>;
+
+// Status → milestone card. created/awaiting_payment map to nothing (no push).
+// packing and shipping BOTH surface the "กำลังจัดส่ง" card (D-21).
+const MILESTONE_OF: Partial<Record<OrderStatus, Milestone>> = {
+  paid: "paid",
+  packing: "shipping",
+  shipping: "shipping",
+  done: "done",
+  cancelled: "cancelled",
+};
+
+// Module-level, last-write-wins. notify.ts registers the real (env-guarded) pusher
+// at boot; tests may override with a mock and reset to null in afterAll.
+let notifier: OrderNotifier | null = null;
+
+/** Register (or clear, with null) the single milestone notifier. */
+export function registerOrderNotifier(fn: OrderNotifier | null): void {
+  notifier = fn;
+}
 
 // The transaction handle passed by a caller's `database.transaction(async (tx) => …)`.
 // Typed from the driver so `.select().for("update")` / `.update()` are available.
@@ -131,5 +174,36 @@ export async function applyTransition(
   }
 
   await tx.update(orders).set({ status: next, updatedAt: new Date() }).where(eq(orders.id, orderId));
+
+  // Milestone notification (ORD-04) — fired ONCE, here, for every caller. Skipped
+  // when `next` is not a milestone (created/awaiting_payment) or no notifier is
+  // registered. The recipient + amounts are read under this same tx (status is now
+  // `next`) and passed by value, then the push is fire-and-forget so a LINE outage
+  // never rolls the transition back.
+  const milestone = MILESTONE_OF[next];
+  if (milestone && notifier) {
+    const [info] = await tx
+      .select({
+        lineUserId: customers.lineUserId,
+        subtotalSatang: orders.subtotalSatang,
+        deliveryFeeSatang: orders.deliveryFeeSatang,
+      })
+      .from(orders)
+      .innerJoin(customers, eq(customers.id, orders.customerId))
+      .where(eq(orders.id, orderId))
+      .limit(1);
+    const data: OrderNotifyData = {
+      id: orderId,
+      status: next,
+      lineUserId: info?.lineUserId ?? null,
+      subtotalSatang: info?.subtotalSatang ?? 0,
+      deliveryFeeSatang: info?.deliveryFeeSatang ?? null,
+      totalSatang: (info?.subtotalSatang ?? 0) + (info?.deliveryFeeSatang ?? 0),
+    };
+    void Promise.resolve()
+      .then(() => notifier?.(data, milestone))
+      .catch((err) => log.error("order notify failed", { orderId, error: String(err) }));
+  }
+
   return { applied: true, status: next };
 }
