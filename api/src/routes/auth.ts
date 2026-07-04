@@ -6,7 +6,10 @@
 //                       CLIENT-SUPPLIED hash) is removed — the body no longer has a
 //                       passwordHash field and the handler only reads the stored one.
 //   POST /auth/line   — LIFF idToken exchange (ES256 verify → HS256 session).
-//                       Unchanged here — its customer wiring is out of this plan.
+//                       Verifies the idToken server-side, upserts a member
+//                       `customers` row keyed on line_user_id (=payload.sub), and
+//                       issues a CUSTOMER session (never a staff role — T-02-06).
+//                       Returns { token, customerId, lineUserId } (02-02/LINE-02).
 //
 // DI: makeAuthRoutes(db) injects the database so the endpoint tests against the
 // seeded test pool (mirrors makeOrdersRoutes/makeVarietiesRoutes). The default
@@ -17,7 +20,7 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { Elysia, t } from "elysia";
 import { db as defaultDb } from "../db/client";
 import type * as schema from "../db/schema";
-import { users } from "../db/schema";
+import { customers, users } from "../db/schema";
 import { authPlugin } from "../plugins/auth.plugin";
 
 type AuthDb = PostgresJsDatabase<typeof schema>;
@@ -72,17 +75,54 @@ export function makeAuthRoutes(database: AuthDb = defaultDb) {
     .post(
       "/line",
       async ({ body, auth, set }) => {
+        // 1) Verify the LIFF idToken SERVER-SIDE (jose ES256, iss=access.line.me,
+        //    aud=LINE_LOGIN_CHANNEL_ID — Pitfall 4). A forged/expired/tampered token
+        //    throws → generic 401, no upsert. Only the verify is wrapped so a later
+        //    DB fault surfaces as a 500, not a misleading "invalid_id_token".
+        let payload: Awaited<ReturnType<typeof auth.verifyLineIdToken>>;
         try {
-          const payload = await auth.verifyLineIdToken(body.idToken);
-          // TODO(Phase 2, 00-02 customers): upsert the LINE user (`sub`) and derive
-          // consent/role. Phase 1 mints a scaffold session; "packer" is a placeholder
-          // until the customer role is modelled (out of scope for 01-03).
-          const token = await auth.issueSession(String(payload.sub), "packer");
-          return { token };
+          payload = await auth.verifyLineIdToken(body.idToken);
         } catch {
           set.status = 401;
           return { error: "invalid_id_token" };
         }
+
+        // 2) The verified `sub` IS the LINE user id — the trusted key we upsert on.
+        const lineUserId = String(payload.sub);
+        // LINE's idToken may carry a display name only when the profile scope was
+        // granted; treat it as optional and never trust it as an identity claim.
+        const lineName = typeof payload.name === "string" ? payload.name : null;
+
+        // 3) Find-or-insert the customer by line_user_id and flag them a member
+        //    (D-17). (A UNIQUE(line_user_id) index is a follow-up hardening — see
+        //    SUMMARY Deferred; the login flow is single-request per user so the
+        //    find-or-insert race window is negligible for the MVP.)
+        const [existing] = await database
+          .select({ id: customers.id })
+          .from(customers)
+          .where(eq(customers.lineUserId, lineUserId))
+          .limit(1);
+
+        let customerId: string;
+        if (existing) {
+          customerId = existing.id;
+          await database
+            .update(customers)
+            .set({ isMember: true, ...(lineName ? { name: lineName } : {}) })
+            .where(eq(customers.id, customerId));
+        } else {
+          const [inserted] = await database
+            .insert(customers)
+            .values({ lineUserId, isMember: true, name: lineName })
+            .returning({ id: customers.id });
+          if (!inserted) throw new Error("customer upsert returned no row");
+          customerId = inserted.id;
+        }
+
+        // 4) Issue a CUSTOMER session only — never a staff role (T-02-06). The
+        //    session subject is the customerId (our id), not the LINE id.
+        const token = await auth.issueSession(customerId, "customer");
+        return { token, customerId, lineUserId };
       },
       {
         body: t.Object({ idToken: t.String({ minLength: 1 }) }),
