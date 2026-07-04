@@ -25,7 +25,7 @@
 //
 // DI: makePaymentsRoutes(db, deps) injects the verifier, storage, compressor and
 // upload fn so the route is testable without a live SlipOK/R2/sharp path.
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { Elysia, t } from "elysia";
 import sharp from "sharp";
@@ -166,6 +166,20 @@ export function makePaymentsRoutes(database: PaymentsDb = defaultDb, deps: Payme
             return { error: "not_awaiting_payment" };
           }
 
+          // WR-03: this endpoint is public (only the order UUID is needed), so a
+          // known/leaked UUID could be replayed to burn SlipOK quota + bloat R2
+          // (NFR-08). Cap the payment attempts recorded per order and refuse once
+          // past it — a legitimate customer still gets several retries.
+          const MAX_SLIP_ATTEMPTS = 5;
+          const [countRow] = await database
+            .select({ n: sql<number>`count(*)::int` })
+            .from(payments)
+            .where(eq(payments.orderId, orderId));
+          if ((countRow?.n ?? 0) >= MAX_SLIP_ATTEMPTS) {
+            set.status = 429;
+            return { error: "too_many_slip_attempts" };
+          }
+
           const expectedAmountSatang = ord.subtotalSatang + (ord.deliveryFeeSatang ?? 0);
 
           // Compress + store the image under a SERVER-ASSIGNED private key. When
@@ -173,6 +187,13 @@ export function makePaymentsRoutes(database: PaymentsDb = defaultDb, deps: Payme
           let slipKey: string | null = null;
           let image: Uint8Array | undefined;
           if (body.slip) {
+            // WR-03: bound the upload size BEFORE invoking sharp/R2 to cap CPU +
+            // storage abuse. 5 MiB is generous for a phone screenshot slip.
+            const MAX_SLIP_BYTES = 5 * 1024 * 1024;
+            if (body.slip.size > MAX_SLIP_BYTES) {
+              set.status = 413;
+              return { error: "slip_too_large" };
+            }
             const raw = new Uint8Array(await body.slip.arrayBuffer());
             image = await compress(raw);
             slipKey = `slips/${orderId}/${crypto.randomUUID()}.jpg`;
