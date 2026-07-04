@@ -69,7 +69,11 @@ export async function loginWithLine(): Promise<{
   const idToken = await getIdToken();
   if (!idToken) return null; // guest path — no idToken to verify
   const { data, error } = await api.auth.line.post({ idToken });
-  if (error || !data || !("token" in data)) return null;
+  // WR-05: narrow ALL three success fields, not just `token`. Eden infers the
+  // response as a success|error union; checking only `"token" in data` left
+  // customerId/lineUserId as `string | undefined`, failing the vue-tsc gate. The
+  // server always sends all three on the success path, so this is a type guard.
+  if (error || !data || !("token" in data) || !data.customerId || !data.lineUserId) return null;
   setSessionToken(data.token);
   return { customerId: data.customerId, lineUserId: data.lineUserId };
 }
