@@ -6,14 +6,14 @@ current_phase: 02
 current_phase_name: line-storefront-payments-delivery
 status: executing
 stopped_at: Completed 02-01-PLAN.md
-last_updated: "2026-07-04T10:59:54.125Z"
+last_updated: "2026-07-04T11:11:06.319Z"
 last_activity: 2026-07-04
 last_activity_desc: Phase 02 execution started
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 22
-  completed_plans: 15
+  completed_plans: 16
   percent: 40
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-06-28)
 ## Current Position
 
 Phase: 02 (line-storefront-payments-delivery) — EXECUTING
-Plan: 3 of 9
+Plan: 4 of 9
 Status: Ready to execute
 Last activity: 2026-07-04 — Phase 02 execution started
 
@@ -59,6 +59,7 @@ Progress: [██████████] 100%
 | Phase 00 P08 | 20 | 3 tasks | 5 files |
 | Phase 02 P01 | 15 | 3 tasks | 41 files |
 | Phase 02 P02 | 11min | 3 tasks | 20 files |
+| Phase 02 P03 | 25m | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -75,6 +76,8 @@ Recent decisions affecting current work:
 - [Phase ?]: [00-01] .env.test committed at both repo root and api/ so 'cd api && bun test' boot-validates from the api cwd (Bun loads env from cwd); real .env stays gitignored.
 - [Phase ?]: [02-01] pg-boss runs on DATABASE_URL_DIRECT and starts only under import.meta.main so bun test never spins a worker.
 - [Phase ?]: [02-01] applyTransition() is the single guarded transition path reused by staff PATCH, slip-verify (02-06), and hold-expiry (02-07) — cannot re-break the concurrent-cancel oversell fix.
+- [Phase ?]: 02-03: delivery fee is a committed TypeBox-validated config file (zone×method flat rate); DB zones deferred to Phase 3
+- [Phase ?]: 02-03: /delivery/quote is public + display-only; checkout 02-04 recomputes+snapshots the fee (never trusts client)
 
 ### Pending Todos
 
@@ -105,6 +108,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-04T10:59:41.733Z
+Last session: 2026-07-04T11:10:35.536Z
 Stopped at: Completed 02-01-PLAN.md
 Resume file: None
