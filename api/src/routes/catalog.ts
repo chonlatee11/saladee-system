@@ -173,6 +173,9 @@ export function makeCatalogRoutes(database: CatalogDb = defaultDb) {
             description: v.description,
             imageUrl: v.imageUrl,
             avgGramsPerPlant: v.avgGramsPerPlant,
+            deliveryClass: v.deliveryClass, // D-13/D-24 care surface
+            storageTips: v.storageTips, // D-24 (nullable)
+            washingTips: v.washingTips, // D-24 (nullable)
             saleUnits: vUnits.map((u) => ({
               id: u.id,
               kind: u.kind,
@@ -347,6 +350,9 @@ export function makeCatalogRoutes(database: CatalogDb = defaultDb) {
                 description: v.description,
                 imageUrl: v.imageUrl,
                 avgGramsPerPlant: v.avgGramsPerPlant,
+                deliveryClass: v.deliveryClass, // D-13/D-24 care surface
+                storageTips: v.storageTips, // D-24 (nullable)
+                washingTips: v.washingTips, // D-24 (nullable)
                 saleUnits: vUnits.map((u) => ({
                   id: u.id,
                   kind: u.kind,

@@ -106,9 +106,10 @@ describe("allowedMethodsForCart — freshness intersection (D-13/DEL-03)", () =>
   test("ALLOWED_METHODS table matches DEL-03", () => {
     const veryFresh: DeliveryMethod[] = ["self", "cold"];
     const normal: DeliveryMethod[] = ["self", "cold", "on_demand", "general"];
-    const classes: DeliveryClass[] = ["very_fresh", "normal"];
-    expect(ALLOWED_METHODS[classes[0]]).toEqual(veryFresh);
-    expect(ALLOWED_METHODS[classes[1]]).toEqual(normal);
+    const first: DeliveryClass = "very_fresh";
+    const second: DeliveryClass = "normal";
+    expect(ALLOWED_METHODS[first]).toEqual(veryFresh);
+    expect(ALLOWED_METHODS[second]).toEqual(normal);
   });
 });
 
