@@ -89,7 +89,9 @@ export function makePaymentsRoutes(database: PaymentsDb = defaultDb, deps: Payme
       const res = await fetch(url, {
         method: "PUT",
         headers: { "content-type": "image/jpeg" },
-        body: bytes,
+        // WR-04: fresh Uint8Array → ArrayBuffer-backed BodyInit so the DOM-lib
+        // vue-tsc gate accepts the fetch body (Bun already accepted the view).
+        body: new Uint8Array(bytes),
       });
       if (!res.ok) throw new Error(`slip store failed: ${res.status}`);
     });

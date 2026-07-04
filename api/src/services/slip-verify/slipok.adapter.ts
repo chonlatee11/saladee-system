@@ -62,7 +62,11 @@ export class SlipOkAdapter implements SlipVerifier {
         // Multipart: send the slip bytes. `log:true` enables the branch-linked
         // payee check + vendor duplicate detection (D-02/D-06).
         const form = new FormData();
-        form.append("files", new Blob([input.image], { type: "image/jpeg" }), "slip.jpg");
+        // WR-04: wrap in a fresh Uint8Array so the byte view is ArrayBuffer-backed
+        // (Uint8Array<ArrayBuffer>) — a bare Uint8Array<ArrayBufferLike> is not a
+        // valid BlobPart under the DOM lib, failing the vue-tsc typecheck gate.
+        // Runtime behaviour is unchanged (Bun already accepted the view).
+        form.append("files", new Blob([new Uint8Array(input.image)], { type: "image/jpeg" }), "slip.jpg");
         form.append("amount", String(amountBaht));
         form.append("log", "true");
         res = await this.fetchImpl(url, {
