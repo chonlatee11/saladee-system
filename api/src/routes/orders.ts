@@ -147,10 +147,16 @@ export function makeOrdersRoutes(database: OrdersDb = defaultDb) {
           //    are read-only lookups — no side effects — so we do them before the tx.
           const resolved: ResolvedLine[] = [];
           for (const line of body.lines ?? []) {
+            // WR-03: honour the soft-delete (`active`) flag. A retired pack or a
+            // discontinued variety must NOT be sellable even if the client still
+            // knows its UUID (both are public before deletion) and a quota/price
+            // row survives — matching the box path (eq(boxes.active,true)) and the
+            // catalog. Without this, soft-delete could be bypassed to sell
+            // withdrawn inventory.
             const [su] = await database
               .select()
               .from(saleUnits)
-              .where(eq(saleUnits.id, line.saleUnitId))
+              .where(and(eq(saleUnits.id, line.saleUnitId), eq(saleUnits.active, true)))
               .limit(1);
             if (!su || su.varietyId !== line.varietyId) {
               set.status = 400;
@@ -159,7 +165,7 @@ export function makeOrdersRoutes(database: OrdersDb = defaultDb) {
             const [variety] = await database
               .select()
               .from(varieties)
-              .where(eq(varieties.id, line.varietyId))
+              .where(and(eq(varieties.id, line.varietyId), eq(varieties.active, true)))
               .limit(1);
             if (!variety) {
               set.status = 400;
@@ -224,10 +230,12 @@ export function makeOrdersRoutes(database: OrdersDb = defaultDb) {
 
             const resolvedComponents: ResolvedBoxComponent[] = [];
             for (const c of comps) {
+              // WR-03: a box whose BOM references a discontinued (soft-deleted)
+              // component variety is not sellable — same rule as the direct line.
               const [variety] = await database
                 .select()
                 .from(varieties)
-                .where(eq(varieties.id, c.varietyId))
+                .where(and(eq(varieties.id, c.varietyId), eq(varieties.active, true)))
                 .limit(1);
               if (!variety) {
                 set.status = 400;

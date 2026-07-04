@@ -157,3 +157,47 @@ describe("POST /orders — server-resolved frozen snapshot (D-16)", () => {
     expect(Number(line.unit_price_satang)).toBe(5000); // server-derived, not client's 1
   });
 });
+
+describe("WR-03: POST /orders honours the variety / sale-unit soft-delete flag", () => {
+  const customer = {
+    name: "ลูกค้า",
+    phone: "0800000000",
+    recipientName: "ผู้รับ",
+    recipientPhone: "0800000000",
+    recipientAddress: "1 ถนนสลัด",
+  };
+
+  test("soft-deleted VARIETY cannot be ordered even with a known UUID + live quota/price", async () => {
+    const seed = await seedSellableLine(db, { quotaPlants: 100 });
+    // Staff retires the variety (soft-delete) — quota + price rows still exist.
+    await db.execute(sql`UPDATE varieties SET active = false WHERE id = ${seed.varietyId}`);
+    const res = await postOrder({
+      tier: "b2c",
+      customer,
+      lines: [
+        { roundId: seed.roundId, varietyId: seed.varietyId, saleUnitId: seed.saleUnitId, qty: 1 },
+      ],
+    });
+    expect(res.status).toBe(400);
+    expect((await res.json()) as { error: string }).toEqual({ error: "variety_not_found" });
+    // No reservation happened on the retired variety.
+    const stock = (await db.execute(
+      sql`SELECT reserved_plants FROM round_stock WHERE round_id = ${seed.roundId} AND variety_id = ${seed.varietyId}`,
+    )) as unknown as { reserved_plants: number }[];
+    expect(Number(stock[0]?.reserved_plants)).toBe(0);
+  });
+
+  test("soft-deleted SALE UNIT (retired pack) cannot be ordered", async () => {
+    const seed = await seedSellableLine(db, { quotaPlants: 100 });
+    await db.execute(sql`UPDATE sale_units SET active = false WHERE id = ${seed.saleUnitId}`);
+    const res = await postOrder({
+      tier: "b2c",
+      customer,
+      lines: [
+        { roundId: seed.roundId, varietyId: seed.varietyId, saleUnitId: seed.saleUnitId, qty: 1 },
+      ],
+    });
+    expect(res.status).toBe(400);
+    expect((await res.json()) as { error: string }).toEqual({ error: "invalid_line" });
+  });
+});
