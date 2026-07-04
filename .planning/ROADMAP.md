@@ -98,7 +98,7 @@ Plans:
   4. The customer receives automatic LINE notifications on status changes and can view order history and reorder.
   5. Delivery fee computes by method/zone with free shipping over 500 baht, disallowed methods are blocked per product type, and PDPA consent (with separate marketing consent) is captured while slips stay in a private, signed-URL-only bucket.
 
-**Plans**: 3/9 plans executed
+**Plans**: 4/9 plans executed
 **UI hint**: yes
 
 Plans:
@@ -113,7 +113,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2)*
 
-- [ ] 02-04-PLAN.md — Checkout API: POST /orders delivery snapshot + awaiting_payment + PromptPay QR + hold schedule + PDPA consent (wave 3)
+- [x] 02-04-PLAN.md — Checkout API: POST /orders delivery snapshot + awaiting_payment + PromptPay QR + hold schedule + PDPA consent (wave 3)
 - [ ] 02-05-PLAN.md — LIFF catalog browse + variety detail (care) + cart store (wave 3)
 
 **Wave 4** *(blocked on Wave 3)*
@@ -176,6 +176,6 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 0. Foundation & Platform | 8/8 | Complete   | 2026-07-02 |
 | 1. Commerce Core | 5/5 | Complete   | 2026-07-02 |
-| 2. LINE Storefront, Payments & Delivery | 3/9 | In Progress|  |
+| 2. LINE Storefront, Payments & Delivery | 4/9 | In Progress|  |
 | 3. Back-office, Crop Planning & B2B/Subscription | 0/TBD | Not started | - |
 | 4. Web Store, Marketing & Scale | 0/TBD | Not started | - |

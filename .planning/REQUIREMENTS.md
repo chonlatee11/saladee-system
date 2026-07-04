@@ -15,7 +15,7 @@
 - [ ] **PLAT-01**: ระบบมีแกนตัดสต็อกแบบ atomic (guarded decrement) กัน oversell ได้แม้มีออเดอร์เข้าพร้อมกัน (NFR-02)
 - [x] **PLAT-02**: ระบบเก็บข้อมูลบน PostgreSQL เดียว + object storage สำหรับสลิป/รูป บนต้นทุนต่ำสุด (NFR-08)
 - [ ] **PLAT-03**: รหัสผ่านถูกเข้ารหัส, จำกัดสิทธิ์ตามบทบาท, สลิป/ข้อมูลลูกค้าเข้าถึงได้เฉพาะผู้มีสิทธิ์ (private bucket + signed URL) (NFR-03)
-- [ ] **PLAT-04**: ระบบขอความยินยอม PDPA, มีนโยบายความเป็นส่วนตัว, รองรับสิทธิ์ขอ/ลบข้อมูล, เก็บ log การยินยอม แยก consent การตลาด (NFR-04)
+- [x] **PLAT-04**: ระบบขอความยินยอม PDPA, มีนโยบายความเป็นส่วนตัว, รองรับสิทธิ์ขอ/ลบข้อมูล, เก็บ log การยินยอม แยก consent การตลาด (NFR-04)
 - [x] **PLAT-05**: ทุกหน้าใช้งานบนมือถือได้ดี (mobile-first เริ่มจาก LIFF) และรองรับทราฟฟิกพุ่งช่วงไลฟ์/โปรโมชัน (NFR-07, NFR-01)
 
 ### INV — สินค้า ราคา และสต็อก
@@ -40,7 +40,7 @@
 
 ### ORD — จัดการออเดอร์ (Omnichannel)
 
-- [ ] **ORD-01**: ระบบรับออเดอร์จาก LINE (LIFF/แชทบอท) เข้าหลังบ้านเดียวกัน (FR-13)
+- [x] **ORD-01**: ระบบรับออเดอร์จาก LINE (LIFF/แชทบอท) เข้าหลังบ้านเดียวกัน (FR-13)
 - [ ] **ORD-02**: หน้าจัดการออเดอร์รวมทุกช่องทาง พร้อม pipeline สถานะ (รอชำระ → ชำระแล้ว → กำลังแพ็ก → จัดส่ง → สำเร็จ/ยกเลิก) (FR-14)
 - [ ] **ORD-03**: พนักงานเห็นคิวงานแพ็กจัดกลุ่มตามรอบส่ง/เส้นทาง และพิมพ์ใบแพ็ก/ใบปะหน้าได้ (FR-15)
 - [ ] **ORD-04**: ระบบแจ้งเตือนลูกค้าอัตโนมัติเมื่อสถานะเปลี่ยน ผ่าน LINE (FR-16)
@@ -48,7 +48,7 @@
 
 ### PAY — ชำระเงิน
 
-- [ ] **PAY-01**: ระบบสร้าง PromptPay QR ตามยอดออเดอร์ (ระบุจำนวน) ฝั่ง backend เอง (FR-17)
+- [x] **PAY-01**: ระบบสร้าง PromptPay QR ตามยอดออเดอร์ (ระบุจำนวน) ฝั่ง backend เอง (FR-17)
 - [ ] **PAY-02**: ลูกค้าโอน + อัปโหลดสลิป, ระบบตรวจสลิปด้วย slip-verification API + ป้องกันสลิปซ้ำ/ปลอม, แอดมินยืนยันได้ (FR-18)
 - [x] **PAY-03**: สถานะการชำระผูกกับออเดอร์ + QR มีเวลา hold/หมดอายุ ปล่อยสต็อกที่จองคืนหากไม่ชำระ (FR-19)
 - [ ] **PAY-04**: ลูกค้าขอใบกำกับภาษี/ใบเสร็จได้ตอน checkout, กรอกข้อมูลผู้รับ, ออก PDF, เก็บประวัติตาม PDPA — เก็บ price-at-order-time ตั้งแต่ Phase 1 (FR-37)
@@ -137,7 +137,7 @@ Explicitly excluded (anti-features จาก research — ป้องกัน 
 | PLAT-01 | Phase 1 | Pending |
 | PLAT-02 | Phase 0 | Complete |
 | PLAT-03 | Phase 1 | Pending |
-| PLAT-04 | Phase 2 | Pending |
+| PLAT-04 | Phase 2 | Complete |
 | PLAT-05 | Phase 0 | Complete |
 | INV-01 | Phase 1 | Pending |
 | INV-02 | Phase 1 | Pending |
@@ -153,12 +153,12 @@ Explicitly excluded (anti-features จาก research — ป้องกัน 
 | SALE-02 | Phase 1 | Pending |
 | SALE-03 | Phase 3 | Pending |
 | SALE-04 | Phase 1 | Pending |
-| ORD-01 | Phase 2 | Pending |
+| ORD-01 | Phase 2 | Complete |
 | ORD-02 | Phase 1 | Pending |
 | ORD-03 | Phase 3 | Pending |
 | ORD-04 | Phase 2 | Pending |
 | ORD-05 | Phase 4 | Pending |
-| PAY-01 | Phase 2 | Pending |
+| PAY-01 | Phase 2 | Complete |
 | PAY-02 | Phase 2 | Pending |
 | PAY-03 | Phase 2 | Complete |
 | PAY-04 | Phase 1 | Pending |
