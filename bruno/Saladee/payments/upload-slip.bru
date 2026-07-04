@@ -1,0 +1,36 @@
+meta {
+  name: upload-slip
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{URL}}/orders/{{ORDER_ID}}/slip
+  body: multipartForm
+  auth: none
+}
+
+docs {
+  # Upload a payment slip (PAY-02)
+
+  Customer uploads a PromptPay transfer slip for an `awaiting_payment` order.
+  The server compresses it, stores it under a server-assigned private R2 key
+  (`slips/{orderId}/{uuid}.jpg` — the client never picks the key), and verifies
+  it via the SlipVerifier seam.
+
+  Outcomes:
+  - **200 `{ status: "paid", transRef }`** — clean: payee + exact amount matched,
+    order auto-transitioned to `paid` (D-05).
+  - **409 `{ error: "duplicate_slip" }`** — the transRef was already used
+    system-wide (UNIQUE `payments_trans_ref_idx`, D-06).
+  - **422 `{ error: "wrong_amount" | "wrong_payee" | "not_a_slip" }`** — rejected.
+  - **202 `{ status: "awaiting_review" }`** — SlipOK unavailable → parked for the
+    admin `POST /orders/:id/confirm-payment` (D-04).
+
+  Send EITHER the `slip` image file OR a `qrPayload` string read from the slip QR.
+  Set `ORDER_ID` to an awaiting_payment order (from create-order-with-qr).
+}
+
+multipartForm {
+  slip: @file()
+}
