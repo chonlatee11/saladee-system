@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: completed
-stopped_at: Completed 00-08-PLAN.md — Phase 0 gap-closure (CORS) done, UAT Test 8 closed
-last_updated: "2026-07-02T12:06:32.209Z"
-last_activity: 2026-07-02 — Phase 0 complete on develop; branching policy fixed (PRs → develop only, main owner-managed)
+status: "Phase 01 shipped — PR #2"
+stopped_at: Phase 1 context gathered
+last_updated: "2026-07-04T05:22:00.771Z"
+last_activity: 2026-07-04
 progress:
   total_phases: 5
   completed_phases: 1
-  total_plans: 8
-  completed_plans: 8
-  percent: 100
+  total_plans: 13
+  completed_plans: 13
+  percent: 20
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-28)
 
 **Core value:** ลูกค้าสั่งผักสลัดผ่าน LINE แล้วจ่ายเงินจบในที่เดียว และจำนวนที่เปิดขายตรงกับผลผลิตจริงเสมอ (ไม่ oversell, ไม่เหลือทิ้ง)
-**Current focus:** Phase 00 — foundation-platform
+**Current focus:** Phase 2 — line storefront, payments & delivery
 
 ## Current Position
 
-Phase: 00 (foundation-platform) — COMPLETE
-Plan: 8 of 8 (00-08 CORS gap-closure done — UAT Test 8 closed)
-Status: Phase 0 complete — integrated on develop (PR #1 closed; main is owner-managed)
-Last activity: 2026-07-02 — Phase 0 complete on develop; branching policy fixed (PRs → develop only, main owner-managed)
+Phase: 2
+Plan: Not started
+Status: Phase 01 shipped — PR #2
+Last activity: 2026-07-04
 
 Progress: [██████████] 100%
 
@@ -36,7 +36,7 @@ Progress: [██████████] 100%
 
 **Velocity:**
 
-- Total plans completed: 0
+- Total plans completed: 5
 - Average duration: — min
 - Total execution time: 0.0 hours
 
@@ -44,7 +44,7 @@ Progress: [██████████] 100%
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 01 | 5 | - | - |
 
 **Recent Trend:**
 
@@ -98,6 +98,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-02T11:46:46.523Z
-Stopped at: Completed 00-08-PLAN.md — Phase 0 gap-closure (CORS) done, UAT Test 8 closed
-Resume file: None
+Last session: 2026-07-02T14:53:23.596Z
+Stopped at: Phase 1 context gathered
+Resume file: .planning/phases/01-commerce-core/01-CONTEXT.md

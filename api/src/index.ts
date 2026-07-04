@@ -13,8 +13,15 @@ import { dbPlugin } from "./plugins/db.plugin";
 import { linePlugin } from "./plugins/line.plugin";
 import { storagePlugin } from "./plugins/storage.plugin";
 import { authRoutes } from "./routes/auth";
+import { boxesRoutes } from "./routes/boxes";
+import { catalogRoutes } from "./routes/catalog";
 import { filesRoutes } from "./routes/files";
 import { healthRoutes } from "./routes/health";
+import { ordersRoutes } from "./routes/orders";
+import { pricesRoutes } from "./routes/prices";
+import { roundsRoutes } from "./routes/rounds";
+import { stockRoutes } from "./routes/stock";
+import { varietiesRoutes } from "./routes/varieties";
 import { webhookRoutes } from "./routes/webhook";
 
 // The un-listened app: importable in tests (app.handle) without binding a port.
@@ -35,7 +42,14 @@ export const app = new Elysia()
   .use(healthRoutes)
   .use(webhookRoutes)
   .use(filesRoutes)
-  .use(authRoutes);
+  .use(authRoutes)
+  .use(ordersRoutes)
+  .use(varietiesRoutes)
+  .use(roundsRoutes)
+  .use(pricesRoutes)
+  .use(catalogRoutes)
+  .use(stockRoutes)
+  .use(boxesRoutes);
 
 // Eden Treaty contract consumed by web/ (compile-time-safe API calls).
 export type App = typeof app;

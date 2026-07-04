@@ -1,0 +1,56 @@
+meta {
+  name: create-order
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{URL}}/orders
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "tier": "b2c",
+    "customer": {
+      "name": "ลูกค้าทดสอบ",
+      "phone": "0810000000",
+      "recipientName": "ผู้รับทดสอบ",
+      "recipientPhone": "0810000000",
+      "recipientAddress": "123 ถนนสลัด กรุงเทพ 10110"
+    },
+    "lines": [
+      {
+        "roundId": "{{ROUND_ID}}",
+        "varietyId": "{{VARIETY_ID}}",
+        "saleUnitId": "{{SALE_UNIT_ID}}",
+        "qty": 1
+      }
+    ]
+  }
+}
+
+docs {
+  # POST /orders (open, D-02/D-03)
+
+  Places a priced order that reserves stock atomically and freezes a
+  server-resolved price/pack snapshot on order_lines (D-16).
+
+  NEVER send a price or plants field — the server resolves the price by
+  tier from the `prices` table and computes the snapshot itself.
+
+  Set the collection vars `ROUND_ID`, `VARIETY_ID`, `SALE_UNIT_ID` to real
+  ids from a seeded open round. Expect `201` with `{ id, status, subtotalSatang }`,
+  or `409 { error: "sold_out" }` / `409 { error: "round_closed" }`.
+
+  For the Criterion-2 oversell demo run the parallel racer (bru run is
+  sequential and cannot prove concurrency):
+
+      bun run bruno/Saladee/orders/race.ts
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

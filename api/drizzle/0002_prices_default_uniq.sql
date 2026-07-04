@@ -1,0 +1,15 @@
+-- WR-01: enforce a SINGLE NULL-effective-date "round default" price per
+-- (round_id, variety_id, tier). The existing plain unique index
+-- prices_round_variety_tier_date_idx does NOT constrain NULL effective_date rows
+-- (Postgres treats NULLs as DISTINCT), so two `POST /prices` without effectiveDate
+-- created two competing defaults and price resolution
+-- (ORDER BY effective_date DESC NULLS LAST LIMIT 1) became non-deterministic.
+--
+-- A PARTIAL unique index over the NULL-date rows closes the gap without needing
+-- NULLS NOT DISTINCT (works on any PG 12+), and also serves as the ON CONFLICT
+-- arbiter for the default upsert in POST /prices.
+--
+-- NOTE: if a database already contains duplicate NULL-date defaults, this index
+-- creation will fail — dedupe those rows first (keep the intended one), then
+-- re-run. A freshly-migrated Phase-1 DB has none.
+CREATE UNIQUE INDEX "prices_default_uniq" ON "prices" USING btree ("round_id","variety_id","tier") WHERE "effective_date" IS NULL;
