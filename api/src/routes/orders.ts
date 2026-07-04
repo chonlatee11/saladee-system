@@ -34,6 +34,7 @@ import { env } from "../env";
 import { boss } from "../jobs/boss";
 import { log } from "../lib/logger";
 import { requireRole } from "../plugins/auth.plugin";
+import { logConsent } from "../services/consent";
 import {
   allowedMethodsForCart,
   computeDeliveryFee,
@@ -125,6 +126,16 @@ const CreateOrderBody = t.Object({
     ]),
   ),
   deliveryZone: t.Optional(t.String({ minLength: 1 })),
+  // PDPA consent (PLAT-04 / D-25/26). When present, usage MUST be true to proceed
+  // (usage_consent_required, 422); usage + marketing are logged as two independent
+  // consent_logs rows inside the order tx. Optional so the legacy path is unchanged.
+  consent: t.Optional(
+    t.Object({
+      usage: t.Boolean(),
+      marketing: t.Boolean(),
+      policyVersion: t.String({ minLength: 1 }),
+    }),
+  ),
 });
 
 const StatusBody = t.Object({
@@ -444,6 +455,14 @@ export function makeOrdersRoutes(
             qrPayload = buildPromptPayPayload(env.PROMPTPAY_PAYEE_ID, totalSatang / 100);
           }
 
+          // 2c. PDPA usage consent (D-25): when a consent block is supplied, usage
+          //     consent is REQUIRED — refuse the order before trusting personal data.
+          //     Marketing is independent and logged regardless of value (D-26).
+          if (body.consent && body.consent.usage !== true) {
+            set.status = 422;
+            return { error: "usage_consent_required" };
+          }
+
           // 3. One transaction: (re)check cut-off (Pitfall 6), reserve atomically,
           //    then persist the order + frozen snapshot. Any throw rolls it all back.
           try {
@@ -595,6 +614,20 @@ export function makeOrdersRoutes(
                     },
                   })),
                 );
+              }
+
+              // Log PDPA consent in the SAME tx so it is recorded atomically with
+              // the order (D-25). Two rows (usage + marketing), each stamped with the
+              // policy version + source "checkout".
+              if (body.consent) {
+                await logConsent(tx, {
+                  customerId,
+                  orderId: ord.id,
+                  usageGranted: body.consent.usage,
+                  marketingGranted: body.consent.marketing,
+                  policyVersion: body.consent.policyVersion,
+                  source: "checkout",
+                });
               }
 
               return {
