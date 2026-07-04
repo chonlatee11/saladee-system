@@ -54,10 +54,12 @@ beforeAll(async () => {
   varietyRoutes = makeVarietiesRoutes(db);
   roundRoutes = makeRoundsRoutes(db);
   priceRoutes = makePricesRoutes(db);
+  await client.file("drizzle/0002_prices_default_uniq.down.sql").catch(() => {});
   await client.file("drizzle/0001_commerce.down.sql").catch(() => {});
   await client.file("drizzle/0000_init.down.sql").catch(() => {});
   await client.file("drizzle/0000_init.sql");
   await client.file("drizzle/0001_commerce.sql");
+  await client.file("drizzle/0002_prices_default_uniq.sql");
   admin = await issueSession(crypto.randomUUID(), "admin");
 });
 

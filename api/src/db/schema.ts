@@ -10,6 +10,7 @@
 //   - snake_case DB column ↔ camelCase TS key (e.g. line_user_id ↔ lineUserId).
 //   - pgEnum declared before the tables that use it (migration ordering, Pitfall 4).
 //   - Money is ALWAYS integer satang — never numeric/float (RESEARCH Money Handling, D-13).
+import { sql } from "drizzle-orm";
 import {
   boolean,
   date,
@@ -126,12 +127,25 @@ export const prices = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => [
+    // Uniqueness among DATED rows: one price per (round, variety, tier, date).
+    // NOTE: Postgres treats NULLs as DISTINCT in a plain unique index, so this
+    // index does NOT constrain the NULL-effective-date round default — the
+    // partial index below closes that gap (WR-01).
     uniqueIndex("prices_round_variety_tier_date_idx").on(
       t.roundId,
       t.varietyId,
       t.tier,
       t.effectiveDate,
     ),
+    // WR-01: enforce a SINGLE NULL-date default per (round, variety, tier). Without
+    // this, two `POST /prices` calls without effectiveDate created two competing
+    // "defaults" and price resolution (ORDER BY effective_date DESC NULLS LAST
+    // LIMIT 1) became non-deterministic — a money-correctness hazard. A partial
+    // unique index is PG-version-agnostic (no NULLS NOT DISTINCT needed) and also
+    // serves as the arbiter for the default upsert in POST /prices.
+    uniqueIndex("prices_default_uniq")
+      .on(t.roundId, t.varietyId, t.tier)
+      .where(sql`${t.effectiveDate} IS NULL`),
   ],
 );
 

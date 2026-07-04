@@ -22,6 +22,8 @@ const INIT_UP = "drizzle/0000_init.sql";
 const INIT_DOWN = "drizzle/0000_init.down.sql";
 const COMMERCE_UP = "drizzle/0001_commerce.sql";
 const COMMERCE_DOWN = "drizzle/0001_commerce.down.sql";
+const PRICES_DEFAULT_UP = "drizzle/0002_prices_default_uniq.sql";
+const PRICES_DEFAULT_DOWN = "drizzle/0002_prices_default_uniq.down.sql";
 
 let client: ReturnType<typeof postgres>;
 let db: ReturnType<typeof drizzle>;
@@ -36,13 +38,22 @@ async function enumExists(typname: string): Promise<boolean> {
   return rows.length > 0;
 }
 
+async function indexExists(indexname: string): Promise<boolean> {
+  const rows = await db.execute(
+    sql`SELECT 1 AS ok FROM pg_indexes WHERE indexname = ${indexname}`,
+  );
+  return rows.length > 0;
+}
+
 // Apply every up (identity → commerce) or every down (commerce → identity) in
 // the correct dependency order.
 async function applyAllUp(): Promise<void> {
   await client.file(INIT_UP);
   await client.file(COMMERCE_UP);
+  await client.file(PRICES_DEFAULT_UP);
 }
 async function applyAllDown(): Promise<void> {
+  await client.file(PRICES_DEFAULT_DOWN);
   await client.file(COMMERCE_DOWN);
   await client.file(INIT_DOWN);
 }
@@ -72,6 +83,9 @@ describe("migration up→down→up (Criterion 2)", () => {
     expect(await tableExists("public.back_in_stock_requests")).toBe(true);
     expect(await enumExists("order_status")).toBe(true);
     expect(await enumExists("tier")).toBe(true);
+    // 0002_prices_default_uniq — the partial unique index enforcing one NULL-date
+    // default per (round, variety, tier) (WR-01).
+    expect(await indexExists("prices_default_uniq")).toBe(true);
   });
 
   test("down: identity + commerce tables and enums are all gone", async () => {
@@ -83,6 +97,8 @@ describe("migration up→down→up (Criterion 2)", () => {
     expect(await tableExists("public.varieties")).toBe(false);
     expect(await enumExists("order_status")).toBe(false);
     expect(await enumExists("tier")).toBe(false);
+    // The partial index is gone with its table (0002 down runs before 0001 down).
+    expect(await indexExists("prices_default_uniq")).toBe(false);
   });
 
   test("up again: full schema is back with no residue", async () => {

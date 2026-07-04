@@ -63,16 +63,29 @@ export function makePricesRoutes(database: CatalogDb = defaultDb) {
       .post(
         "/prices",
         async ({ body, set }) => {
-          const [row] = await database
-            .insert(prices)
-            .values({
-              roundId: body.roundId,
-              varietyId: body.varietyId,
-              tier: body.tier,
-              pricePerKgSatang: body.pricePerKgSatang,
-              effectiveDate: body.effectiveDate ?? null,
-            })
-            .returning();
+          const values = {
+            roundId: body.roundId,
+            varietyId: body.varietyId,
+            tier: body.tier,
+            pricePerKgSatang: body.pricePerKgSatang,
+            effectiveDate: body.effectiveDate ?? null,
+          };
+          // WR-01: the NULL-date "round default" is now DB-unique (partial index
+          // prices_default_uniq). UPSERT it so re-posting a default updates the
+          // single row instead of creating a second competing default that made
+          // price resolution non-deterministic. Dated overrides remain plain
+          // inserts (each date is its own row; the full unique index guards them).
+          const [row] = values.effectiveDate
+            ? await database.insert(prices).values(values).returning()
+            : await database
+                .insert(prices)
+                .values(values)
+                .onConflictDoUpdate({
+                  target: [prices.roundId, prices.varietyId, prices.tier],
+                  targetWhere: isNull(prices.effectiveDate),
+                  set: { pricePerKgSatang: body.pricePerKgSatang },
+                })
+                .returning();
           if (!row) throw new Error("price insert returned no row");
           set.status = 201;
           return row;

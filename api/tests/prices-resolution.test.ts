@@ -5,6 +5,7 @@
 // the one the public catalog (01-04) reuses: a row dated for the given day wins;
 // otherwise the effective_date IS NULL round default.
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "../src/db/schema";
@@ -50,10 +51,12 @@ beforeAll(async () => {
   client = postgres(TEST_URL, { prepare: false, max: 4 });
   db = drizzle(client, { schema });
   routes = makePricesRoutes(db);
+  await client.file("drizzle/0002_prices_default_uniq.down.sql").catch(() => {});
   await client.file("drizzle/0001_commerce.down.sql").catch(() => {});
   await client.file("drizzle/0000_init.down.sql").catch(() => {});
   await client.file("drizzle/0000_init.sql");
   await client.file("drizzle/0001_commerce.sql");
+  await client.file("drizzle/0002_prices_default_uniq.sql");
   adminToken = await issueSession(crypto.randomUUID(), "admin");
 });
 
@@ -135,6 +138,42 @@ describe("price history: both rows persist", () => {
     expect(rows.length).toBe(2);
     const kgs = rows.map((r) => r.pricePerKgSatang).sort((a, b) => a - b);
     expect(kgs).toEqual([KG_DEFAULT, KG_OVERRIDE]);
+  });
+});
+
+describe("WR-01: a single NULL-date default per (round,variety,tier)", () => {
+  test("re-posting the default UPSERTS the one row (no competing duplicate)", async () => {
+    const varietyId = await seedVariety(db, `พันธุ์ ${crypto.randomUUID()}`);
+    const roundId = await seedRound(db, `รอบ ${crypto.randomUUID()}`);
+    const first = await req("POST", "/prices", {
+      token: adminToken,
+      body: { roundId, varietyId, tier: "b2c", pricePerKgSatang: 20000 },
+    });
+    expect(first.status).toBe(201);
+    // A second default for the SAME (round,variety,tier) must NOT create a rival
+    // NULL-date row — it updates the existing default in place.
+    const second = await req("POST", "/prices", {
+      token: adminToken,
+      body: { roundId, varietyId, tier: "b2c", pricePerKgSatang: 25000 },
+    });
+    expect(second.status).toBe(201);
+
+    // Exactly ONE NULL-date default row exists, carrying the latest price → price
+    // resolution is now deterministic.
+    const rows = (await db.execute(
+      sql`SELECT price_per_kg_satang FROM prices
+          WHERE round_id = ${roundId} AND variety_id = ${varietyId}
+            AND tier = 'b2c' AND effective_date IS NULL`,
+    )) as unknown as { price_per_kg_satang: number }[];
+    expect(rows.length).toBe(1);
+    expect(Number(rows[0]?.price_per_kg_satang)).toBe(25000);
+
+    const res = await req(
+      "GET",
+      `/prices/resolve?roundId=${roundId}&varietyId=${varietyId}&tier=b2c&date=2099-01-01`,
+    );
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as ResolveResp).pricePerKgSatang).toBe(25000);
   });
 });
 
