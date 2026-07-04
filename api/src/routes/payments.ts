@@ -207,7 +207,46 @@ export function makePaymentsRoutes(database: PaymentsDb = defaultDb, deps: Payme
 
           if (result.status === "clean") {
             try {
-              await database.transaction(async (tx) => {
+              const outcome = await database.transaction(async (tx) => {
+                // CR-01: lock the order row and re-read its AUTHORITATIVE status
+                // INSIDE the tx before deciding. The slip upload + verifier.verify
+                // above are a multi-second network window in which the hold-expiry
+                // sweep can cancel the order (TOCTOU). Previously applyTransition
+                // then threw illegal_transition on `cancelled` and rolled the whole
+                // tx back — INCLUDING the payments INSERT — so a customer who paid
+                // (and whose slip verified) was left with NO payment row, released
+                // stock, and an orphan slip. A verified payment must NEVER be
+                // silently dropped.
+                const [locked] = await tx
+                  .select({ status: orders.status })
+                  .from(orders)
+                  .where(eq(orders.id, orderId))
+                  .for("update")
+                  .limit(1);
+                if (!locked) throw new OrderError("order_not_found", 404);
+
+                // Order is no longer collectable (e.g. cancelled by the sweep during
+                // verify) → persist the verified slip as `awaiting_review` (transRef
+                // /amount/slipKey intact) so an admin can reconcile/re-credit, rather
+                // than discarding it. Dedup is preserved: the UNIQUE transRef insert
+                // still rejects a duplicate slip with 409.
+                if (locked.status !== "awaiting_payment") {
+                  try {
+                    await tx.insert(payments).values({
+                      orderId,
+                      status: "awaiting_review",
+                      transRef: result.transRef,
+                      amountSatang: result.amountSatang,
+                      slipKey,
+                      rawJson: result.raw as object,
+                    });
+                  } catch (e) {
+                    if (isUniqueViolation(e)) throw new OrderError("duplicate_slip", 409);
+                    throw e;
+                  }
+                  return "review" as const;
+                }
+
                 try {
                   // The UNIQUE transRef insert is the system-wide dedup arbiter (D-06).
                   await tx.insert(payments).values({
@@ -225,7 +264,14 @@ export function makePaymentsRoutes(database: PaymentsDb = defaultDb, deps: Payme
                 // Clean verify auto-advances the order via the SHARED transition (D-05);
                 // the 02-07 notify hook fires post-commit off this transition.
                 await applyTransition(tx, orderId, "paid");
+                return "paid" as const;
               });
+              if (outcome === "review") {
+                // A verified-but-uncollectable payment was parked for admin review
+                // (order was cancelled mid-verify) — 202, not a dropped 400.
+                set.status = 202;
+                return { id: orderId, status: "awaiting_review", transRef: result.transRef };
+              }
             } catch (e) {
               if (e instanceof OrderError) {
                 set.status = e.httpStatus;
