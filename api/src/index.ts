@@ -35,7 +35,10 @@ export const app = new Elysia()
   .use(
     cors({
       origin: env.CORS_ORIGINS.split(",").map((o) => o.trim()),
-      methods: ["GET", "POST", "OPTIONS"],
+      // WR-02: include PATCH/PUT/DELETE — the API exposes PATCH /orders/:id/status
+      // and PUT/DELETE /varieties/:id. Without them the browser preflight blocks
+      // every cross-origin mutation from the allowlisted web origin.
+      methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
       allowedHeaders: ["Content-Type", "Authorization"],
     }),
   )
