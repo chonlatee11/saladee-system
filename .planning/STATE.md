@@ -6,14 +6,14 @@ current_phase: 02
 current_phase_name: line-storefront-payments-delivery
 status: executing
 stopped_at: Completed 02-04-PLAN.md
-last_updated: "2026-07-04T11:41:40.637Z"
+last_updated: "2026-07-04T11:57:17.147Z"
 last_activity: 2026-07-04
 last_activity_desc: Phase 02 execution started
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 22
-  completed_plans: 18
+  completed_plans: 19
   percent: 40
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-06-28)
 ## Current Position
 
 Phase: 02 (line-storefront-payments-delivery) — EXECUTING
-Plan: 6 of 9
+Plan: 7 of 9
 Status: Ready to execute
 Last activity: 2026-07-04 — Phase 02 execution started
 
@@ -62,6 +62,7 @@ Progress: [████████░░] 77%
 | Phase 02 P03 | 25m | 2 tasks | 7 files |
 | Phase 02 P04 | 30min | 3 tasks | 11 files |
 | Phase 02 P05 | 6min | 2 tasks | 11 files |
+| Phase 02 P06 | ~35m | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -82,6 +83,8 @@ Recent decisions affecting current work:
 - [Phase ?]: 02-03: /delivery/quote is public + display-only; checkout 02-04 recomputes+snapshots the fee (never trusts client)
 - [Phase ?]: 02-04: LINE checkout — delivery+consent optional; awaiting_payment/QR/hold/consent activate only with a delivery choice (preserves Phase-1 created-status oversell tests)
 - [Phase ?]: 02-04: PromptPay CRC produced by promptpay-qr and independently re-derived in the golden-vector test; never hand-rolled
+- [Phase ?]: 02-06: DB partial UNIQUE index is the sole system-wide slip dedup arbiter; 23505 unwrapped from DrizzleQueryError.cause → 409 duplicate_slip
+- [Phase ?]: 02-06: SlipVerifier seam (env-selected) keeps SlipOK swappable; ambiguous/quota/5xx/network → 'unavailable' → admin manual-confirm (money-safe)
 
 ### Pending Todos
 
@@ -112,6 +115,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-04T11:41:31.895Z
+Last session: 2026-07-04T11:56:48.884Z
 Stopped at: Completed 02-04-PLAN.md
 Resume file: None

@@ -49,7 +49,7 @@
 ### PAY — ชำระเงิน
 
 - [x] **PAY-01**: ระบบสร้าง PromptPay QR ตามยอดออเดอร์ (ระบุจำนวน) ฝั่ง backend เอง (FR-17)
-- [ ] **PAY-02**: ลูกค้าโอน + อัปโหลดสลิป, ระบบตรวจสลิปด้วย slip-verification API + ป้องกันสลิปซ้ำ/ปลอม, แอดมินยืนยันได้ (FR-18)
+- [x] **PAY-02**: ลูกค้าโอน + อัปโหลดสลิป, ระบบตรวจสลิปด้วย slip-verification API + ป้องกันสลิปซ้ำ/ปลอม, แอดมินยืนยันได้ (FR-18)
 - [x] **PAY-03**: สถานะการชำระผูกกับออเดอร์ + QR มีเวลา hold/หมดอายุ ปล่อยสต็อกที่จองคืนหากไม่ชำระ (FR-19)
 - [ ] **PAY-04**: ลูกค้าขอใบกำกับภาษี/ใบเสร็จได้ตอน checkout, กรอกข้อมูลผู้รับ, ออก PDF, เก็บประวัติตาม PDPA — เก็บ price-at-order-time ตั้งแต่ Phase 1 (FR-37)
 
@@ -159,7 +159,7 @@ Explicitly excluded (anti-features จาก research — ป้องกัน 
 | ORD-04 | Phase 2 | Pending |
 | ORD-05 | Phase 4 | Pending |
 | PAY-01 | Phase 2 | Complete |
-| PAY-02 | Phase 2 | Pending |
+| PAY-02 | Phase 2 | Complete |
 | PAY-03 | Phase 2 | Complete |
 | PAY-04 | Phase 1 | Pending |
 | DEL-01 | Phase 2 | Complete |
