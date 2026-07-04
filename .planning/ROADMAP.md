@@ -98,7 +98,7 @@ Plans:
   4. The customer receives automatic LINE notifications on status changes and can view order history and reorder.
   5. Delivery fee computes by method/zone with free shipping over 500 baht, disallowed methods are blocked per product type, and PDPA consent (with separate marketing consent) is captured while slips stay in a private, signed-URL-only bucket.
 
-**Plans**: 6/9 plans executed
+**Plans**: 7/9 plans executed
 **UI hint**: yes
 
 Plans:
@@ -119,7 +119,7 @@ Plans:
 **Wave 4** *(blocked on Wave 3)*
 
 - [x] 02-06-PLAN.md — Slip-verify slice: SlipOK adapter + slip upload → private R2 → verify → paid/review + transRef dedup + admin confirm (wave 4)
-- [ ] 02-07-PLAN.md — Hold-expiry worker + safety-net sweep + Flex milestone notifications + webhook extend (wave 4)
+- [x] 02-07-PLAN.md — Hold-expiry worker + safety-net sweep + Flex milestone notifications + webhook extend (wave 4)
 
 **Wave 5** *(blocked on Wave 4)*
 
@@ -176,6 +176,6 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 0. Foundation & Platform | 8/8 | Complete   | 2026-07-02 |
 | 1. Commerce Core | 5/5 | Complete   | 2026-07-02 |
-| 2. LINE Storefront, Payments & Delivery | 6/9 | In Progress|  |
+| 2. LINE Storefront, Payments & Delivery | 7/9 | In Progress|  |
 | 3. Back-office, Crop Planning & B2B/Subscription | 0/TBD | Not started | - |
 | 4. Web Store, Marketing & Scale | 0/TBD | Not started | - |

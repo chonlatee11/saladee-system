@@ -43,7 +43,7 @@
 - [x] **ORD-01**: ระบบรับออเดอร์จาก LINE (LIFF/แชทบอท) เข้าหลังบ้านเดียวกัน (FR-13)
 - [ ] **ORD-02**: หน้าจัดการออเดอร์รวมทุกช่องทาง พร้อม pipeline สถานะ (รอชำระ → ชำระแล้ว → กำลังแพ็ก → จัดส่ง → สำเร็จ/ยกเลิก) (FR-14)
 - [ ] **ORD-03**: พนักงานเห็นคิวงานแพ็กจัดกลุ่มตามรอบส่ง/เส้นทาง และพิมพ์ใบแพ็ก/ใบปะหน้าได้ (FR-15)
-- [ ] **ORD-04**: ระบบแจ้งเตือนลูกค้าอัตโนมัติเมื่อสถานะเปลี่ยน ผ่าน LINE (FR-16)
+- [x] **ORD-04**: ระบบแจ้งเตือนลูกค้าอัตโนมัติเมื่อสถานะเปลี่ยน ผ่าน LINE (FR-16)
 - [ ] **ORD-05**: ลูกค้าสั่งซื้อผ่านเว็บได้ (ตะกร้า → checkout) (FR-12)
 
 ### PAY — ชำระเงิน
@@ -96,7 +96,7 @@
 
 - [ ] **LINE-01**: ตั้งค่า Rich Menu — สั่งผักรอบนี้, ราคาวันนี้, เช็ก/ติดตามออเดอร์, สมาชิก/แต้ม, ติดต่อร้าน (FR-46)
 - [x] **LINE-02**: หน้าสั่งซื้อผ่าน LIFF — เลือกผัก/แพ็ก → รอบส่ง → ที่อยู่ → ชำระ PromptPay/แนบสลิป, รองรับ LINE Login/guest (FR-47)
-- [ ] **LINE-03**: เชื่อม Messaging API webhook — รับอีเวนต์ (ตรวจ signature), ตอบกลับอัตโนมัติ, ส่งแจ้งเตือนสถานะออเดอร์ (FR-48)
+- [x] **LINE-03**: เชื่อม Messaging API webhook — รับอีเวนต์ (ตรวจ signature), ตอบกลับอัตโนมัติ, ส่งแจ้งเตือนสถานะออเดอร์ (FR-48)
 - [ ] **LINE-04**: แชทบอตรับออเดอร์แบบสนทนา + Broadcast โปรโมชันตามกลุ่ม (FR-49)
 
 ---
@@ -156,7 +156,7 @@ Explicitly excluded (anti-features จาก research — ป้องกัน 
 | ORD-01 | Phase 2 | Complete |
 | ORD-02 | Phase 1 | Pending |
 | ORD-03 | Phase 3 | Pending |
-| ORD-04 | Phase 2 | Pending |
+| ORD-04 | Phase 2 | Complete |
 | ORD-05 | Phase 4 | Pending |
 | PAY-01 | Phase 2 | Complete |
 | PAY-02 | Phase 2 | Complete |
@@ -188,7 +188,7 @@ Explicitly excluded (anti-features จาก research — ป้องกัน 
 | CROP-07 | Phase 4 | Pending |
 | LINE-01 | Phase 2 | Pending |
 | LINE-02 | Phase 2 | Complete |
-| LINE-03 | Phase 2 | Pending |
+| LINE-03 | Phase 2 | Complete |
 | LINE-04 | Phase 4 | Pending |
 
 **Coverage:**
