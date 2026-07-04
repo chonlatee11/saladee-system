@@ -30,23 +30,19 @@ import {
   varieties,
 } from "../db/schema";
 import { requireRole } from "../plugins/auth.plugin";
-import { canTransition, type OrderStatus } from "../services/order-status";
+import type { OrderStatus } from "../services/order-status";
+import { applyTransition, OrderError } from "../services/order-transition";
 import { deriveUnitPriceSatang } from "../services/pricing";
-import { release, reserve } from "../services/reservation";
+import { reserve } from "../services/reservation";
 
 // The schema-typed drizzle handle (query builder + transaction runner). Matches
 // both the runtime db (client.ts) and an injected test pool typed with `schema`.
 type OrdersDb = PostgresJsDatabase<typeof schema>;
 
-/** Signalled inside a transaction to roll back with a specific HTTP mapping. */
-class OrderError extends Error {
-  constructor(
-    readonly code: string,
-    readonly httpStatus: number,
-  ) {
-    super(code);
-  }
-}
+// OrderError (throw-to-rollback → HTTP mapping) now lives in
+// services/order-transition.ts alongside the shared applyTransition() and is
+// imported above; the POST /orders flow below still throws it for round_closed /
+// sold_out, and the PATCH flow delegates the guarded transition to applyTransition.
 
 // ── TypeBox request schemas ──────────────────────────────────────────────────
 // NEVER accept a price/plants field from the client — the server resolves price
@@ -520,67 +516,13 @@ export function makeOrdersRoutes(database: OrdersDb = defaultDb) {
         async ({ params, body, set }) => {
           const next = body.status as OrderStatus;
           try {
-            const finalStatus = await database.transaction(async (tx) => {
-              // CR-01 / WR-05: lock the order row and read the AUTHORITATIVE status
-              // INSIDE the tx (SELECT ... FOR UPDATE). Reading status outside the tx
-              // and validating against that stale value opened a TOCTOU window where
-              // two concurrent cancels both passed canTransition('paid','cancelled')
-              // and both ran release() — double-decrementing reserved_plants and
-              // freeing OTHER orders' reservations (oversell, NFR-02 / INV-06). With
-              // the row lock, the second racer blocks until the first commits, then
-              // re-reads status = 'cancelled' and fails the transition gate below, so
-              // release() runs exactly once. This also closes the general
-              // lost-update window for ANY two concurrent transitions (WR-05).
-              const [locked] = await tx
-                .select({ status: orders.status, roundId: orders.roundId })
-                .from(orders)
-                .where(eq(orders.id, params.id))
-                .for("update")
-                .limit(1);
-              if (!locked) throw new OrderError("order_not_found", 404);
-              const current = locked.status as OrderStatus;
-              // Re-validate the transition against the LOCKED row, not a stale read.
-              // `cancelled` from a terminal state (done) or a repeat cancel is illegal
-              // here → 400, so stock is never re-released.
-              if (!canTransition(current, next)) {
-                throw new OrderError("illegal_transition", 400);
-              }
-
-              // A `cancelled` entry (from a non-cancelled state) releases the order's
-              // reserved plants in the SAME tx. The row lock above serialises racers,
-              // so this branch runs at most once per order (D-08 / Pitfall 5).
-              if (next === "cancelled" && current !== "cancelled") {
-                const lines = await tx
-                  .select({
-                    lineKind: orderLines.lineKind,
-                    varietyId: orderLines.varietyId,
-                    plants: orderLines.plantsDecremented,
-                    qty: orderLines.qty,
-                    boxBomJson: orderLines.boxBomJson,
-                  })
-                  .from(orderLines)
-                  .where(eq(orderLines.orderId, params.id));
-                for (const l of lines) {
-                  if (l.lineKind === "box") {
-                    // Release EVERY component of the box from its frozen BOM snapshot
-                    // (plantsPerBox × qty), so a cancelled box never strands stock.
-                    const bom = l.boxBomJson as {
-                      components?: { varietyId: string; plantsPerBox: number }[];
-                    } | null;
-                    for (const c of bom?.components ?? []) {
-                      await release(tx, locked.roundId, c.varietyId, c.plantsPerBox * l.qty);
-                    }
-                  } else if (l.varietyId) {
-                    await release(tx, locked.roundId, l.varietyId, l.plants);
-                  }
-                }
-              }
-              await tx
-                .update(orders)
-                .set({ status: next, updatedAt: new Date() })
-                .where(eq(orders.id, params.id));
-              return next;
-            });
+            // Delegate to the SHARED guarded transition (services/order-transition.ts):
+            // it row-locks + re-reads the authoritative status and releases reserved
+            // stock on entering `cancelled`, exactly once (the Phase-1 concurrent-cancel
+            // fix, now the single source of truth reused by slip-verify + hold-expiry).
+            const { status: finalStatus } = await database.transaction((tx) =>
+              applyTransition(tx, params.id, next),
+            );
 
             set.status = 200;
             // IN-03: `finalStatus` is the committed status read/written under the
