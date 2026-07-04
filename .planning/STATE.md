@@ -32,6 +32,7 @@ Phase: 02 (line-storefront-payments-delivery) — EXECUTING
 Plan: 9 of 9
 Status: Phase complete — ready for verification
 Last activity: 2026-07-04 — Phase 02 execution started
+Note: CR-01/CR-02 code-review test-gaps CLOSED — added regression tests api/tests/verified-slip-park.test.ts (verified slip parked as awaiting_review + 202 when order cancelled mid-verify) and api/tests/created-hold-sweep.test.ts (created-path holdExpiresAt set + swept). api bun test 187 pass / 0 fail.
 
 Progress: [████████░░] 77%
 
