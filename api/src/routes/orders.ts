@@ -55,7 +55,11 @@ const OrderLineBody = t.Object({
   roundId: t.String({ format: "uuid" }),
   varietyId: t.String({ format: "uuid" }),
   saleUnitId: t.String({ format: "uuid" }),
-  qty: t.Integer({ minimum: 1 }), // blocks negative/zero reserve (T-01-09 / V5)
+  // WR-02: bound qty above too. Without a maximum, unitPriceSatang*qty (and
+  // plantsPerUnit*qty) can exceed int4 (2,147,483,647) and Postgres raises
+  // "integer out of range" — an uncaught 500 instead of a clean 422. 100000 packs
+  // is far beyond any real order and keeps every derived int4 well in range.
+  qty: t.Integer({ minimum: 1, maximum: 100000 }), // blocks negative/zero/overflow (T-01-09 / V5)
 });
 
 // A mixed-box line (01-05, INV-07): identify the box + the round it draws stock
@@ -63,7 +67,7 @@ const OrderLineBody = t.Object({
 const BoxLineBody = t.Object({
   boxId: t.String({ format: "uuid" }),
   roundId: t.String({ format: "uuid" }),
-  qty: t.Integer({ minimum: 1 }),
+  qty: t.Integer({ minimum: 1, maximum: 100000 }), // WR-02: bound to avoid int4 overflow → 500
 });
 
 const GuestCustomer = t.Object({

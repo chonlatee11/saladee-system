@@ -28,7 +28,9 @@ type BoxesDb = PostgresJsDatabase<typeof schema>;
 
 const ComponentBody = t.Object({
   varietyId: t.String({ format: "uuid" }),
-  plantsPerBox: t.Integer({ minimum: 1 }), // >=1 plant per box (T-01 negative/zero guard)
+  // WR-02: bound above too — plantsPerBox flows into plantsPerBox*qty (int4) at
+  // order time; an unbounded value could overflow int4 and surface as a 500.
+  plantsPerBox: t.Integer({ minimum: 1, maximum: 100000 }), // >=1 plant per box, bounded (T-01)
 });
 
 const CreateBoxBody = t.Object({

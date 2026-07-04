@@ -200,4 +200,21 @@ describe("WR-03: POST /orders honours the variety / sale-unit soft-delete flag",
     expect(res.status).toBe(400);
     expect((await res.json()) as { error: string }).toEqual({ error: "invalid_line" });
   });
+
+  test("WR-02: oversized qty is rejected at validation (422), not an int4-overflow 500", async () => {
+    const seed = await seedSellableLine(db, { quotaPlants: 100 });
+    const res = await postOrder({
+      tier: "b2c",
+      customer,
+      lines: [
+        {
+          roundId: seed.roundId,
+          varietyId: seed.varietyId,
+          saleUnitId: seed.saleUnitId,
+          qty: 100001, // over the 100000 maximum → TypeBox 422 before any DB write
+        },
+      ],
+    });
+    expect(res.status).toBe(422);
+  });
 });
