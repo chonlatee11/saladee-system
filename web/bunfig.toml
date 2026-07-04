@@ -1,0 +1,6 @@
+# Bun config for the LIFF SPA test runner. `preload` registers the Vue SFC loader
+# (tests/vue-loader.ts) before any test file runs, so `bun test` can import and
+# server-render `.vue` components (the Vite build has its own Vue plugin). No effect
+# on the Vite production build, which never reads bunfig.
+[test]
+preload = ["./tests/vue-loader.ts"]
