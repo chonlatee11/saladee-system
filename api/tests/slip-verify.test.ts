@@ -99,7 +99,9 @@ describe("slip-verify adapter (PAY-02)", () => {
   it("sends the api key in the x-authorization header (env-only) to the branch URL, never in the body", async () => {
     const { fn, calls } = stubFetch(jsonRes(200, { success: true, data: { transRef: "TX", amount: 70 } }));
     await adapter(fn).verify({ image: new Uint8Array([9]), expectedAmountSatang: 7000 });
-    const [call] = calls;
+    const call = calls[0];
+    expect(call).toBeDefined();
+    if (!call) return;
     expect(call.url).toBe("https://api.slipok.com/api/line/apikey/branch-1");
     const headers = new Headers(call.init?.headers);
     expect(headers.get("x-authorization")).toBe("secret-key");

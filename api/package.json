@@ -24,7 +24,8 @@
     "pg-boss": "12.23.0",
     "postgres": "3.4.9",
     "promptpay-qr": "0.5.0",
-    "qrcode": "1.5.4"
+    "qrcode": "1.5.4",
+    "sharp": "0.35.2"
   },
   "devDependencies": {
     "@elysiajs/eden": "1.4.9",
