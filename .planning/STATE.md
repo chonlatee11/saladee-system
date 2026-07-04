@@ -2,17 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 2
-status: "Phase 01 shipped — PR #2"
-stopped_at: Phase 2 UI-SPEC approved
-last_updated: "2026-07-04T09:38:09.783Z"
+current_phase: 02
+current_phase_name: line-storefront-payments-delivery
+status: executing
+stopped_at: Completed 02-01-PLAN.md
+last_updated: "2026-07-04T10:40:36.582Z"
 last_activity: 2026-07-04
-last_activity_desc: Phase 2 planning complete
+last_activity_desc: Phase 02 execution started
 progress:
   total_phases: 5
   completed_phases: 2
-  total_plans: 13
-  completed_plans: 13
+  total_plans: 22
+  completed_plans: 14
   percent: 40
 ---
 
@@ -23,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-28)
 
 **Core value:** ลูกค้าสั่งผักสลัดผ่าน LINE แล้วจ่ายเงินจบในที่เดียว และจำนวนที่เปิดขายตรงกับผลผลิตจริงเสมอ (ไม่ oversell, ไม่เหลือทิ้ง)
-**Current focus:** Phase 2 — line storefront, payments & delivery
+**Current focus:** Phase 02 — line-storefront-payments-delivery
 
 ## Current Position
 
-Phase: 2
-Plan: Not started
-Status: Phase 01 shipped — PR #2
-Last activity: 2026-07-04 — Phase 2 planning complete
+Phase: 02 (line-storefront-payments-delivery) — EXECUTING
+Plan: 2 of 9
+Status: Ready to execute
+Last activity: 2026-07-04 — Phase 02 execution started
 
 Progress: [██████████] 100%
 
@@ -56,6 +57,7 @@ Progress: [██████████] 100%
 *Updated after each plan completion*
 | Phase 00 P01 | 8 | 3 tasks | 25 files |
 | Phase 00 P08 | 20 | 3 tasks | 5 files |
+| Phase 02 P01 | 15 | 3 tasks | 41 files |
 
 ## Accumulated Context
 
@@ -70,6 +72,8 @@ Recent decisions affecting current work:
 - [Roadmap]: Phase 1 ships MANUAL sellable qty; crop-planning auto-feed (CROP-04) replaces it in Phase 3 with manual override kept permanently.
 - [Phase ?]: [00-01] Interface-first stub seams (db/storage/line/auth plugins + webhook/files/auth route stubs) with a FIXED index.ts composition order let wave-2 slices fill their own module only, never editing index.ts — enables parallel disjoint-file execution.
 - [Phase ?]: [00-01] .env.test committed at both repo root and api/ so 'cd api && bun test' boot-validates from the api cwd (Bun loads env from cwd); real .env stays gitignored.
+- [Phase ?]: [02-01] pg-boss runs on DATABASE_URL_DIRECT and starts only under import.meta.main so bun test never spins a worker.
+- [Phase ?]: [02-01] applyTransition() is the single guarded transition path reused by staff PATCH, slip-verify (02-06), and hold-expiry (02-07) — cannot re-break the concurrent-cancel oversell fix.
 
 ### Pending Todos
 
@@ -100,6 +104,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-04T07:04:29.760Z
-Stopped at: Phase 2 UI-SPEC approved
-Resume file: .planning/phases/02-line-storefront-payments-delivery/02-UI-SPEC.md
+Last session: 2026-07-04T10:40:23.982Z
+Stopped at: Completed 02-01-PLAN.md
+Resume file: None

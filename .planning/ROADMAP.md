@@ -98,13 +98,13 @@ Plans:
   4. The customer receives automatic LINE notifications on status changes and can view order history and reorder.
   5. Delivery fee computes by method/zone with free shipping over 500 baht, disallowed methods are blocked per product type, and PDPA consent (with separate marketing consent) is captured while slips stay in a private, signed-URL-only bucket.
 
-**Plans**: 9 plans
+**Plans**: 1/9 plans executed
 **UI hint**: yes
 
 Plans:
 **Wave 1**
 
-- [ ] 02-01-PLAN.md — Backbone: schema+migration 0003 [BLOCKING], env keys, shared applyTransition(), pg-boss init, Wave-0 test scaffolds (wave 1)
+- [x] 02-01-PLAN.md — Backbone: schema+migration 0003 [BLOCKING], env keys, shared applyTransition(), pg-boss init, Wave-0 test scaffolds (wave 1)
 
 **Wave 2** *(blocked on Wave 1)*
 
@@ -176,6 +176,6 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 0. Foundation & Platform | 8/8 | Complete   | 2026-07-02 |
 | 1. Commerce Core | 5/5 | Complete   | 2026-07-02 |
-| 2. LINE Storefront, Payments & Delivery | 0/9 | Not started | - |
+| 2. LINE Storefront, Payments & Delivery | 1/9 | In Progress|  |
 | 3. Back-office, Crop Planning & B2B/Subscription | 0/TBD | Not started | - |
 | 4. Web Store, Marketing & Scale | 0/TBD | Not started | - |

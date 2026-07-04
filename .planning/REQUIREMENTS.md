@@ -50,7 +50,7 @@
 
 - [ ] **PAY-01**: ระบบสร้าง PromptPay QR ตามยอดออเดอร์ (ระบุจำนวน) ฝั่ง backend เอง (FR-17)
 - [ ] **PAY-02**: ลูกค้าโอน + อัปโหลดสลิป, ระบบตรวจสลิปด้วย slip-verification API + ป้องกันสลิปซ้ำ/ปลอม, แอดมินยืนยันได้ (FR-18)
-- [ ] **PAY-03**: สถานะการชำระผูกกับออเดอร์ + QR มีเวลา hold/หมดอายุ ปล่อยสต็อกที่จองคืนหากไม่ชำระ (FR-19)
+- [x] **PAY-03**: สถานะการชำระผูกกับออเดอร์ + QR มีเวลา hold/หมดอายุ ปล่อยสต็อกที่จองคืนหากไม่ชำระ (FR-19)
 - [ ] **PAY-04**: ลูกค้าขอใบกำกับภาษี/ใบเสร็จได้ตอน checkout, กรอกข้อมูลผู้รับ, ออก PDF, เก็บประวัติตาม PDPA — เก็บ price-at-order-time ตั้งแต่ Phase 1 (FR-37)
 
 ### DEL — จัดส่ง
@@ -160,7 +160,7 @@ Explicitly excluded (anti-features จาก research — ป้องกัน 
 | ORD-05 | Phase 4 | Pending |
 | PAY-01 | Phase 2 | Pending |
 | PAY-02 | Phase 2 | Pending |
-| PAY-03 | Phase 2 | Pending |
+| PAY-03 | Phase 2 | Complete |
 | PAY-04 | Phase 1 | Pending |
 | DEL-01 | Phase 2 | Pending |
 | DEL-02 | Phase 2 | Pending |
@@ -192,6 +192,7 @@ Explicitly excluded (anti-features จาก research — ป้องกัน 
 | LINE-04 | Phase 4 | Pending |
 
 **Coverage:**
+
 - v1 requirements: 56 total (PLAT×5, INV×10, SALE×4, ORD×5, PAY×4, DEL×5, CUST×5, MKT×4, ADM×3, CROP×7, LINE×4). หมายเหตุ: บันทึกเดิมระบุ "45" เป็นการนับพลาด — REQ-ID จริงในเอกสารมี 56 รายการ
 - Mapped to phases: 56/56 ✓ (Phase 0: 2, Phase 1: 17, Phase 2: 14, Phase 3: 16, Phase 4: 7)
 - Unmapped: 0
