@@ -15,6 +15,8 @@ const complete = {
   R2_ACCESS_KEY_ID: "dummy-key-id",
   R2_SECRET_ACCESS_KEY: "dummy-secret",
   R2_BUCKET: "saladee-uploads",
+  // Phase-2: the only new REQUIRED key (SLIPOK_*/HOLD/PROVIDER all have defaults).
+  PROMPTPAY_PAYEE_ID: "0812345678",
 } as const;
 
 describe("validateEnv (boot-time env validation)", () => {
@@ -40,6 +42,20 @@ describe("validateEnv (boot-time env validation)", () => {
   test("PORT is optional and defaults to 3000 when absent", () => {
     const { PORT, ...noPort } = complete;
     const result = validateEnv(noPort);
+    expect(result.ok).toBe(true);
+  });
+
+  test("missing PROMPTPAY_PAYEE_ID fails (fail-fast, no default)", () => {
+    const { PROMPTPAY_PAYEE_ID, ...missing } = complete;
+    const result = validateEnv(missing);
+    expect(result.ok).toBe(false);
+    expect(result.errors.some((e) => e.includes("PROMPTPAY_PAYEE_ID"))).toBe(true);
+  });
+
+  test("SLIPOK_* and HOLD_WINDOW_SECONDS are optional (defaults) — env still valid", () => {
+    // The SlipOK creds are not provisioned yet (env gap); they default to "" so
+    // boot never fails, while 02-06 validates them non-empty before calling out.
+    const result = validateEnv({ ...complete });
     expect(result.ok).toBe(true);
   });
 });

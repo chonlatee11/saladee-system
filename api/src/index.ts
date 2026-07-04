@@ -7,6 +7,7 @@
 import { cors } from "@elysiajs/cors";
 import { Elysia } from "elysia";
 import { env } from "./env";
+import { startJobs, stopJobs } from "./jobs/boss";
 import { log } from "./lib/logger";
 import { authPlugin } from "./plugins/auth.plugin";
 import { dbPlugin } from "./plugins/db.plugin";
@@ -55,8 +56,20 @@ export const app = new Elysia()
 export type App = typeof app;
 
 // Bind the port only when run as the entry point (not when imported by tests).
+// The pg-boss worker starts under the SAME guard so `bun test` (which imports
+// `app`) never spins a background worker (RESEARCH Pitfall 6 / D-08).
 if (import.meta.main) {
   app.listen(Number(env.PORT), (server) => {
     log.info("listening", { port: server.port, env: env.NODE_ENV });
   });
+  startJobs().catch((err) => {
+    log.error("jobs failed to start", { error: String(err) });
+    process.exit(1);
+  });
+  // Graceful shutdown: drain the worker before exit.
+  for (const sig of ["SIGTERM", "SIGINT"] as const) {
+    process.on(sig, () => {
+      stopJobs().finally(() => process.exit(0));
+    });
+  }
 }
