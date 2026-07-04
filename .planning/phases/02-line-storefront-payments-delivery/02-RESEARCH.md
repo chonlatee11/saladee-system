@@ -610,21 +610,24 @@ See the inline blocks above — all are the concrete Phase-2 patterns:
 | A4 | Setting order to `awaiting_payment` at `POST /orders` (vs Phase-1 `created`) is acceptable | pg-boss / orders | Low — Phase-2 owns the checkout flow; the planner should confirm whether POST sets awaiting_payment directly or via a follow-on transition. Either satisfies D-10. |
 | A5 | `promptpay-qr` default-exports `generatePayload` (last published 2022) | PromptPay | Low — stable, widely used; confirm import shape (`import generatePayload from "promptpay-qr"`) at install. If ESM/CJS interop bites under Bun, `promptparse` is the blessed fallback. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **SlipOK receiver-field masking vs strict payee match (D-02).**
    - What we know: SlipOK returns `receiver` (masked) and, with `log:true`, verifies against the branch's linked receiving account.
    - What's unclear: whether the masked fields alone allow a code-level payee assertion, or whether we lean entirely on the branch-account binding.
    - Recommendation: a 30-minute spike with the free tier + one real slip during Wave 0; if masking blocks it, treat the branch-linked-account as the payee guarantee (still satisfies D-02) and assert amount + transRef in code.
+   - RESOLVED: SlipOK payee-masking verification is deferred to a Wave-0 spike (one real slip through the free tier). PAY-02 is fully covered regardless of the spike outcome by the D-04 admin manual-confirm fallback plus the D-02 branch-linked-account guarantee (slip must be paid into the registered receiving account) asserted alongside amount + transRef. See 02-06 (slip adapter + admin confirm) and 02-VALIDATION.md Manual-Only Verifications.
 
 2. **Order status at checkout: `created` vs `awaiting_payment`.**
    - What we know: D-10 wants QR + hold scheduled in the same flow as `POST /orders`.
    - What's unclear: whether to set `awaiting_payment` inside POST or emit `created` then transition.
    - Recommendation: set `awaiting_payment` in the same transaction and schedule the hold; simplest and matches the pay screen states.
+   - RESOLVED: The order is set to `awaiting_payment` directly inside the `POST /orders` transaction (same flow that snapshots delivery + builds the QR + schedules the hold). Implemented in 02-04 Task 2.
 
 3. **Delivery config: file vs DB table.**
    - What we know: D-12 says "config, admin edits" but the admin UI is Phase 3.
    - Recommendation: committed TypeBox-validated config file for MVP (edit via git/redeploy); migrate to a DB table when the Phase-3 admin UI lands. No data migration needed later (config → seed rows).
+   - RESOLVED: Delivery zones use a committed TypeBox-validated config file (`api/src/config/delivery.ts`, validated at boot), edited via git/redeploy for MVP; migrate to a DB table when the Phase-3 admin UI lands (config → seed rows, no data migration). Implemented in 02-03.
 
 ## Environment Availability
 
