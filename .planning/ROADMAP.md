@@ -176,6 +176,6 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 0. Foundation & Platform | 8/8 | Complete   | 2026-07-02 |
 | 1. Commerce Core | 5/5 | Complete   | 2026-07-02 |
-| 2. LINE Storefront, Payments & Delivery | 9/9 | Complete   | 2026-07-04 |
+| 2. LINE Storefront, Payments & Delivery | 9/9 | Complete    | 2026-07-04 |
 | 3. Back-office, Crop Planning & B2B/Subscription | 0/TBD | Not started | - |
 | 4. Web Store, Marketing & Scale | 0/TBD | Not started | - |
