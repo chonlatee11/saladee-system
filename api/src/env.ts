@@ -29,11 +29,14 @@ export const EnvSchema = t.Object({
   }),
   // ── Phase-2 payments/slip/hold config (RESEARCH 220-227) ────────────────────
   // Slip-verification adapter selection + credentials. SLIP_VERIFY_PROVIDER picks
-  // the adapter (02-06). SLIPOK_* default to "" because the concrete SlipOK branch
-  // + key are not provisioned yet (flagged pre-planning: "surface SlipOK env gap")
-  // — env-driven, never logged (Phase-0 D-15); 02-06 validates they are non-empty
-  // before the slipok adapter actually calls out.
-  SLIP_VERIFY_PROVIDER: t.String({ default: "slipok" }),
+  // the adapter (02-06): "slip2go" (default) or "slipok". Credentials default to ""
+  // because the concrete secret is provisioned per-shop in prod — env-driven, never
+  // logged (Phase-0 D-15); each adapter parks the order for admin review if its
+  // outbound call fails (D-04), so a missing secret degrades safely, never oversells.
+  SLIP_VERIFY_PROVIDER: t.String({ default: "slip2go" }),
+  // Slip2Go bearer secret (Authorization: Bearer). From the Slip2Go "API Connect" menu.
+  SLIP2GO_API_SECRET: t.String({ default: "" }),
+  // SlipOK (legacy alternative — still selectable via SLIP_VERIFY_PROVIDER=slipok).
   SLIPOK_BRANCH_ID: t.String({ default: "" }),
   SLIPOK_API_KEY: t.String({ default: "" }),
   // The PromptPay payee (phone or national id) embedded in the merchant QR (D-02).
