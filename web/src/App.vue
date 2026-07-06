@@ -12,7 +12,7 @@ onErrorCaptured(() => {
 </script>
 
 <template>
-  <main class="mx-auto min-h-dvh w-full max-w-md">
+  <main class="mx-auto min-h-dvh w-full max-w-[28rem]">
     <div
       v-if="failed"
       class="flex min-h-dvh flex-col items-center justify-center gap-md p-md text-center"

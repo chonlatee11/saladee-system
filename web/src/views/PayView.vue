@@ -257,7 +257,7 @@ onUnmounted(() => {
       role="dialog"
       aria-modal="true"
     >
-      <div class="w-full max-w-md rounded-xl bg-canvas p-lg">
+      <div class="w-full max-w-[28rem] rounded-xl bg-canvas p-lg">
         <h2 class="text-[20px] font-semibold text-ink">ยกเลิกคำสั่งซื้อ</h2>
         <p class="mt-sm text-[16px] leading-[1.6] text-muted">
           ยกเลิกออเดอร์นี้ใช่ไหม? ผักที่จองไว้จะถูกคืนสู่รอบ

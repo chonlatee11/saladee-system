@@ -2,30 +2,13 @@
  * Saladee LIFF design tokens (02-UI-SPEC). Tailwind v4 is CSS-first: the @theme
  * block below declares the UI-SPEC tokens as CSS custom properties, so utilities
  * like `bg-surface`, `text-accent`, `p-md`, `font-sans` are generated from them.
- * No tailwind.config.js (v4). Sarabun is self-hosted (no Google CDN) so the LIFF
- * first paint is fast and offline-tolerant; a system-font stack is the fallback.
- *
- * The two woff2 weights (400/600) are a design artifact dropped into web/public/
- * fonts/ (absolute /fonts/… URLs are served as-is, not bundled). Until they are
- * present the fallback stack renders — the app never breaks on a missing font.
+ * No tailwind.config.js (v4). Text renders in the system-font stack declared by
+ * --font-sans below (system-ui → Noto Sans Thai), so there is nothing to self-host
+ * and no font request on first paint. (The self-hosted Sarabun @font-face was
+ * removed — the woff2 files were never provisioned, so the browser 404'd them and
+ * logged OTS decode errors; the system stack renders Thai cleanly regardless.)
  */
 @import "tailwindcss";
-
-@font-face {
-  font-family: "Sarabun";
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url("/fonts/sarabun-400.woff2") format("woff2");
-}
-
-@font-face {
-  font-family: "Sarabun";
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url("/fonts/sarabun-600.woff2") format("woff2");
-}
 
 @theme {
   /* Color — 60/30/10 fresh-salad palette (UI-SPEC Color) */
