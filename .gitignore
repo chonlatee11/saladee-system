@@ -9,3 +9,13 @@ dist
 
 # Bun
 .bun
+
+# Generated tooling output (regenerable — never committed)
+graphify-out/
+.planning/graphs/
+.rtk/
+
+# Local scratch + working captures
+scratchpad/
+chat.png
+rich-menu.png
