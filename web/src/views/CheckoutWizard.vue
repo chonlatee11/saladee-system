@@ -22,6 +22,7 @@
 import { computed, reactive, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import { api } from "../api";
+import { getCustomerId } from "../liff";
 import { useCart } from "../stores/cart";
 import BusyOverlay from "../components/BusyOverlay.vue";
 import DeliveryMethodTiles from "../components/DeliveryMethodTiles.vue";
@@ -249,6 +250,9 @@ async function confirm(): Promise<void> {
     deliveryZone: zoneId.value,
     customer,
     consent: consent.value,
+    // A logged-in member binds the order to their LINE identity (history/detail/push,
+    // UAT-4); a guest sends the byte-identical guest body (getCustomerId() === null).
+    customerId: getCustomerId() ?? undefined,
   });
   const res = await placeOrder(body).catch(
     () => ({ data: null, error: { network: true } }) as Loaded<{ id: string }>,

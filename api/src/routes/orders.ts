@@ -100,7 +100,16 @@ const GuestCustomer = t.Object({
   recipientPhone: t.String({ minLength: 1 }),
   recipientAddress: t.String({ minLength: 1 }),
 });
-const MemberCustomer = t.Object({ customerId: t.String({ format: "uuid" }) });
+// A member body carries the customer id (which bears line_user_id) so the order
+// links to their LINE identity (history/detail/push). Recipient fields are OPTIONAL
+// so a legacy `{ customerId }`-only body still validates 201 — when present they are
+// snapshotted onto the order exactly like the guest path (D-21). Never a money field.
+const MemberCustomer = t.Object({
+  customerId: t.String({ format: "uuid" }),
+  recipientName: t.Optional(t.String({ minLength: 1 })),
+  recipientPhone: t.Optional(t.String({ minLength: 1 })),
+  recipientAddress: t.Optional(t.String({ minLength: 1 })),
+});
 
 const CreateOrderBody = t.Object({
   tier: t.Union([t.Literal("b2c"), t.Literal("b2b")]),
@@ -387,7 +396,12 @@ export function makeOrdersRoutes(
 
           // 2. Member validation (read-only) before entering the tx.
           const cust = body.customer as
-            | { customerId: string }
+            | {
+                customerId: string;
+                recipientName?: string;
+                recipientPhone?: string;
+                recipientAddress?: string;
+              }
             | {
                 name: string;
                 phone: string;
@@ -479,6 +493,13 @@ export function makeOrdersRoutes(
               let recipientAddress: string | null = null;
               if ("customerId" in cust) {
                 customerId = cust.customerId;
+                // A member may now supply a delivery recipient (UAT-4). Snapshot the
+                // same recipient columns the guest path writes, coalescing any
+                // omitted field to null so a legacy `{ customerId }`-only body is
+                // unchanged. No money/stock/consent logic is touched here.
+                recipientName = cust.recipientName ?? null;
+                recipientPhone = cust.recipientPhone ?? null;
+                recipientAddress = cust.recipientAddress ?? null;
               } else {
                 const [c] = await tx
                   .insert(customers)

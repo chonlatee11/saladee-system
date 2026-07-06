@@ -126,6 +126,7 @@ Items acknowledged and carried forward from previous milestone close:
 | 2026-07-06 | Fix Phase-2 LIFF UI blockers (max-w-md 16px collision, missing checkout CTA, remove missing Sarabun @font-face) | 260706-swg-fix-phase-2-liff-ui-blockers-max-w-md-16 | complete ✓ |
 | 2026-07-06 | Add Slip2Go slip-verification adapter (new default, replaces SlipOK) | 260706-tbn-add-slip2go-slip-verification-adapter-an | complete ✓ |
 | 2026-07-06 | Loading spinner + full-screen busy overlay across the LIFF | 260706-ut1-add-loading-spinner-full-screen-busy-ove | complete ✓ |
+| 2026-07-06 | Wire LINE member order linkage (order.customer_id + recipient snapshot) — closes Phase-2 UAT-4 | 260706-vr5-wire-line-member-order-linkage-customeri | complete ✓ |
 
 ## Session Continuity
 
