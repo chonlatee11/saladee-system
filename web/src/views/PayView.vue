@@ -15,6 +15,7 @@
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { useRoute } from "vue-router";
 import { api } from "../api";
+import BusyOverlay from "../components/BusyOverlay.vue";
 import SlipUploader, { type SlipResult } from "../components/SlipUploader.vue";
 import { baht } from "../lib/checkout";
 import { getSessionToken } from "../liff";
@@ -120,8 +121,10 @@ function onUploading(): void {
 function onResult(result: SlipResult): void {
   uploading.value = false;
   hasUploaded.value = true;
-  if (result.status === "paid") view.value = "paid";
-  else if (result.status === "review") view.value = "review";
+  if (result.status === "paid") {
+    view.value = "paid";
+    stopPoll();
+  } else if (result.status === "review") view.value = "review";
   else rejectReason.value = result.reason ?? "other"; // stay in "pay" → allow re-upload
 }
 
@@ -138,8 +141,33 @@ async function doCancel(): Promise<void> {
   if (!r.error) view.value = "expired";
 }
 
+// ── Order-status self-heal poll ─────────────────────────────────────────────
+// The slip verify runs synchronously server-side across a multi-second external
+// call (slip vendor); a LIFF WebView can drop or time out that upload response even
+// though the order was paid. Poll the idempotent QR/status endpoint so the screen
+// reflects the TRUE order state (paid / cancelled) regardless of whether the upload
+// response ever arrived — otherwise a paid customer is stranded on the QR screen.
+let statusPoll: ReturnType<typeof setInterval> | null = null;
+function stopPoll(): void {
+  if (statusPoll) clearInterval(statusPoll);
+  statusPoll = null;
+}
+async function pollStatus(): Promise<void> {
+  const r = await qrLoad(orderId).catch(() => null);
+  const s = r?.data?.status;
+  if (s === "paid") {
+    view.value = "paid";
+    stopPoll();
+  } else if (s === "cancelled") {
+    view.value = "expired";
+    stopPoll();
+  }
+}
+
 // ── Countdown ticker (client only) ─────────────────────────────────────────────
 onMounted(() => {
+  // Poll while the order can still resolve server-side (awaiting_payment).
+  if (view.value === "pay") statusPoll = setInterval(() => void pollStatus(), 4000);
   if (secondsLeft.value === null) return;
   timer = setInterval(() => {
     if (secondsLeft.value === null) return;
@@ -149,11 +177,18 @@ onMounted(() => {
 });
 onUnmounted(() => {
   if (timer) clearInterval(timer);
+  stopPoll();
 });
 </script>
 
 <template>
   <section class="flex flex-col items-center gap-lg p-md pb-2xl">
+    <!-- Blocks all input while the slip is verifying (multi-second) or cancelling. -->
+    <BusyOverlay
+      :show="uploading || cancelling"
+      :label="uploading ? 'กำลังตรวจสอบสลิป…' : 'กำลังยกเลิกคำสั่งซื้อ…'"
+    />
+
     <!-- ── ERROR ────────────────────────────────────────────────────────────── -->
     <div v-if="view === 'error'" class="flex flex-col items-center gap-md py-2xl text-center" role="alert">
       <p class="text-[16px] text-ink">เกิดข้อผิดพลาด โปรดลองใหม่อีกครั้ง</p>

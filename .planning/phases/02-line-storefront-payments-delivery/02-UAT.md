@@ -1,5 +1,5 @@
 ---
-status: partial
+status: testing
 phase: 02-line-storefront-payments-delivery
 source: [02-VERIFICATION.md]
 started: 2026-07-04
@@ -8,7 +8,15 @@ updated: 2026-07-06
 
 ## Current Test
 
-[testing paused — LIFF UI issue found (test 5); fixing before tests 3–4 resume]
+number: 5
+name: End-to-end live order inside LINE (re-test after LIFF fix deployed)
+expected: |
+  With the LIFF fix live (max-w-[28rem] layout + checkout CTA), a real customer opens
+  the Rich Menu, browses the open round in LIFF, adds packs, completes the 3-step
+  checkout (cart → delivery+address+consent → summary), pays via PromptPay, uploads a
+  slip, sees the order confirmed, and receives automatic status updates — while an
+  unpaid hold releases stock on expiry.
+awaiting: user response
 
 ## Tests
 
@@ -35,10 +43,15 @@ notes: |
   and payee resolved correctly. Required first seeding a catalog: created owner user
   (SQL), then variety+round+stock+price via the new bruno/Saladee/admin requests.
 
-### 3. Slip auto-verification with a live SlipOK account (optional for launch)
-expected: SLIPOK_API_KEY / SLIPOK_BRANCH_ID set to a real SlipOK branch bound to the receiving account. Uploading a genuine slip auto-confirms the order to paid; an ambiguous/failed verify parks the order as awaiting_review for admin manual-confirm. (Admin manual-confirm already works without a live key.)
-result: pending
-note: deferred — user paused UAT to fix the test-5 LIFF UI blockers first
+### 3. Slip auto-verification with a live account (Slip2Go — switched from SlipOK)
+expected: Uploading a genuine slip auto-confirms the order to paid; an ambiguous/failed verify parks the order as awaiting_review for admin manual-confirm.
+result: pass
+notes: |
+  Provider switched to Slip2Go (quick 260706-tbn). Live-verified against a real
+  Slip2Go account: a genuine slip returned code 200200 "Slip is valid" → payment row
+  status=clean (transRef + amount_satang 5000) → order transitioned to paid. An early
+  false wrong_payee (200401) was root-caused to a missing PromptPay accountType in the
+  checkReceiver condition and fixed (derive 02003/02001/02004 from payee length).
 
 ### 4. Real LINE push — milestone Flex notifications reach the customer
 expected: LINE_CHANNEL_ACCESS_TOKEN set in production. On order milestones (awaiting_payment → paid → later transitions), a member with a line_user_id receives the Flex card with the "ดูคำสั่งซื้อ" deep-link; guests are skipped silently.
@@ -49,13 +62,19 @@ expected: A real customer opens the Rich Menu, browses the open round in LIFF, a
 result: issue
 reported: "กดอะไรไม่ได้เลยในหน้า liff หลังกดสั่งผักรอบนี้; กดเพิ่มไม่เกิดอะไร; layout เพี้ยน (หัวข้อตัดทีละตัวอักษร) — เพี้ยนทั้งใน LINE และ Chrome desktop"
 severity: blocker
+progress: |
+  Walk-through now works: catalog layout fixed + checkout CTA (quick 260706-swg, live).
+  Slip verifies clean → order paid (Slip2Go, test 3). Remaining sub-issue: after a
+  clean verify the LIFF stayed stuck on the QR screen (WebView dropped the multi-second
+  upload response). Fixed by a PayView status self-heal poll (PR #6) — pending deploy,
+  then re-test the full E2E to close test 5.
 
 ## Summary
 
 total: 5
-passed: 2
+passed: 3
 issues: 1
-pending: 2
+pending: 1
 skipped: 0
 blocked: 0
 
