@@ -130,4 +130,21 @@ describe("slip2go adapter (PAY-02)", () => {
     expect(calls[0]?.url).toBe("https://connect.slip2go.com/api/verify-slip/qr-image/info");
     expect(calls[0]?.init?.body).toBeInstanceOf(FormData);
   });
+
+  it("checkReceiver: derives PromptPay CitizenID accountType (02003) for a 13-digit payee", async () => {
+    const { fn, calls } = stubFetch(jsonRes(200, { code: "200200", data: { transRef: "TX", amount: 70 } }));
+    const a = new Slip2GoAdapter({ apiSecret: "k", payeeId: "1234567890195", fetchImpl: fn });
+    await a.verify({ qrPayload: "0044...", expectedAmountSatang: 7000 });
+    const body = JSON.parse(String(calls[0]?.init?.body));
+    expect(body.checkCondition.checkReceiver[0]).toEqual({ accountNumber: "1234567890195", accountType: "02003" });
+    expect(body.checkCondition.checkAmount).toEqual({ type: "eq", amount: 70 });
+  });
+
+  it("checkReceiver: derives PromptPay phone accountType (02001) for a 10-digit payee and strips formatting", async () => {
+    const { fn, calls } = stubFetch(jsonRes(200, { code: "200200", data: { transRef: "TX", amount: 70 } }));
+    const a = new Slip2GoAdapter({ apiSecret: "k", payeeId: "081-234-5678", fetchImpl: fn });
+    await a.verify({ qrPayload: "0044...", expectedAmountSatang: 7000 });
+    const body = JSON.parse(String(calls[0]?.init?.body));
+    expect(body.checkCondition.checkReceiver[0]).toEqual({ accountNumber: "0812345678", accountType: "02001" });
+  });
 });
