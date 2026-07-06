@@ -4,11 +4,10 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 3
 current_phase_name: Back-office, Crop Planning & B2B/Subscription
-status: verifying
+status: "Phase 02 shipped — PR #10"
 stopped_at: Completed 02-04-PLAN.md
-last_updated: "2026-07-06T16:28:29.116Z"
+last_updated: "2026-07-06T16:52:37.950Z"
 last_activity: 2026-07-06
-last_activity_desc: Phase 02 complete, transitioned to Phase 3
 progress:
   total_phases: 5
   completed_phases: 3
@@ -30,8 +29,8 @@ See: .planning/PROJECT.md (updated 2026-06-28)
 
 Phase: 3 — Back-office, Crop Planning & B2B/Subscription
 Plan: Not started
-Status: Phase complete — ready for verification
-Last activity: 2026-07-06 — Phase 02 complete, transitioned to Phase 3
+Status: Phase 02 shipped — PR #10
+Last activity: 2026-07-06
 Note: CR-01/CR-02 code-review test-gaps CLOSED — added regression tests api/tests/verified-slip-park.test.ts (verified slip parked as awaiting_review + 202 when order cancelled mid-verify) and api/tests/created-hold-sweep.test.ts (created-path holdExpiresAt set + swept). api bun test 187 pass / 0 fail.
 
 Progress: [████████░░] 77%
