@@ -3,6 +3,7 @@
 // lazily-imported screen chunks show a Thai loading state on first paint and a
 // recoverable error state instead of a blank LIFF WebView (NFR-07).
 import { onErrorCaptured, ref } from "vue";
+import Spinner from "./components/Spinner.vue";
 
 const failed = ref(false);
 onErrorCaptured(() => {
@@ -30,8 +31,9 @@ onErrorCaptured(() => {
       <Suspense>
         <component :is="Component" />
         <template #fallback>
-          <div class="flex min-h-dvh items-center justify-center p-md text-muted">
-            กำลังโหลด…
+          <div class="flex min-h-dvh flex-col items-center justify-center gap-md p-md text-muted">
+            <Spinner size="lg" />
+            <p class="text-[15px]">กำลังโหลด…</p>
           </div>
         </template>
       </Suspense>

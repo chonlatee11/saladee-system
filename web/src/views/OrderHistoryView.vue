@@ -20,6 +20,7 @@ import { ensureLineLogin, getSessionToken } from "../liff";
 import { applyReorderToCart, type ReorderResponse } from "../lib/reorder";
 import { orderStatusBadgeClass, orderStatusLabel } from "../lib/order-status";
 import { useCart } from "../stores/cart";
+import BusyOverlay from "../components/BusyOverlay.vue";
 import EmptyState from "../components/EmptyState.vue";
 
 interface OrderSummary {
@@ -104,6 +105,8 @@ async function onReorder(id: string): Promise<void> {
 
 <template>
   <section class="p-md">
+    <!-- Blocks input while a reorder resolves stock/prices and routes to checkout. -->
+    <BusyOverlay :show="reorderBusy" label="กำลังเตรียมคำสั่งซื้อ…" />
     <h1 class="mb-md text-[28px] font-semibold leading-[1.3] text-ink">ติดตามออเดอร์</h1>
 
     <!-- Guest gate (D-19): history + reorder need a LINE login. -->

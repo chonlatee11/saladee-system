@@ -15,6 +15,7 @@
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { useRoute } from "vue-router";
 import { api } from "../api";
+import BusyOverlay from "../components/BusyOverlay.vue";
 import SlipUploader, { type SlipResult } from "../components/SlipUploader.vue";
 import { baht } from "../lib/checkout";
 import { getSessionToken } from "../liff";
@@ -182,6 +183,12 @@ onUnmounted(() => {
 
 <template>
   <section class="flex flex-col items-center gap-lg p-md pb-2xl">
+    <!-- Blocks all input while the slip is verifying (multi-second) or cancelling. -->
+    <BusyOverlay
+      :show="uploading || cancelling"
+      :label="uploading ? 'กำลังตรวจสอบสลิป…' : 'กำลังยกเลิกคำสั่งซื้อ…'"
+    />
+
     <!-- ── ERROR ────────────────────────────────────────────────────────────── -->
     <div v-if="view === 'error'" class="flex flex-col items-center gap-md py-2xl text-center" role="alert">
       <p class="text-[16px] text-ink">เกิดข้อผิดพลาด โปรดลองใหม่อีกครั้ง</p>

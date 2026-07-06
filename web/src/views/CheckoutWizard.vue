@@ -23,6 +23,7 @@ import { computed, reactive, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import { api } from "../api";
 import { useCart } from "../stores/cart";
+import BusyOverlay from "../components/BusyOverlay.vue";
 import DeliveryMethodTiles from "../components/DeliveryMethodTiles.vue";
 import ConsentCheckboxes from "../components/ConsentCheckboxes.vue";
 import WizardStepIndicator from "../components/WizardStepIndicator.vue";
@@ -264,6 +265,8 @@ async function confirm(): Promise<void> {
 
 <template>
   <section class="flex flex-col gap-lg p-md pb-2xl">
+    <!-- Blocks all input while placing the order + building the QR (server round-trip). -->
+    <BusyOverlay :show="placing" label="กำลังสร้างคำสั่งซื้อ…" />
     <WizardStepIndicator :steps="STEP_LABELS" :current="step" />
 
     <!-- ── STEP 1 — review cart ─────────────────────────────────────────────── -->
