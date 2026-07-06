@@ -16,7 +16,7 @@
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 import { api } from "../api";
-import { ensureLineLogin, getSessionToken } from "../liff";
+import { ensureLineLogin, getSessionToken, loginWithLine } from "../liff";
 import { applyReorderToCart, type ReorderResponse } from "../lib/reorder";
 import { orderStatusBadgeClass, orderStatusLabel } from "../lib/order-status";
 import { useCart } from "../stores/cart";
@@ -81,7 +81,13 @@ function baht(satang: number): string {
 }
 
 async function onLogin(): Promise<void> {
+  // In an external browser this redirects to LINE Login (page navigates away). In
+  // the LINE in-app browser the user is already logged in, so it is a no-op and we
+  // proceed to exchange the idToken for a customer session (D-17) — the previous
+  // code stopped at ensureLineLogin(), which is why the button did nothing in LINE.
   await ensureLineLogin();
+  const session = await loginWithLine().catch(() => null);
+  if (session) location.reload(); // re-render the guarded views with the new session
 }
 
 async function onReorder(id: string): Promise<void> {
