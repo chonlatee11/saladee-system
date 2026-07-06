@@ -155,11 +155,13 @@ function stopPoll(): void {
 async function pollStatus(): Promise<void> {
   const r = await qrLoad(orderId).catch(() => null);
   const s = r?.data?.status;
-  if (s === "paid") {
-    view.value = "paid";
-    stopPoll();
-  } else if (s === "cancelled") {
-    view.value = "expired";
+  if (s === "paid" || s === "cancelled") {
+    // Clear the in-flight flags too: if the WebView dropped the slip-upload response,
+    // `uploading` is still true and the BusyOverlay (bound to it) would otherwise stay
+    // up over the resolved screen forever. Resetting them lets the overlay dismiss.
+    uploading.value = false;
+    cancelling.value = false;
+    view.value = s === "paid" ? "paid" : "expired";
     stopPoll();
   }
 }
@@ -185,7 +187,7 @@ onUnmounted(() => {
   <section class="flex flex-col items-center gap-lg p-md pb-2xl">
     <!-- Blocks all input while the slip is verifying (multi-second) or cancelling. -->
     <BusyOverlay
-      :show="uploading || cancelling"
+      :show="(uploading || cancelling) && view === 'pay'"
       :label="uploading ? 'กำลังตรวจสอบสลิป…' : 'กำลังยกเลิกคำสั่งซื้อ…'"
     />
 

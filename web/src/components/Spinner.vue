@@ -3,17 +3,16 @@
 // spins; under prefers-reduced-motion it degrades to a gentle opacity pulse so it
 // never induces motion sickness. Size via the `size` prop (sm/md/lg).
 withDefaults(defineProps<{ size?: "sm" | "md" | "lg" }>(), { size: "md" });
-const PX = { sm: 20, md: 32, lg: 44 } as const;
+const PX = { sm: 22, md: 34, lg: 52 } as const;
+const STROKE = { sm: "3px", md: "4px", lg: "5px" } as const;
 </script>
 
 <template>
+  <!-- Two-tone accent ring: a soft accent track with a bold accent sweep (top+right),
+       thicker than a hairline ring so it reads clearly on the frosted overlay. -->
   <span
-    class="s2-spinner inline-block shrink-0 rounded-full border-hairline border-t-accent"
-    :style="{
-      width: `${PX[size]}px`,
-      height: `${PX[size]}px`,
-      borderWidth: size === 'sm' ? '2px' : '3px',
-    }"
+    class="s2-spinner inline-block shrink-0 rounded-full border-accent/20 border-t-accent border-r-accent"
+    :style="{ width: `${PX[size]}px`, height: `${PX[size]}px`, borderWidth: STROKE[size] }"
     role="status"
     aria-label="กำลังโหลด"
   />
