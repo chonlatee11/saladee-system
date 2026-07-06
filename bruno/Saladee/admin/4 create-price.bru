@@ -1,0 +1,36 @@
+meta {
+  name: 4 create-price
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{URL}}/prices
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{TOKEN}}
+}
+
+body:json {
+  {
+    "roundId": "{{ROUND_ID}}",
+    "varietyId": "{{VARIETY_ID}}",
+    "tier": "b2c",
+    "pricePerKgSatang": 12000
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  # Step 4 — set the b2c round-default price (owner|admin)
+
+  120 ฿/kg (12000 satang) → a 250g pack resolves to 30 ฿. Expect 201.
+  After this, GET /catalog shows the variety and the LINE storefront can order it.
+}

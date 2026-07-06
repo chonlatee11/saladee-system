@@ -1,0 +1,23 @@
+meta {
+  name: catalog
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{URL}}/catalog
+  body: none
+  auth: none
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  # GET /catalog — public open-round catalog
+
+  After the admin-seed steps, this returns { varieties: [ ... กรีนโอ๊ค ... ], boxes: [] }.
+  An empty varieties array means no OPEN round has sellable stock yet.
+}

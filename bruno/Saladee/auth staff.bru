@@ -7,14 +7,20 @@ meta {
 post {
   url: {{URL}}/auth/staff
   body: json
-  auth: inherit
+  auth: none
 }
 
 body:json {
   {
-    "email": "a@b.com",
-    "password": "secret123",
-    "passwordHash": "$argon2id$v=19$m=65536,t=2,p=1$WODaL0PLGmrajRk2FWIusfQhvJbjwLeN8ezq69vOApA$454EtxLioTdmgT6QPUZaqDrT8FpLDQ/4YAvZFZIkWcE"
+    "email": "owner@saladee.local",
+    "password": "SaladeeOwner2026!"
+  }
+}
+
+script:post-response {
+  // Capture the staff session token so the admin-seed requests can reuse it.
+  if (res.status === 200 && res.body && res.body.token) {
+    bru.setEnvVar("TOKEN", res.body.token);
   }
 }
 

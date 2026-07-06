@@ -1,0 +1,49 @@
+meta {
+  name: 1 create-variety
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{URL}}/varieties
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{TOKEN}}
+}
+
+body:json {
+  {
+    "name": "ผักสลัดกรีนโอ๊ค",
+    "category": "ผักสลัด",
+    "avgGramsPerPlant": 150,
+    "deliveryClass": "normal",
+    "saleUnits": [
+      { "kind": "pack", "label": "แพ็ค 250 กรัม", "gramsPerUnit": 250, "plantsPerUnit": 2 }
+    ]
+  }
+}
+
+script:post-response {
+  // Save the new variety id + its first sale-unit id for the round/stock/price/order steps.
+  if (res.status === 201 && res.body) {
+    bru.setEnvVar("VARIETY_ID", res.body.id);
+    if (res.body.saleUnits && res.body.saleUnits[0]) {
+      bru.setEnvVar("SALE_UNIT_ID", res.body.saleUnits[0].id);
+    }
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  # Step 1 — create a variety + a 250g pack (owner|admin)
+
+  Run `auth staff` first (captures TOKEN). On 201 this saves VARIETY_ID and
+  SALE_UNIT_ID as environment vars for the next steps.
+}
