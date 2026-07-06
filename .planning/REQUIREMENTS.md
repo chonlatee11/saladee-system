@@ -94,7 +94,7 @@
 
 ### LINE — ช่องทาง LINE OA
 
-- [ ] **LINE-01**: ตั้งค่า Rich Menu — สั่งผักรอบนี้, ราคาวันนี้, เช็ก/ติดตามออเดอร์, สมาชิก/แต้ม, ติดต่อร้าน (FR-46)
+- [x] **LINE-01**: ตั้งค่า Rich Menu — สั่งผักรอบนี้, ราคาวันนี้, เช็ก/ติดตามออเดอร์, สมาชิก/แต้ม, ติดต่อร้าน (FR-46)
 - [x] **LINE-02**: หน้าสั่งซื้อผ่าน LIFF — เลือกผัก/แพ็ก → รอบส่ง → ที่อยู่ → ชำระ PromptPay/แนบสลิป, รองรับ LINE Login/guest (FR-47)
 - [x] **LINE-03**: เชื่อม Messaging API webhook — รับอีเวนต์ (ตรวจ signature), ตอบกลับอัตโนมัติ, ส่งแจ้งเตือนสถานะออเดอร์ (FR-48)
 - [ ] **LINE-04**: แชทบอตรับออเดอร์แบบสนทนา + Broadcast โปรโมชันตามกลุ่ม (FR-49)
@@ -186,7 +186,7 @@ Explicitly excluded (anti-features จาก research — ป้องกัน 
 | CROP-05 | Phase 3 | Pending |
 | CROP-06 | Phase 3 | Pending |
 | CROP-07 | Phase 4 | Pending |
-| LINE-01 | Phase 2 | Pending |
+| LINE-01 | Phase 2 | Complete |
 | LINE-02 | Phase 2 | Complete |
 | LINE-03 | Phase 2 | Complete |
 | LINE-04 | Phase 4 | Pending |

@@ -2,13 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 02
-current_phase_name: line-storefront-payments-delivery
-status: verifying
+current_phase: 3
+current_phase_name: Back-office, Crop Planning & B2B/Subscription
+status: "Phase 02 shipped — PR #10"
 stopped_at: Completed 02-04-PLAN.md
-last_updated: "2026-07-04T12:43:48.335Z"
-last_activity: 2026-07-04
-last_activity_desc: Phase 02 execution started
+last_updated: "2026-07-06T16:52:37.950Z"
+last_activity: 2026-07-06
 progress:
   total_phases: 5
   completed_phases: 3
@@ -28,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-06-28)
 
 ## Current Position
 
-Phase: 02 (line-storefront-payments-delivery) — EXECUTING
-Plan: 9 of 9
-Status: Phase complete — ready for verification
-Last activity: 2026-07-04 — Phase 02 execution started
+Phase: 3 — Back-office, Crop Planning & B2B/Subscription
+Plan: Not started
+Status: Phase 02 shipped — PR #10
+Last activity: 2026-07-06
 Note: CR-01/CR-02 code-review test-gaps CLOSED — added regression tests api/tests/verified-slip-park.test.ts (verified slip parked as awaiting_review + 202 when order cancelled mid-verify) and api/tests/created-hold-sweep.test.ts (created-path holdExpiresAt set + swept). api bun test 187 pass / 0 fail.
 
 Progress: [████████░░] 77%
@@ -40,7 +39,7 @@ Progress: [████████░░] 77%
 
 **Velocity:**
 
-- Total plans completed: 5
+- Total plans completed: 14
 - Average duration: — min
 - Total execution time: 0.0 hours
 
@@ -49,6 +48,7 @@ Progress: [████████░░] 77%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01 | 5 | - | - |
+| 02 | 9 | - | - |
 
 **Recent Trend:**
 
