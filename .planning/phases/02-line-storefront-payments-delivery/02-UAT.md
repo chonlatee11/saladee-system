@@ -1,5 +1,5 @@
 ---
-status: testing
+status: complete
 phase: 02-line-storefront-payments-delivery
 source: [02-VERIFICATION.md]
 started: 2026-07-04
@@ -8,15 +8,7 @@ updated: 2026-07-06
 
 ## Current Test
 
-number: 5
-name: End-to-end live order inside LINE (re-test after LIFF fix deployed)
-expected: |
-  With the LIFF fix live (max-w-[28rem] layout + checkout CTA), a real customer opens
-  the Rich Menu, browses the open round in LIFF, adds packs, completes the 3-step
-  checkout (cart → delivery+address+consent → summary), pays via PromptPay, uploads a
-  slip, sees the order confirmed, and receives automatic status updates — while an
-  unpaid hold releases stock on expiry.
-awaiting: user response
+[testing complete]
 
 ## Tests
 
@@ -55,33 +47,42 @@ notes: |
 
 ### 4. Real LINE push — milestone Flex notifications reach the customer
 expected: LINE_CHANNEL_ACCESS_TOKEN set in production. On order milestones (awaiting_payment → paid → later transitions), a member with a line_user_id receives the Flex card with the "ดูคำสั่งซื้อ" deep-link; guests are skipped silently.
-result: pending
+result: pass
+notes: |
+  Push works: a member (logged in via LINE) receives the milestone Flex card on paid.
+  Required the member-linkage work (quick 260706-vr5) so the order binds to a customer
+  with line_user_id. The card's "ดูคำสั่งซื้อ" deep-link initially showed "เกิดข้อผิดพลาดระบบ"
+  because the API had no LIFF_ID env (notify.ts built https://liff.line.me//orders/…);
+  fixed by setting LIFF_ID=2010573375-k3WSb8VS in /opt/saladee/api/.env + recreating api.
 
 ### 5. End-to-end live order inside LINE
 expected: A real customer opens the Rich Menu, browses the open round in LIFF, adds packs, completes the 3-step checkout (cart → delivery+address+consent → summary), pays via PromptPay, uploads a slip, sees the order confirmed, and receives automatic status updates — while an unpaid hold releases stock on expiry.
-result: issue
-reported: "กดอะไรไม่ได้เลยในหน้า liff หลังกดสั่งผักรอบนี้; กดเพิ่มไม่เกิดอะไร; layout เพี้ยน (หัวข้อตัดทีละตัวอักษร) — เพี้ยนทั้งใน LINE และ Chrome desktop"
-severity: blocker
-progress: |
-  Walk-through now works: catalog layout fixed + checkout CTA (quick 260706-swg, live).
-  Slip verifies clean → order paid (Slip2Go, test 3). Remaining sub-issue: after a
-  clean verify the LIFF stayed stuck on the QR screen (WebView dropped the multi-second
-  upload response). Fixed by a PayView status self-heal poll (PR #6) — pending deploy,
-  then re-test the full E2E to close test 5.
+result: pass
+notes: |
+  Full in-LINE E2E verified after the UAT-driven fixes shipped: catalog layout +
+  checkout CTA (swg), PayView self-heal poll + spinner/busy-overlay (poll + ut1),
+  VITE_LIFF_ID injected into the build + session minted on login, and member order
+  linkage (vr5). Order placed → paid → slip auto-verified → success screen → push card
+  received → order detail viewable. Initial reported blocker (16px layout, no CTA,
+  stuck-on-QR) all resolved.
 
 ## Summary
 
 total: 5
-passed: 3
-issues: 1
-pending: 1
+passed: 5
+issues: 0
+pending: 0
 skipped: 0
 blocked: 0
 
 ## Gaps
 
+All UAT gaps were resolved inline via quick tasks during this session (statuses below
+updated failed → resolved). No outstanding gaps.
+
 - truth: "The catalog shell renders at the correct width so the LIFF is usable (mobile-first, responsive)"
-  status: failed
+  status: resolved
+  resolution: "quick 260706-swg — App.vue + PayView.vue max-w-md → max-w-[28rem]; <main> now 448px. Live-verified."
   reason: "User reported: the whole LIFF page is broken — headings wrap one character per line, nothing usable. Reproduces in LINE and Chrome desktop."
   severity: blocker
   test: 5
@@ -97,7 +98,8 @@ blocked: 0
     - "Replace the two max-w-md usages with a non-colliding width (e.g. max-w-[28rem] or a dedicated --container-app token), so the shell is ~448px and mobile-first responsive"
 
 - truth: "From the catalog a customer can proceed to checkout after adding packs to the cart"
-  status: failed
+  status: resolved
+  resolution: "quick 260706-swg — sticky 'ไปชำระเงิน (N)' CTA in CatalogView using cart.lineCount → /checkout. Live-verified."
   reason: "User reported: pressing เพิ่ม does nothing visible. CatalogView adds to the cart store silently but has no cart summary/checkout CTA, and no visible route to /checkout exists from the browse flow."
   severity: major
   test: 5
@@ -111,7 +113,8 @@ blocked: 0
     - "Add a sticky cart bar / 'ไปชำระเงิน (N)' button shown when the cart has items, routing to /checkout; add feedback on add (badge/count)"
 
 - truth: "Self-hosted Sarabun font loads without console errors"
-  status: failed
+  status: resolved
+  resolution: "quick 260706-swg — removed the @font-face; falls back to system-ui/Noto Sans Thai. No more OTS console errors."
   reason: "Console: 'Failed to decode downloaded font .../fonts/sarabun-400.woff2 · OTS parsing error: invalid sfntVersion' (the bytes are <!DO — the SPA fallback HTML, i.e. the font files are missing)."
   severity: minor
   test: 5
