@@ -34,6 +34,11 @@ jobs:
         env:
           # API base URL for the Eden Treaty client, injected at build time.
           VITE_API_URL: ${{ vars.VITE_API_URL }}
+          # LIFF app id — REQUIRED for LINE Login (liff.ts). Without it Vite tree-shakes
+          # initLiff/ensureLineLogin to no-ops and every user is a guest (no order
+          # history/detail, no line_user_id → no status push). Set the repo Actions
+          # variable VITE_LIFF_ID to the LIFF id from the LINE console.
+          VITE_LIFF_ID: ${{ vars.VITE_LIFF_ID }}
 
       # Create the Pages project on first run (idempotent — ignore "already exists").
       - name: Ensure Cloudflare Pages project exists
