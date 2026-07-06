@@ -60,9 +60,21 @@ export class Slip2GoAdapter implements SlipVerifier {
     // Ask Slip2Go to check the shop is the receiver + the exact amount. We STILL
     // re-check the satang ourselves below (D-03). checkDuplicate flags vendor-side
     // reuse; our DB remains the arbiter.
+    //
+    // Slip2Go matches a PromptPay receiver by (accountType, accountNumber) — the
+    // number alone does NOT match a proxy receiver (every PromptPay example in the
+    // docs pairs them). Derive the proxy type from the payee length, mirroring
+    // promptpay-qr's own detection (13 = CitizenID, 10 = phone, 15 = e-wallet), and
+    // strip any formatting the number may carry (docs: no space/special chars).
+    const payeeDigits = this.payeeId.replace(/\D/g, "");
+    const accountType = proxyAccountType(payeeDigits);
+    const receiver: { accountType?: string; accountNumber: string } = {
+      accountNumber: payeeDigits,
+    };
+    if (accountType) receiver.accountType = accountType;
     const checkCondition = {
       checkDuplicate: true,
-      checkReceiver: [{ accountNumber: this.payeeId }],
+      checkReceiver: [receiver],
       checkAmount: { type: "eq", amount: amountBaht },
     };
     const authHeader = `Bearer ${this.apiSecret}`; // key: header only, never body/log
@@ -135,6 +147,22 @@ export class Slip2GoAdapter implements SlipVerifier {
     }
     // A passing checkReceiver condition means the payee matched the shop (D-02).
     return { status: "clean", transRef, amountSatang: returnedSatang, payeeOk: true, raw: body };
+  }
+}
+
+/** Slip2Go PromptPay proxy accountType from the payee length (Account Type List):
+ *  13 = CitizenID (02003), 10 = phone (02001), 15 = e-wallet (02004). An unknown
+ *  length returns undefined → Slip2Go partial-matches on accountNumber alone. */
+function proxyAccountType(digits: string): string | undefined {
+  switch (digits.length) {
+    case 13:
+      return "02003"; // PromptPay - CitizenID
+    case 10:
+      return "02001"; // PromptPay - Phone Number
+    case 15:
+      return "02004"; // PromptPay - e-Wallet
+    default:
+      return undefined;
   }
 }
 

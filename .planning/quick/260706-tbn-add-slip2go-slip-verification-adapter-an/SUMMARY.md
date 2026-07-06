@@ -44,6 +44,18 @@ HTTP 200 with a String `code`.
   integration tests needing PostgreSQL on :55432 (not run locally) — unrelated to
   this change and do not reference slip2go.
 
+## Post-UAT fix (2026-07-06, live test 3/5)
+
+First live slip returned Slip2Go `200401 Recipient Account Not Match` on a valid
+payment (sender = receiver = shop owner). Root cause: Slip2Go matches a PromptPay
+receiver by **(accountType, accountNumber)** — the number alone does not match a
+proxy. Fixed `slip2go.adapter.ts` to derive the proxy `accountType` from the payee
+length (per the Account Type List: 13→`02003` CitizenID, 10→`02001` phone,
+15→`02004` e-wallet) and strip formatting from the number. +2 tests (15 total).
+No separate UI fix needed: PayView already keeps the pay screen with a per-reason
+rejection message + re-upload on a rejected slip — the "stuck" screen was the
+(wrongly-triggered) rejection, which clears once a valid slip verifies clean.
+
 ## Follow-up (prod)
 
 - Set `SLIP2GO_API_SECRET` in `/opt/saladee/api/.env` (from Slip2Go "API Connect"),
