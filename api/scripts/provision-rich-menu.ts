@@ -13,6 +13,7 @@
 // re-running never accumulates duplicates. The channel access token is read ONLY
 // from env (never a literal, never logged — T-02-07 / Phase-0 D-15).
 import { messagingApi } from "@line/bot-sdk";
+import sharp from "sharp";
 import { env } from "../src/env";
 
 const MENU_NAME = "saladee-main";
@@ -105,13 +106,35 @@ async function main(): Promise<void> {
   const { richMenuId } = await client.createRichMenu(request);
   console.log(`  ✓ created rich menu ${richMenuId}`);
 
-  // 3) Upload the image (must be exactly the declared 2500×1686 size).
+  // 3) Normalize + upload the image. LINE requires the uploaded bytes to match the
+  //    declared size EXACTLY and stay ≤ 1 MB — a source that violates either yields a
+  //    413 (Request Entity Too Large) on upload. Operators rarely hand-produce a
+  //    pixel-perfect, sub-1 MB file, so we resize to request.size and JPEG-compress
+  //    below the cap here (stepping quality down until it fits) rather than pushing
+  //    that chore onto whoever runs the script.
   const file = Bun.file(IMAGE_PATH);
   if (!(await file.exists())) fail(`image not found at ${IMAGE_PATH}`);
-  const bytes = await file.arrayBuffer();
-  const contentType = IMAGE_PATH.toLowerCase().endsWith(".jpg") ? "image/jpeg" : "image/png";
-  await blob.setRichMenuImage(richMenuId, new Blob([bytes], { type: contentType }));
-  console.log("  ✓ uploaded menu image");
+  const source = Buffer.from(await file.arrayBuffer());
+  const { width, height } = request.size;
+  const MAX_BYTES = 1024 * 1024; // LINE's hard limit for a rich-menu image.
+  let bytes: Buffer = source;
+  for (const quality of [90, 80, 70, 60, 50, 40]) {
+    bytes = await sharp(source)
+      .resize(width, height, { fit: "fill" })
+      .jpeg({ quality, mozjpeg: true })
+      .toBuffer();
+    if (bytes.byteLength <= MAX_BYTES) break;
+  }
+  if (bytes.byteLength > MAX_BYTES) {
+    fail(
+      `image still ${(bytes.byteLength / 1048576).toFixed(2)} MB after max compression — ` +
+        "use a flatter/simpler menu image",
+    );
+  }
+  await blob.setRichMenuImage(richMenuId, new Blob([bytes], { type: "image/jpeg" }));
+  console.log(
+    `  ✓ uploaded menu image (${(bytes.byteLength / 1024).toFixed(0)} KB, ${width}×${height} jpeg)`,
+  );
 
   // 4) Make it the default menu for every chat with the OA.
   await client.setDefaultRichMenu(richMenuId);
