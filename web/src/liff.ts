@@ -10,6 +10,7 @@
 import { api } from "./api";
 
 const SESSION_KEY = "saladee_session";
+const CUSTOMER_KEY = "saladee_customer";
 
 /** The stored customer session token (issued by POST /auth/line), or null. */
 export function getSessionToken(): string | null {
@@ -21,7 +22,25 @@ export function getSessionToken(): string | null {
 export function setSessionToken(token: string | null): void {
   if (typeof localStorage === "undefined") return;
   if (token) localStorage.setItem(SESSION_KEY, token);
-  else localStorage.removeItem(SESSION_KEY);
+  else {
+    localStorage.removeItem(SESSION_KEY);
+    // Clearing the session must never leave a stale customer id behind — a logged-
+    // out client must fall back to the guest checkout body (LINE-02 / D-19).
+    localStorage.removeItem(CUSTOMER_KEY);
+  }
+}
+
+/** The logged-in member's customer id (bears line_user_id), or null for guests. */
+export function getCustomerId(): string | null {
+  if (typeof localStorage === "undefined") return null;
+  return localStorage.getItem(CUSTOMER_KEY);
+}
+
+/** Persist / clear the member customer id (set on login, cleared on logout). */
+export function setCustomerId(id: string | null): void {
+  if (typeof localStorage === "undefined") return;
+  if (id) localStorage.setItem(CUSTOMER_KEY, id);
+  else localStorage.removeItem(CUSTOMER_KEY);
 }
 
 /** True when a LIFF id is configured — i.e. LINE Login is available at all. */
@@ -75,5 +94,8 @@ export async function loginWithLine(): Promise<{
   // server always sends all three on the success path, so this is a type guard.
   if (error || !data || !("token" in data) || !data.customerId || !data.lineUserId) return null;
   setSessionToken(data.token);
+  // Persist the member customer id so the LINE checkout can bind the order to this
+  // member's identity + recipient (LINE-02 / UAT-4). Cleared on session clear above.
+  setCustomerId(data.customerId);
   return { customerId: data.customerId, lineUserId: data.lineUserId };
 }

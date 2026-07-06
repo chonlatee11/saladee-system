@@ -67,18 +67,33 @@ export function consentSatisfied(consent: CheckoutConsent): boolean {
   return consent.usage === true;
 }
 
+/** A guest checkout customer (buyer == recipient for the MVP). */
+export interface GuestOrderCustomer {
+  name: string;
+  phone: string;
+  recipientName: string;
+  recipientPhone: string;
+  recipientAddress: string;
+}
+
+/**
+ * A logged-in member checkout customer: the customer id binds the order to the LINE
+ * identity (history/detail/push, LINE-02 / D-19) while the recipient columns are
+ * snapshotted just like the guest path (D-21). Still NO money field.
+ */
+export interface MemberOrderCustomer {
+  customerId: string;
+  recipientName: string;
+  recipientPhone: string;
+  recipientAddress: string;
+}
+
 /** The POST /orders body — ids + qty + delivery choice + consent only (no money). */
 export interface OrderBody {
   tier: "b2c";
   lines?: CartLine[];
   boxLines?: CartBoxLine[];
-  customer: {
-    name: string;
-    phone: string;
-    recipientName: string;
-    recipientPhone: string;
-    recipientAddress: string;
-  };
+  customer: GuestOrderCustomer | MemberOrderCustomer;
   deliveryMethod: DeliveryMethod;
   deliveryZone: string;
   consent: { usage: boolean; marketing: boolean; policyVersion: string };
@@ -97,17 +112,31 @@ export function buildOrderBody(opts: {
   deliveryZone: string;
   customer: CheckoutCustomer;
   consent: CheckoutConsent;
+  // When set (the logged-in member path), the order binds to this customer id so
+  // it links to the LINE identity; when absent, the byte-identical guest body is
+  // emitted (LINE-02 / D-19). Never a money field.
+  customerId?: string;
 }): OrderBody {
-  const { lines, boxLines, deliveryMethod, deliveryZone, customer, consent } = opts;
+  const { lines, boxLines, deliveryMethod, deliveryZone, customer, consent, customerId } = opts;
+  // The recipient columns are identical for both paths — the single collected
+  // name/phone/address maps to the recipient (buyer == recipient for the MVP).
+  const orderCustomer: GuestOrderCustomer | MemberOrderCustomer = customerId
+    ? {
+        customerId,
+        recipientName: customer.name,
+        recipientPhone: customer.phone,
+        recipientAddress: customer.address,
+      }
+    : {
+        name: customer.name,
+        phone: customer.phone,
+        recipientName: customer.name,
+        recipientPhone: customer.phone,
+        recipientAddress: customer.address,
+      };
   const body: OrderBody = {
     tier: "b2c",
-    customer: {
-      name: customer.name,
-      phone: customer.phone,
-      recipientName: customer.name,
-      recipientPhone: customer.phone,
-      recipientAddress: customer.address,
-    },
+    customer: orderCustomer,
     deliveryMethod,
     deliveryZone,
     consent: { usage: consent.usage, marketing: consent.marketing, policyVersion: POLICY_VERSION },
