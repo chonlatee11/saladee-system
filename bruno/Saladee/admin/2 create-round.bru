@@ -1,0 +1,41 @@
+meta {
+  name: 2 create-round
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{URL}}/rounds
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{TOKEN}}
+}
+
+body:json {
+  {
+    "name": "รอบทดสอบ live",
+    "status": "open",
+    "deliveryDate": "2026-07-08"
+  }
+}
+
+script:post-response {
+  // Save the new round id for the stock/price/order steps.
+  if (res.status === 201 && res.body) {
+    bru.setEnvVar("ROUND_ID", res.body.id);
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  # Step 2 — create an OPEN round (owner|admin)
+
+  No future harvestDate → ready-to-ship. On 201 saves ROUND_ID.
+}

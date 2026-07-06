@@ -11,6 +11,7 @@
 //   • no-open-round  → the "รอบขายปิดชั่วคราว" empty state
 //   • error          → "เกิดข้อผิดพลาด โปรดลองใหม่อีกครั้ง"
 // A `loader` prop is injectable so the view test can mount it with a mocked catalog.
+import { RouterLink } from "vue-router";
 import { api } from "../api";
 import { useCart, type CartLine } from "../stores/cart";
 import VarietyCard, { type VarietyCardModel } from "../components/VarietyCard.vue";
@@ -25,6 +26,9 @@ interface CatalogResult {
 
 const props = defineProps<{ loader?: () => Promise<CatalogResult> }>();
 const cart = useCart();
+// Item count drives the sticky checkout CTA — the only route into the wizard from
+// the browse flow (D-08). A top-level binding so the template auto-unwraps the ref.
+const cartCount = cart.lineCount;
 const load = props.loader ?? (() => api.catalog.get() as unknown as Promise<CatalogResult>);
 
 // Async setup: the <Suspense> in App.vue shows the loading fallback until this
@@ -62,5 +66,16 @@ function onAdd(line: CartLine): void {
         <VarietyCard :variety="v" :sold-out-label="SOLD_OUT_LABEL" @add="onAdd" />
       </li>
     </ul>
+
+    <!-- Sticky checkout CTA — the browse-flow entry into the 02-08 wizard. Shown
+         only once the cart has items; the count is the add-to-cart feedback the
+         catalog otherwise lacked. Money stays server-resolved (count only here). -->
+    <RouterLink
+      v-if="cartCount > 0"
+      to="/checkout"
+      class="sticky bottom-md z-10 mt-lg flex min-h-[48px] items-center justify-center rounded-lg bg-accent px-md py-sm text-[16px] font-semibold text-canvas shadow-lg"
+    >
+      ไปชำระเงิน ({{ cartCount }})
+    </RouterLink>
   </section>
 </template>

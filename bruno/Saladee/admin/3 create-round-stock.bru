@@ -1,0 +1,33 @@
+meta {
+  name: 3 create-round-stock
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{URL}}/rounds/{{ROUND_ID}}/stock
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{TOKEN}}
+}
+
+body:json {
+  {
+    "varietyId": "{{VARIETY_ID}}",
+    "quotaPlants": 100
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  # Step 3 — set the per-(round,variety) stock quota (owner|admin)
+
+  Upserts quotaPlants=100 for VARIETY_ID in ROUND_ID. Expect 200.
+}
