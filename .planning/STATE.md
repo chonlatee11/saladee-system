@@ -119,6 +119,12 @@ Items acknowledged and carried forward from previous milestone close:
 - CI: push to `develop` auto-deploys API (SSH → docker compose) and web (→ Pages). `NODE_ENV=production` on the droplet. GitHub secrets set: `VPS_HOST/VPS_USER/VPS_SSH_KEY`, `CLOUDFLARE_API_TOKEN/ACCOUNT_ID`; var `VITE_API_URL`. Droplet is a git clone (read-only deploy key).
 - Remaining optional only: swap sslip.io for a real domain if/when desired.
 
+## Quick Tasks Completed
+
+| Date | Task | Slug | Status |
+|------|------|------|--------|
+| 2026-07-06 | Fix Phase-2 LIFF UI blockers (max-w-md 16px collision, missing checkout CTA, remove missing Sarabun @font-face) | 260706-swg-fix-phase-2-liff-ui-blockers-max-w-md-16 | complete ✓ |
+
 ## Session Continuity
 
 Last session: 2026-07-04T12:43:39.048Z
