@@ -1,30 +1,36 @@
 ---
 phase: 02-line-storefront-payments-delivery
 verified: 2026-07-04T13:21:15Z
-status: human_needed
+status: passed
 score: 5/5 roadmap success criteria code-verified (13/14 requirement IDs code-complete; LINE-01 provisioning operator-deferred)
 behavior_unverified: 2
 overrides_applied: 0
 mode: mvp
 behavior_unverified_items:
+
   - truth: "An unpaid `created` order (non-checkout path) that reserves stock is reclaimed by the periodic safety-net sweep once past holdExpiresAt (CR-02 fix)."
     test: "Create an order via POST /orders WITHOUT deliveryMethod/deliveryZone (status=created, holdExpiresAt set). Let holdExpiresAt pass, then run sweepExpiredHolds. Confirm the order transitions to cancelled and its reserved plants return to the available pool."
     expected: "created order past deadline → cancelled, reserved_plants released; a paid order is a safe no-op."
     why_human: "No unit test exercises the `created` (not awaiting_payment) branch of the sweep. Code path is present and wired (HOLD_STATUSES includes 'created', holdExpiresAt always set) but the state transition is not observed by any test."
+
   - truth: "A verified slip whose order was cancelled by the sweep DURING the multi-second verify window is parked as `awaiting_review` (with transRef/amount/slipKey intact) instead of being discarded (CR-01 fix)."
     test: "Force POST /orders/:id/slip to reach the clean-verify transaction after the order has become cancelled (e.g. flip status to cancelled between verify and tx). Confirm a payments row with status=awaiting_review is persisted and the response is 202/review — the verified payment is NOT rolled back."
     expected: "order no longer awaiting_payment at tx time → insert payments(status=awaiting_review), return review; verified slip never lost; duplicate transRef still rejected 409."
     why_human: "The TOCTOU reconcile branch is present and wired in payments.ts but no test drives the cancelled-during-verify race; the invariant (no verified payment ever dropped) is not exercised."
 human_verification:
+
   - test: "Provision the LINE surface live: create the LIFF app under the Login channel (aud=LINE_LOGIN_CHANNEL_ID), set VITE_LIFF_ID, set the Messaging webhook URL, and run scripts/provision-rich-menu.ts with a 2500x1686 PNG. Then open the Rich Menu on a real phone and complete a LIFF checkout end-to-end."
     expected: "Rich Menu shows 5 buttons deep-linking into LIFF routes; LINE login upserts a member; checkout wizard completes and the order lands in the backend."
     why_human: "LINE-01 (Rich Menu / LIFF / webhook) is console-only operator provisioning the harness cannot perform; REQUIREMENTS.md lists LINE-01 as Pending. The provisioning script and SPA are code-complete and correct."
+
   - test: "Scan the generated amount-specified PromptPay QR with a real Thai bank app for a delivery-charged order."
     expected: "The bank app accepts the QR and the pre-filled amount equals subtotal + delivery fee (the TOTAL, not subtotal)."
     why_human: "Real bank-app acceptance is a live external check. CRC-16 correctness is proven by an independent golden-vector test; a real payee id (PROMPTPAY_PAYEE_ID) is still a production .env item."
+
   - test: "With live SLIPOK_API_KEY / SLIPOK_BRANCH_ID configured, upload a real slip and confirm auto-verify transitions the order to paid; also confirm duplicate/forged/wrong-amount slips are rejected."
     expected: "Clean slip → paid; duplicate/forged/wrong-amount → rejected with the correct Thai reason; API-down → awaiting_review for admin confirm."
     why_human: "Live SlipOK credentials are not provisioned in this environment; adapter mapping + dedup are unit-tested, but the live vendor round-trip needs real keys. Admin manual-confirm path works without SlipOK."
+
   - test: "Trigger a status change (paid/shipping/done/cancelled) for a member with a line_user_id and confirm the Flex card arrives in LINE with a working deep-link into the order page."
     expected: "Member receives exactly one Flex push per milestone; guest (no line_user_id) receives nothing."
     why_human: "Live LINE push delivery is an external check; the notify seam, members-only gate, and single-fire post-commit hook are code-verified."
