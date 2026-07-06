@@ -53,6 +53,9 @@ export const orderStatusEnum = pgEnum("order_status", [
 export const substitutionEnum = pgEnum("substitution_policy", ["allow", "disallow"]);
 export const unitKindEnum = pgEnum("unit_kind", ["kg", "bag", "pack", "plant"]);
 export const roundStatusEnum = pgEnum("round_status", ["open", "closed"]);
+// Delivery freshness class per variety (D-13/D-24). Declared before `varieties`
+// (Pitfall 4 migration ordering) — gates which delivery methods a cart allows.
+export const deliveryClassEnum = pgEnum("delivery_class", ["very_fresh", "normal"]);
 
 // ── Catalog: varieties + their sale units (INV-01, INV-03, D-22 CROP-01 seam) ─
 export const varieties = pgTable("varieties", {
@@ -62,6 +65,11 @@ export const varieties = pgTable("varieties", {
   description: text("description"),
   imageUrl: text("image_url"),
   avgGramsPerPlant: integer("avg_grams_per_plant").notNull(), // D-22 / CROP-01 seam
+  // Phase-2 freshness gating + care content (D-13/D-24). deliveryClass defaults
+  // to "normal" so every existing row keeps a valid class after the migration.
+  deliveryClass: deliveryClassEnum("delivery_class").notNull().default("normal"),
+  storageTips: text("storage_tips"), // nullable care copy (like description)
+  washingTips: text("washing_tips"), // nullable care copy
   active: boolean("active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
@@ -214,6 +222,15 @@ export const orders = pgTable("orders", {
   recipientAddress: text("recipient_address"),
   taxId: text("tax_id"), // optional invoice (D-21)
   subtotalSatang: integer("subtotal_satang").notNull(),
+  // Phase-2 payment hold + QR (D-10/D-11): holdExpiresAt is the authoritative
+  // hold deadline the 02-07 safety-net sweep reads (RESEARCH Pitfall 2).
+  holdExpiresAt: timestamp("hold_expires_at", { withTimezone: true }), // nullable
+  qrPayload: text("qr_payload"), // nullable EMVCo PromptPay string snapshot
+  // Delivery snapshot alongside subtotalSatang (D-10/D-12/D-14/D-15). Nullable
+  // so Phase-1 orders (no delivery choice) remain valid.
+  deliveryMethod: text("delivery_method"), // nullable
+  deliveryZone: text("delivery_zone"), // nullable
+  deliveryFeeSatang: integer("delivery_fee_satang"), // nullable, integer satang
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
@@ -249,5 +266,50 @@ export const backInStockRequests = pgTable("back_in_stock_requests", {
     .references(() => varieties.id),
   customerId: uuid("customer_id").references(() => customers.id), // nullable
   contact: text("contact"), // nullable — free-form contact when no customer row
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// ── Payments: slip/QR verification + system-wide dedup (PAY-02 / D-06) ─────────
+// status ∈ {"verifying","awaiting_review","clean","rejected"} (plain text, no enum:
+// the code owns these values and slip-verify (02-06) may add branches without a
+// schema migration). transRef carries a UNIQUE partial index so a duplicate slip
+// (same bank reference) can never pay two orders — the unique-violation IS the
+// dedup (D-06, RESEARCH Pitfall 3). NULL trans_ref rows (awaiting-review, not yet
+// verified) coexist because the index is partial (WHERE trans_ref IS NOT NULL).
+export const payments = pgTable(
+  "payments",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    orderId: uuid("order_id")
+      .notNull()
+      .references(() => orders.id),
+    status: text("status").notNull(), // "verifying" | "awaiting_review" | "clean" | "rejected"
+    transRef: text("trans_ref"), // nullable — bank reference; UNIQUE when present
+    amountSatang: integer("amount_satang"), // nullable, integer satang
+    rejectReason: text("reject_reason"), // nullable
+    slipKey: text("slip_key"), // nullable — server-assigned R2 key (slips/{orderId}/…)
+    rawJson: jsonb("raw_json"), // nullable — provider response snapshot
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    // System-wide dedup (D-06). Partial so multiple NULL-transRef awaiting-review
+    // rows coexist — mirrors the prices_default_uniq partial-index idiom (0002).
+    uniqueIndex("payments_trans_ref_idx")
+      .on(t.transRef)
+      .where(sql`${t.transRef} IS NOT NULL`),
+  ],
+);
+
+// ── Consent logs: PDPA usage/marketing grants, append-only (PLAT-04 / D-25/26) ─
+// Two separate rows (usage + marketing) per grant, each stamped with the policy
+// version it consented to — the audit trail for PDPA withdrawal/reconsent.
+export const consentLogs = pgTable("consent_logs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  customerId: uuid("customer_id").references(() => customers.id), // nullable
+  orderId: uuid("order_id").references(() => orders.id), // nullable
+  consentType: text("consent_type").notNull(), // "usage" | "marketing"
+  granted: boolean("granted").notNull(),
+  policyVersion: text("policy_version").notNull(),
+  source: text("source"), // nullable — where the consent was captured
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });

@@ -1,0 +1,67 @@
+meta {
+  name: create-order-with-qr
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{URL}}/orders
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "tier": "b2c",
+    "customer": {
+      "name": "ลูกค้าทดสอบ",
+      "phone": "0810000000",
+      "recipientName": "ผู้รับทดสอบ",
+      "recipientPhone": "0810000000",
+      "recipientAddress": "123 ถนนสลัด กรุงเทพ 10110"
+    },
+    "lines": [
+      {
+        "roundId": "{{ROUND_ID}}",
+        "varietyId": "{{VARIETY_ID}}",
+        "saleUnitId": "{{SALE_UNIT_ID}}",
+        "qty": 1
+      }
+    ],
+    "deliveryMethod": "self",
+    "deliveryZone": "samut_prakan",
+    "consent": {
+      "usage": true,
+      "marketing": false,
+      "policyVersion": "2026-07-01"
+    }
+  }
+}
+
+docs {
+  # POST /orders — LINE checkout (02-04, ORD-01/PAY-01/DEL-04/PLAT-04)
+
+  The real LINE checkout: places a priced order that reserves stock atomically,
+  RE-COMPUTES the delivery fee server-side (never trusts the client), enforces the
+  freshness intersection, snapshots delivery_method/zone/fee, lands the order
+  `awaiting_payment`, builds+stores the amount-specified PromptPay QR for the FULL
+  total (subtotal + delivery fee — Pitfall 5), schedules the hold-expiry timer, and
+  logs PDPA usage + marketing consent as two separate rows.
+
+  NEVER send a price, plants, or delivery-fee field — all are server-resolved.
+  `deliveryMethod` must be allowed for the cart's freshness class (very_fresh →
+  self/cold only) and offered in `deliveryZone`, else `422`.
+  `consent.usage` MUST be true, else `422 { error: "usage_consent_required" }`.
+
+  Set the collection vars `ROUND_ID`, `VARIETY_ID`, `SALE_UNIT_ID` to real ids from
+  a seeded open round. Expect `201` with
+  `{ id, status: "awaiting_payment", subtotalSatang, deliveryFeeSatang, totalSatang, qr, holdExpiresAt }`.
+
+  Re-fetch the QR idempotently at `GET /orders/:id/qr` — it returns the SAME stored
+  payload and schedules no second timer (D-11).
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

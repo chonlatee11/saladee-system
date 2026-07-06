@@ -33,12 +33,19 @@ const SaleUnitBody = t.Object({
   plantsPerUnit: t.Integer({ minimum: 1 }),
 });
 
+// Freshness class + care copy (D-13/D-24). deliveryClass gates delivery methods;
+// storage/washing tips are nullable care content surfaced on the public detail.
+const DeliveryClassBody = t.Union([t.Literal("very_fresh"), t.Literal("normal")]);
+
 const CreateVarietyBody = t.Object({
   name: t.String({ minLength: 1 }),
   category: t.Optional(t.String()),
   description: t.Optional(t.String()),
   imageUrl: t.Optional(t.String()),
   avgGramsPerPlant: t.Integer({ minimum: 1 }), // D-22 / CROP-01 seam
+  deliveryClass: t.Optional(DeliveryClassBody), // D-13; defaults to "normal"
+  storageTips: t.Optional(t.Union([t.String(), t.Null()])), // D-24 care copy
+  washingTips: t.Optional(t.Union([t.String(), t.Null()])), // D-24 care copy
   saleUnits: t.Optional(t.Array(SaleUnitBody)),
 });
 
@@ -48,6 +55,9 @@ const UpdateVarietyBody = t.Object({
   description: t.Optional(t.String()),
   imageUrl: t.Optional(t.String()),
   avgGramsPerPlant: t.Optional(t.Integer({ minimum: 1 })),
+  deliveryClass: t.Optional(DeliveryClassBody),
+  storageTips: t.Optional(t.Union([t.String(), t.Null()])),
+  washingTips: t.Optional(t.Union([t.String(), t.Null()])),
   active: t.Optional(t.Boolean()),
 });
 
@@ -106,6 +116,9 @@ export function makeVarietiesRoutes(database: CatalogDb = defaultDb) {
                 description: body.description ?? null,
                 imageUrl: body.imageUrl ?? null,
                 avgGramsPerPlant: body.avgGramsPerPlant,
+                deliveryClass: body.deliveryClass ?? "normal", // D-13 default
+                storageTips: body.storageTips ?? null,
+                washingTips: body.washingTips ?? null,
               })
               .returning();
             if (!v) throw new Error("variety insert returned no row");
@@ -140,6 +153,9 @@ export function makeVarietiesRoutes(database: CatalogDb = defaultDb) {
           if (body.description !== undefined) patch.description = body.description;
           if (body.imageUrl !== undefined) patch.imageUrl = body.imageUrl;
           if (body.avgGramsPerPlant !== undefined) patch.avgGramsPerPlant = body.avgGramsPerPlant;
+          if (body.deliveryClass !== undefined) patch.deliveryClass = body.deliveryClass;
+          if (body.storageTips !== undefined) patch.storageTips = body.storageTips;
+          if (body.washingTips !== undefined) patch.washingTips = body.washingTips;
           if (body.active !== undefined) patch.active = body.active;
           if (Object.keys(patch).length === 0) {
             set.status = 400;

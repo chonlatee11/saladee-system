@@ -15,7 +15,7 @@
 - [ ] **PLAT-01**: ระบบมีแกนตัดสต็อกแบบ atomic (guarded decrement) กัน oversell ได้แม้มีออเดอร์เข้าพร้อมกัน (NFR-02)
 - [x] **PLAT-02**: ระบบเก็บข้อมูลบน PostgreSQL เดียว + object storage สำหรับสลิป/รูป บนต้นทุนต่ำสุด (NFR-08)
 - [ ] **PLAT-03**: รหัสผ่านถูกเข้ารหัส, จำกัดสิทธิ์ตามบทบาท, สลิป/ข้อมูลลูกค้าเข้าถึงได้เฉพาะผู้มีสิทธิ์ (private bucket + signed URL) (NFR-03)
-- [ ] **PLAT-04**: ระบบขอความยินยอม PDPA, มีนโยบายความเป็นส่วนตัว, รองรับสิทธิ์ขอ/ลบข้อมูล, เก็บ log การยินยอม แยก consent การตลาด (NFR-04)
+- [x] **PLAT-04**: ระบบขอความยินยอม PDPA, มีนโยบายความเป็นส่วนตัว, รองรับสิทธิ์ขอ/ลบข้อมูล, เก็บ log การยินยอม แยก consent การตลาด (NFR-04)
 - [x] **PLAT-05**: ทุกหน้าใช้งานบนมือถือได้ดี (mobile-first เริ่มจาก LIFF) และรองรับทราฟฟิกพุ่งช่วงไลฟ์/โปรโมชัน (NFR-07, NFR-01)
 
 ### INV — สินค้า ราคา และสต็อก
@@ -40,25 +40,25 @@
 
 ### ORD — จัดการออเดอร์ (Omnichannel)
 
-- [ ] **ORD-01**: ระบบรับออเดอร์จาก LINE (LIFF/แชทบอท) เข้าหลังบ้านเดียวกัน (FR-13)
+- [x] **ORD-01**: ระบบรับออเดอร์จาก LINE (LIFF/แชทบอท) เข้าหลังบ้านเดียวกัน (FR-13)
 - [ ] **ORD-02**: หน้าจัดการออเดอร์รวมทุกช่องทาง พร้อม pipeline สถานะ (รอชำระ → ชำระแล้ว → กำลังแพ็ก → จัดส่ง → สำเร็จ/ยกเลิก) (FR-14)
 - [ ] **ORD-03**: พนักงานเห็นคิวงานแพ็กจัดกลุ่มตามรอบส่ง/เส้นทาง และพิมพ์ใบแพ็ก/ใบปะหน้าได้ (FR-15)
-- [ ] **ORD-04**: ระบบแจ้งเตือนลูกค้าอัตโนมัติเมื่อสถานะเปลี่ยน ผ่าน LINE (FR-16)
+- [x] **ORD-04**: ระบบแจ้งเตือนลูกค้าอัตโนมัติเมื่อสถานะเปลี่ยน ผ่าน LINE (FR-16)
 - [ ] **ORD-05**: ลูกค้าสั่งซื้อผ่านเว็บได้ (ตะกร้า → checkout) (FR-12)
 
 ### PAY — ชำระเงิน
 
-- [ ] **PAY-01**: ระบบสร้าง PromptPay QR ตามยอดออเดอร์ (ระบุจำนวน) ฝั่ง backend เอง (FR-17)
-- [ ] **PAY-02**: ลูกค้าโอน + อัปโหลดสลิป, ระบบตรวจสลิปด้วย slip-verification API + ป้องกันสลิปซ้ำ/ปลอม, แอดมินยืนยันได้ (FR-18)
-- [ ] **PAY-03**: สถานะการชำระผูกกับออเดอร์ + QR มีเวลา hold/หมดอายุ ปล่อยสต็อกที่จองคืนหากไม่ชำระ (FR-19)
+- [x] **PAY-01**: ระบบสร้าง PromptPay QR ตามยอดออเดอร์ (ระบุจำนวน) ฝั่ง backend เอง (FR-17)
+- [x] **PAY-02**: ลูกค้าโอน + อัปโหลดสลิป, ระบบตรวจสลิปด้วย slip-verification API + ป้องกันสลิปซ้ำ/ปลอม, แอดมินยืนยันได้ (FR-18)
+- [x] **PAY-03**: สถานะการชำระผูกกับออเดอร์ + QR มีเวลา hold/หมดอายุ ปล่อยสต็อกที่จองคืนหากไม่ชำระ (FR-19)
 - [ ] **PAY-04**: ลูกค้าขอใบกำกับภาษี/ใบเสร็จได้ตอน checkout, กรอกข้อมูลผู้รับ, ออก PDF, เก็บประวัติตาม PDPA — เก็บ price-at-order-time ตั้งแต่ Phase 1 (FR-37)
 
 ### DEL — จัดส่ง
 
-- [ ] **DEL-01**: รองรับ 4 รูปแบบจัดส่ง — ส่งเอง(สมุทรปราการ)/ขนส่งเย็น/Grab-Lalamove/ขนส่งทั่วไป (FR-20)
-- [ ] **DEL-02**: คำนวณค่าส่งตามรูปแบบ/โซน + เงื่อนไขส่งฟรีเมื่อครบ 500 บาท (FR-21)
-- [ ] **DEL-03**: จำกัดรูปแบบจัดส่งตามประเภทสินค้า (สินค้าสดมากบังคับส่งเอง/ขนส่งเย็น) (FR-22)
-- [ ] **DEL-04**: ลูกค้าเลือกวัน/รอบจัดส่งตอน checkout ให้สอดคล้องกับรอบเก็บเกี่ยว (FR-23)
+- [x] **DEL-01**: รองรับ 4 รูปแบบจัดส่ง — ส่งเอง(สมุทรปราการ)/ขนส่งเย็น/Grab-Lalamove/ขนส่งทั่วไป (FR-20)
+- [x] **DEL-02**: คำนวณค่าส่งตามรูปแบบ/โซน + เงื่อนไขส่งฟรีเมื่อครบ 500 บาท (FR-21)
+- [x] **DEL-03**: จำกัดรูปแบบจัดส่งตามประเภทสินค้า (สินค้าสดมากบังคับส่งเอง/ขนส่งเย็น) (FR-22)
+- [x] **DEL-04**: ลูกค้าเลือกวัน/รอบจัดส่งตอน checkout ให้สอดคล้องกับรอบเก็บเกี่ยว (FR-23)
 - [ ] **DEL-05**: บันทึกเลขพัสดุ/สถานะจัดส่ง (เชื่อม API ขนส่งในเฟสท้าย) (FR-24)
 
 ### CUST — ลูกค้า & สมาชิก
@@ -66,7 +66,7 @@
 - [ ] **CUST-01**: ลูกค้าสมัคร/ล็อกอิน (รวม LINE Login) และสั่งแบบ guest ได้ — guest กรอกข้อมูลต่อครั้ง, สมาชิกบันทึกที่อยู่ไว้ใช้ซ้ำ (FR-25)
 - [ ] **CUST-02**: ระบบแยกประเภทลูกค้า B2C/B2B — B2B เห็นราคาส่ง, ตั้งวงเงิน/เครดิตเทอมได้ (FR-26)
 - [ ] **CUST-03**: ระบบสมาชิก/สะสมแต้ม — สะสมจากยอดซื้อ, แลกส่วนลด/ของแถม, ระดับสมาชิก (FR-27)
-- [ ] **CUST-04**: ลูกค้าดูประวัติการสั่งซื้อและกด "สั่งซ้ำ" ได้ (FR-28)
+- [x] **CUST-04**: ลูกค้าดูประวัติการสั่งซื้อและกด "สั่งซ้ำ" ได้ (FR-28)
 - [ ] **CUST-05**: B2B ตั้งออเดอร์ประจำ (Standing Order) ผูกรอบส่ง และระบบกันโควตาจากผลผลิตคาดการณ์ให้ B2B ก่อน (FR-39)
 
 ### MKT — การตลาด
@@ -95,8 +95,8 @@
 ### LINE — ช่องทาง LINE OA
 
 - [ ] **LINE-01**: ตั้งค่า Rich Menu — สั่งผักรอบนี้, ราคาวันนี้, เช็ก/ติดตามออเดอร์, สมาชิก/แต้ม, ติดต่อร้าน (FR-46)
-- [ ] **LINE-02**: หน้าสั่งซื้อผ่าน LIFF — เลือกผัก/แพ็ก → รอบส่ง → ที่อยู่ → ชำระ PromptPay/แนบสลิป, รองรับ LINE Login/guest (FR-47)
-- [ ] **LINE-03**: เชื่อม Messaging API webhook — รับอีเวนต์ (ตรวจ signature), ตอบกลับอัตโนมัติ, ส่งแจ้งเตือนสถานะออเดอร์ (FR-48)
+- [x] **LINE-02**: หน้าสั่งซื้อผ่าน LIFF — เลือกผัก/แพ็ก → รอบส่ง → ที่อยู่ → ชำระ PromptPay/แนบสลิป, รองรับ LINE Login/guest (FR-47)
+- [x] **LINE-03**: เชื่อม Messaging API webhook — รับอีเวนต์ (ตรวจ signature), ตอบกลับอัตโนมัติ, ส่งแจ้งเตือนสถานะออเดอร์ (FR-48)
 - [ ] **LINE-04**: แชทบอตรับออเดอร์แบบสนทนา + Broadcast โปรโมชันตามกลุ่ม (FR-49)
 
 ---
@@ -137,7 +137,7 @@ Explicitly excluded (anti-features จาก research — ป้องกัน 
 | PLAT-01 | Phase 1 | Pending |
 | PLAT-02 | Phase 0 | Complete |
 | PLAT-03 | Phase 1 | Pending |
-| PLAT-04 | Phase 2 | Pending |
+| PLAT-04 | Phase 2 | Complete |
 | PLAT-05 | Phase 0 | Complete |
 | INV-01 | Phase 1 | Pending |
 | INV-02 | Phase 1 | Pending |
@@ -153,24 +153,24 @@ Explicitly excluded (anti-features จาก research — ป้องกัน 
 | SALE-02 | Phase 1 | Pending |
 | SALE-03 | Phase 3 | Pending |
 | SALE-04 | Phase 1 | Pending |
-| ORD-01 | Phase 2 | Pending |
+| ORD-01 | Phase 2 | Complete |
 | ORD-02 | Phase 1 | Pending |
 | ORD-03 | Phase 3 | Pending |
-| ORD-04 | Phase 2 | Pending |
+| ORD-04 | Phase 2 | Complete |
 | ORD-05 | Phase 4 | Pending |
-| PAY-01 | Phase 2 | Pending |
-| PAY-02 | Phase 2 | Pending |
-| PAY-03 | Phase 2 | Pending |
+| PAY-01 | Phase 2 | Complete |
+| PAY-02 | Phase 2 | Complete |
+| PAY-03 | Phase 2 | Complete |
 | PAY-04 | Phase 1 | Pending |
-| DEL-01 | Phase 2 | Pending |
-| DEL-02 | Phase 2 | Pending |
-| DEL-03 | Phase 2 | Pending |
-| DEL-04 | Phase 2 | Pending |
+| DEL-01 | Phase 2 | Complete |
+| DEL-02 | Phase 2 | Complete |
+| DEL-03 | Phase 2 | Complete |
+| DEL-04 | Phase 2 | Complete |
 | DEL-05 | Phase 4 | Pending |
 | CUST-01 | Phase 1 | Pending |
 | CUST-02 | Phase 3 | Pending |
 | CUST-03 | Phase 4 | Pending |
-| CUST-04 | Phase 2 | Pending |
+| CUST-04 | Phase 2 | Complete |
 | CUST-05 | Phase 3 | Pending |
 | MKT-01 | Phase 4 | Pending |
 | MKT-02 | Phase 3 | Pending |
@@ -187,11 +187,12 @@ Explicitly excluded (anti-features จาก research — ป้องกัน 
 | CROP-06 | Phase 3 | Pending |
 | CROP-07 | Phase 4 | Pending |
 | LINE-01 | Phase 2 | Pending |
-| LINE-02 | Phase 2 | Pending |
-| LINE-03 | Phase 2 | Pending |
+| LINE-02 | Phase 2 | Complete |
+| LINE-03 | Phase 2 | Complete |
 | LINE-04 | Phase 4 | Pending |
 
 **Coverage:**
+
 - v1 requirements: 56 total (PLAT×5, INV×10, SALE×4, ORD×5, PAY×4, DEL×5, CUST×5, MKT×4, ADM×3, CROP×7, LINE×4). หมายเหตุ: บันทึกเดิมระบุ "45" เป็นการนับพลาด — REQ-ID จริงในเอกสารมี 56 รายการ
 - Mapped to phases: 56/56 ✓ (Phase 0: 2, Phase 1: 17, Phase 2: 14, Phase 3: 16, Phase 4: 7)
 - Unmapped: 0

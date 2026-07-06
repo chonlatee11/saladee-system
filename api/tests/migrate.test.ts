@@ -24,6 +24,8 @@ const COMMERCE_UP = "drizzle/0001_commerce.sql";
 const COMMERCE_DOWN = "drizzle/0001_commerce.down.sql";
 const PRICES_DEFAULT_UP = "drizzle/0002_prices_default_uniq.sql";
 const PRICES_DEFAULT_DOWN = "drizzle/0002_prices_default_uniq.down.sql";
+const PAYMENTS_UP = "drizzle/0003_payments_delivery_consent.sql";
+const PAYMENTS_DOWN = "drizzle/0003_payments_delivery_consent.down.sql";
 
 let client: ReturnType<typeof postgres>;
 let db: ReturnType<typeof drizzle>;
@@ -51,8 +53,11 @@ async function applyAllUp(): Promise<void> {
   await client.file(INIT_UP);
   await client.file(COMMERCE_UP);
   await client.file(PRICES_DEFAULT_UP);
+  await client.file(PAYMENTS_UP);
 }
 async function applyAllDown(): Promise<void> {
+  // Latest migration first (children before parents, delivery_class type last).
+  await client.file(PAYMENTS_DOWN);
   await client.file(PRICES_DEFAULT_DOWN);
   await client.file(COMMERCE_DOWN);
   await client.file(INIT_DOWN);
@@ -86,6 +91,11 @@ describe("migration up→down→up (Criterion 2)", () => {
     // 0002_prices_default_uniq — the partial unique index enforcing one NULL-date
     // default per (round, variety, tier) (WR-01).
     expect(await indexExists("prices_default_uniq")).toBe(true);
+    // 0003_payments_delivery_consent — new tables, dedup index, and enum.
+    expect(await tableExists("public.payments")).toBe(true);
+    expect(await tableExists("public.consent_logs")).toBe(true);
+    expect(await indexExists("payments_trans_ref_idx")).toBe(true);
+    expect(await enumExists("delivery_class")).toBe(true);
   });
 
   test("down: identity + commerce tables and enums are all gone", async () => {
@@ -99,6 +109,10 @@ describe("migration up→down→up (Criterion 2)", () => {
     expect(await enumExists("tier")).toBe(false);
     // The partial index is gone with its table (0002 down runs before 0001 down).
     expect(await indexExists("prices_default_uniq")).toBe(false);
+    // 0003 objects are gone too (down reverses cleanly, delivery_class type last).
+    expect(await tableExists("public.payments")).toBe(false);
+    expect(await tableExists("public.consent_logs")).toBe(false);
+    expect(await enumExists("delivery_class")).toBe(false);
   });
 
   test("up again: full schema is back with no residue", async () => {

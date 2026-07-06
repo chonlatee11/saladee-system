@@ -16,6 +16,7 @@
 import { and, eq, isNull, or, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { Elysia, t } from "elysia";
+import { deliveryConfig } from "../config/delivery";
 import { db as defaultDb } from "../db/client";
 import type * as schema from "../db/schema";
 import {
@@ -29,24 +30,46 @@ import {
   saleUnits,
   varieties,
 } from "../db/schema";
+import { env } from "../env";
+import { boss } from "../jobs/boss";
+import { log } from "../lib/logger";
 import { requireRole } from "../plugins/auth.plugin";
-import { canTransition, type OrderStatus } from "../services/order-status";
+import { logConsent } from "../services/consent";
+import {
+  allowedMethodsForCart,
+  computeDeliveryFee,
+  type DeliveryClass,
+  type DeliveryMethod,
+} from "../services/delivery";
+import type { OrderStatus } from "../services/order-status";
+import { applyTransition, OrderError } from "../services/order-transition";
 import { deriveUnitPriceSatang } from "../services/pricing";
-import { release, reserve } from "../services/reservation";
+import { buildPromptPayPayload, renderQrDataUrl } from "../services/promptpay";
+import { reserve } from "../services/reservation";
+
+/**
+ * Schedules the pg-boss hold-expiry timer for an order (PAY-03 / D-11). Injected
+ * so tests can assert scheduling without a running worker; the runtime default
+ * uses `singletonKey=orderId` so re-showing the QR never adds a second timer.
+ */
+export type HoldExpiryScheduler = (orderId: string, holdWindowSeconds: number) => Promise<void>;
+
+export const defaultScheduleHoldExpiry: HoldExpiryScheduler = async (orderId, holdWindowSeconds) => {
+  await boss.send(
+    "hold-expiry",
+    { orderId },
+    { startAfter: holdWindowSeconds, singletonKey: orderId },
+  );
+};
 
 // The schema-typed drizzle handle (query builder + transaction runner). Matches
 // both the runtime db (client.ts) and an injected test pool typed with `schema`.
 type OrdersDb = PostgresJsDatabase<typeof schema>;
 
-/** Signalled inside a transaction to roll back with a specific HTTP mapping. */
-class OrderError extends Error {
-  constructor(
-    readonly code: string,
-    readonly httpStatus: number,
-  ) {
-    super(code);
-  }
-}
+// OrderError (throw-to-rollback → HTTP mapping) now lives in
+// services/order-transition.ts alongside the shared applyTransition() and is
+// imported above; the POST /orders flow below still throws it for round_closed /
+// sold_out, and the PATCH flow delegates the guarded transition to applyTransition.
 
 // ── TypeBox request schemas ──────────────────────────────────────────────────
 // NEVER accept a price/plants field from the client — the server resolves price
@@ -87,6 +110,32 @@ const CreateOrderBody = t.Object({
   // At least one of lines / boxLines must be present (checked in the handler).
   lines: t.Optional(t.Array(OrderLineBody, { minItems: 1 })),
   boxLines: t.Optional(t.Array(BoxLineBody, { minItems: 1 })),
+  // ── Phase-2 LINE checkout (02-04) ───────────────────────────────────────────
+  // Delivery choice. When BOTH are present the order becomes a real checkout:
+  // the fee is RE-COMPUTED server-side (never trusted from the client — the client
+  // sends no money field), the freshness intersection is re-enforced, status lands
+  // `awaiting_payment`, a PromptPay QR for (subtotal+fee) is stored, and a
+  // hold-expiry timer is scheduled. Omitting them keeps the Phase-1 `created`
+  // behaviour (staff/legacy path) unchanged.
+  deliveryMethod: t.Optional(
+    t.Union([
+      t.Literal("self"),
+      t.Literal("cold"),
+      t.Literal("on_demand"),
+      t.Literal("general"),
+    ]),
+  ),
+  deliveryZone: t.Optional(t.String({ minLength: 1 })),
+  // PDPA consent (PLAT-04 / D-25/26). When present, usage MUST be true to proceed
+  // (usage_consent_required, 422); usage + marketing are logged as two independent
+  // consent_logs rows inside the order tx. Optional so the legacy path is unchanged.
+  consent: t.Optional(
+    t.Object({
+      usage: t.Boolean(),
+      marketing: t.Boolean(),
+      policyVersion: t.String({ minLength: 1 }),
+    }),
+  ),
 });
 
 const StatusBody = t.Object({
@@ -114,6 +163,7 @@ interface ResolvedLine {
   unitPriceSatang: number;
   qty: number;
   plantsDecremented: number;
+  deliveryClass: DeliveryClass; // freshness gating at checkout (D-13)
 }
 
 /** One resolved BOM component (server-derived; never client-supplied). */
@@ -123,6 +173,7 @@ interface ResolvedBoxComponent {
   plantsPerBox: number;
   pricePerKgSatang: number | null;
   componentPriceSatang: number | null;
+  deliveryClass: DeliveryClass; // freshness gating at checkout (D-13)
 }
 
 /** A box line after the server has resolved its BOM + price (D-18) snapshot. */
@@ -138,7 +189,10 @@ interface ResolvedBox {
   plantsDecremented: number; // plantsPerBox × qty
 }
 
-export function makeOrdersRoutes(database: OrdersDb = defaultDb) {
+export function makeOrdersRoutes(
+  database: OrdersDb = defaultDb,
+  scheduleHoldExpiry: HoldExpiryScheduler = defaultScheduleHoldExpiry,
+) {
   return (
     new Elysia()
       .post(
@@ -205,6 +259,7 @@ export function makeOrdersRoutes(database: OrdersDb = defaultDb) {
               unitPriceSatang,
               qty: line.qty,
               plantsDecremented: su.plantsPerUnit * line.qty,
+              deliveryClass: variety.deliveryClass as DeliveryClass,
             });
           }
 
@@ -273,6 +328,7 @@ export function makeOrdersRoutes(database: OrdersDb = defaultDb) {
                 plantsPerBox: c.plantsPerBox,
                 pricePerKgSatang: price?.pricePerKgSatang ?? null,
                 componentPriceSatang,
+                deliveryClass: variety.deliveryClass as DeliveryClass,
               });
             }
 
@@ -354,6 +410,64 @@ export function makeOrdersRoutes(database: OrdersDb = defaultDb) {
           const subtotalSatang =
             resolved.reduce((s, r) => s + r.unitPriceSatang * r.qty, 0) +
             resolvedBoxes.reduce((s, b) => s + b.unitPriceSatang * b.qty, 0);
+
+          // 2b. LINE checkout (02-04): when a delivery choice is supplied, this is a
+          //     real checkout. Re-enforce the freshness intersection (T-02-13), RE-
+          //     COMPUTE the fee server-side (T-02-12 — the client never sends money),
+          //     and build the amount-specified PromptPay QR for the FULL total
+          //     (subtotal + fee, T-02-16 / Pitfall 5). Snapshot everything onto the
+          //     order so status lands `awaiting_payment` with a scheduled hold. Omit
+          //     the delivery choice and the order keeps the Phase-1 `created` path.
+          const isCheckout =
+            body.deliveryMethod !== undefined && body.deliveryZone !== undefined;
+          let deliveryFeeSatang: number | null = null;
+          let totalSatang = subtotalSatang;
+          // CR-02: EVERY order created here reserves stock atomically below — so
+          // every order, INCLUDING the legacy `created` path (no delivery choice),
+          // MUST carry a holdExpiresAt so the 02-07 safety-net sweep can always
+          // reclaim it. Without a deadline, the open/unauthenticated POST /orders
+          // could reserve stock forever via public catalog UUIDs and permanently
+          // exhaust a round (stock-exhaustion weaponising oversell-prevention,
+          // NFR-02). The status still lands `created` on this path (Phase-1
+          // behaviour preserved); only the reclaim deadline is added.
+          const holdWindowSeconds = Number(env.HOLD_WINDOW_SECONDS);
+          const holdExpiresAt: Date | null = new Date(Date.now() + holdWindowSeconds * 1000);
+          let qrPayload: string | null = null;
+          if (isCheckout) {
+            const method = body.deliveryMethod as DeliveryMethod;
+            const zone = body.deliveryZone as string;
+            // Freshness gating: the chosen method MUST be allowed for the cart's
+            // strictest class (very_fresh → self/cold only). Re-enforced here, not
+            // only in the display-only quote (02-03).
+            const classes: DeliveryClass[] = [
+              ...resolved.map((r) => r.deliveryClass),
+              ...resolvedBoxes.flatMap((b) => b.components.map((c) => c.deliveryClass)),
+            ];
+            if (!allowedMethodsForCart(classes).includes(method)) {
+              set.status = 422;
+              return { error: "method_not_allowed_freshness" };
+            }
+            // Server-authoritative fee — an (zone, method) pair the config does not
+            // offer is a clean 422, never a 500.
+            try {
+              deliveryFeeSatang = computeDeliveryFee(zone, method, subtotalSatang, deliveryConfig);
+            } catch {
+              set.status = 422;
+              return { error: "method_not_available_in_zone" };
+            }
+            totalSatang = subtotalSatang + deliveryFeeSatang;
+            // QR amount = full total in baht (/100). Whole-baht prices + whole-baht
+            // fees guarantee X.00. CRC-16 is produced by the library, never here.
+            qrPayload = buildPromptPayPayload(env.PROMPTPAY_PAYEE_ID, totalSatang / 100);
+          }
+
+          // 2c. PDPA usage consent (D-25): when a consent block is supplied, usage
+          //     consent is REQUIRED — refuse the order before trusting personal data.
+          //     Marketing is independent and logged regardless of value (D-26).
+          if (body.consent && body.consent.usage !== true) {
+            set.status = 422;
+            return { error: "usage_consent_required" };
+          }
 
           // 3. One transaction: (re)check cut-off (Pitfall 6), reserve atomically,
           //    then persist the order + frozen snapshot. Any throw rolls it all back.
@@ -443,7 +557,8 @@ export function makeOrdersRoutes(database: OrdersDb = defaultDb) {
                 .values({
                   customerId,
                   roundId: orderRoundId,
-                  status: "created",
+                  // Checkout lands `awaiting_payment` (D-10); legacy path stays `created`.
+                  status: isCheckout ? "awaiting_payment" : "created",
                   tier,
                   substitutionPolicy: body.substitutionPolicy ?? "disallow",
                   recipientName,
@@ -451,6 +566,14 @@ export function makeOrdersRoutes(database: OrdersDb = defaultDb) {
                   recipientAddress,
                   taxId: body.taxId ?? null,
                   subtotalSatang,
+                  // Phase-2 delivery + payment-hold snapshot (nullable on the legacy
+                  // path). holdExpiresAt is the authoritative deadline the 02-07
+                  // safety-net sweep + expiry job read.
+                  deliveryMethod: isCheckout ? (body.deliveryMethod as string) : null,
+                  deliveryZone: isCheckout ? (body.deliveryZone as string) : null,
+                  deliveryFeeSatang,
+                  holdExpiresAt,
+                  qrPayload,
                 })
                 .returning({ id: orders.id, status: orders.status });
               if (!ord) throw new Error("order insert returned no row");
@@ -499,10 +622,47 @@ export function makeOrdersRoutes(database: OrdersDb = defaultDb) {
                 );
               }
 
-              return { id: ord.id, status: ord.status, subtotalSatang };
+              // Log PDPA consent in the SAME tx so it is recorded atomically with
+              // the order (D-25). Two rows (usage + marketing), each stamped with the
+              // policy version + source "checkout".
+              if (body.consent) {
+                await logConsent(tx, {
+                  customerId,
+                  orderId: ord.id,
+                  usageGranted: body.consent.usage,
+                  marketingGranted: body.consent.marketing,
+                  policyVersion: body.consent.policyVersion,
+                  source: "checkout",
+                });
+              }
+
+              return {
+                id: ord.id,
+                status: ord.status,
+                subtotalSatang,
+                deliveryFeeSatang,
+                totalSatang,
+              };
             });
+
+            // 4. Post-commit (checkout only): render the stored QR and schedule the
+            //    hold-expiry timer. The order is ALREADY committed, so a scheduling
+            //    failure must NOT roll it back (T-02-14) — holdExpiresAt is snapshotted
+            //    and the 02-07 periodic sweep is the authoritative self-heal.
+            let qr: string | null = null;
+            if (isCheckout && qrPayload) {
+              qr = await renderQrDataUrl(qrPayload);
+              try {
+                await scheduleHoldExpiry(result.id, holdWindowSeconds);
+              } catch (err) {
+                log.warn("hold-expiry schedule failed; sweep will self-heal", {
+                  orderId: result.id,
+                  error: String(err),
+                });
+              }
+            }
             set.status = 201;
-            return result;
+            return { ...result, qr, holdExpiresAt };
           } catch (e) {
             if (e instanceof OrderError) {
               set.status = e.httpStatus;
@@ -520,67 +680,13 @@ export function makeOrdersRoutes(database: OrdersDb = defaultDb) {
         async ({ params, body, set }) => {
           const next = body.status as OrderStatus;
           try {
-            const finalStatus = await database.transaction(async (tx) => {
-              // CR-01 / WR-05: lock the order row and read the AUTHORITATIVE status
-              // INSIDE the tx (SELECT ... FOR UPDATE). Reading status outside the tx
-              // and validating against that stale value opened a TOCTOU window where
-              // two concurrent cancels both passed canTransition('paid','cancelled')
-              // and both ran release() — double-decrementing reserved_plants and
-              // freeing OTHER orders' reservations (oversell, NFR-02 / INV-06). With
-              // the row lock, the second racer blocks until the first commits, then
-              // re-reads status = 'cancelled' and fails the transition gate below, so
-              // release() runs exactly once. This also closes the general
-              // lost-update window for ANY two concurrent transitions (WR-05).
-              const [locked] = await tx
-                .select({ status: orders.status, roundId: orders.roundId })
-                .from(orders)
-                .where(eq(orders.id, params.id))
-                .for("update")
-                .limit(1);
-              if (!locked) throw new OrderError("order_not_found", 404);
-              const current = locked.status as OrderStatus;
-              // Re-validate the transition against the LOCKED row, not a stale read.
-              // `cancelled` from a terminal state (done) or a repeat cancel is illegal
-              // here → 400, so stock is never re-released.
-              if (!canTransition(current, next)) {
-                throw new OrderError("illegal_transition", 400);
-              }
-
-              // A `cancelled` entry (from a non-cancelled state) releases the order's
-              // reserved plants in the SAME tx. The row lock above serialises racers,
-              // so this branch runs at most once per order (D-08 / Pitfall 5).
-              if (next === "cancelled" && current !== "cancelled") {
-                const lines = await tx
-                  .select({
-                    lineKind: orderLines.lineKind,
-                    varietyId: orderLines.varietyId,
-                    plants: orderLines.plantsDecremented,
-                    qty: orderLines.qty,
-                    boxBomJson: orderLines.boxBomJson,
-                  })
-                  .from(orderLines)
-                  .where(eq(orderLines.orderId, params.id));
-                for (const l of lines) {
-                  if (l.lineKind === "box") {
-                    // Release EVERY component of the box from its frozen BOM snapshot
-                    // (plantsPerBox × qty), so a cancelled box never strands stock.
-                    const bom = l.boxBomJson as {
-                      components?: { varietyId: string; plantsPerBox: number }[];
-                    } | null;
-                    for (const c of bom?.components ?? []) {
-                      await release(tx, locked.roundId, c.varietyId, c.plantsPerBox * l.qty);
-                    }
-                  } else if (l.varietyId) {
-                    await release(tx, locked.roundId, l.varietyId, l.plants);
-                  }
-                }
-              }
-              await tx
-                .update(orders)
-                .set({ status: next, updatedAt: new Date() })
-                .where(eq(orders.id, params.id));
-              return next;
-            });
+            // Delegate to the SHARED guarded transition (services/order-transition.ts):
+            // it row-locks + re-reads the authoritative status and releases reserved
+            // stock on entering `cancelled`, exactly once (the Phase-1 concurrent-cancel
+            // fix, now the single source of truth reused by slip-verify + hold-expiry).
+            const { status: finalStatus } = await database.transaction((tx) =>
+              applyTransition(tx, params.id, next),
+            );
 
             set.status = 200;
             // IN-03: `finalStatus` is the committed status read/written under the

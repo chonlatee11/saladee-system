@@ -34,10 +34,12 @@ beforeAll(async () => {
   db = drizzle(client, { schema });
   // Clean slate, then apply both migrations so the commerce tables exist
   // regardless of which integration test file ran first.
+  await client.file("drizzle/0003_payments_delivery_consent.down.sql").catch(() => {});
   await client.file("drizzle/0001_commerce.down.sql").catch(() => {});
   await client.file("drizzle/0000_init.down.sql").catch(() => {});
   await client.file("drizzle/0000_init.sql");
   await client.file("drizzle/0001_commerce.sql");
+  await client.file("drizzle/0003_payments_delivery_consent.sql");
 });
 
 afterAll(async () => {

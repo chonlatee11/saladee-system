@@ -9,6 +9,11 @@ import { validateSignature } from "@line/bot-sdk";
 import { Elysia } from "elysia";
 import { log } from "../lib/logger";
 import { linePlugin } from "../plugins/line.plugin";
+// Side-effect import: registers the milestone Flex notifier into the shared
+// applyTransition() seam at boot (ORD-04), WITHOUT editing index.ts. webhook.ts is
+// already composed in the app, so this guarantees the notifier is live in the
+// running server; under NODE_ENV=test the notifier is a no-op (no live push).
+import "../services/notify";
 
 // Minimal shape of the LINE webhook payload we act on (echo of text messages).
 interface LineTextMessage {

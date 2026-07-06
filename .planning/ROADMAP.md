@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 0: Foundation & Platform** - Single deployable backend, DB, storage, LINE client, HTTPS on VPS (completed 2026-07-02)
 - [x] **Phase 1: Commerce Core** - Oversell-safe harvest-bound reservation engine, catalog, pricing, rounds, mixed box (completed 2026-07-02)
-- [ ] **Phase 2: LINE Storefront, Payments & Delivery** - LIFF + Rich Menu ordering, PromptPay + verified slips, hold-expiry, delivery, PDPA
+- [x] **Phase 2: LINE Storefront, Payments & Delivery** - LIFF + Rich Menu ordering, PromptPay + verified slips, hold-expiry, delivery, PDPA (completed 2026-07-04)
 - [ ] **Phase 3: Back-office, Crop Planning & B2B/Subscription** - Crop forecast auto-feeds stock, B2B quota, subscriptions, packing, dashboards, reports
 - [ ] **Phase 4: Web Store, Marketing & Scale** - Web storefront, promotions/loyalty, broadcast, multi-carrier delivery, demand-driven planting
 
@@ -98,12 +98,33 @@ Plans:
   4. The customer receives automatic LINE notifications on status changes and can view order history and reorder.
   5. Delivery fee computes by method/zone with free shipping over 500 baht, disallowed methods are blocked per product type, and PDPA consent (with separate marketing consent) is captured while slips stay in a private, signed-URL-only bucket.
 
-**Plans**: TBD
+**Plans**: 9/9 plans complete
 **UI hint**: yes
 
 Plans:
+**Wave 1**
 
-- [ ] 02-01: TBD (derived during plan-phase)
+- [x] 02-01-PLAN.md — Backbone: schema+migration 0003 [BLOCKING], env keys, shared applyTransition(), pg-boss init, Wave-0 test scaffolds (wave 1)
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [x] 02-02-PLAN.md — LINE Login (server-verified) + LIFF SPA shell + Rich Menu provisioning + console env-gap checkpoint (wave 2)
+- [x] 02-03-PLAN.md — Delivery fee engine + freshness gating + care-content API (DEL-01..04, D-24) (wave 2)
+
+**Wave 3** *(blocked on Wave 2)*
+
+- [x] 02-04-PLAN.md — Checkout API: POST /orders delivery snapshot + awaiting_payment + PromptPay QR + hold schedule + PDPA consent (wave 3)
+- [x] 02-05-PLAN.md — LIFF catalog browse + variety detail (care) + cart store (wave 3)
+
+**Wave 4** *(blocked on Wave 3)*
+
+- [x] 02-06-PLAN.md — Slip-verify slice: SlipOK adapter + slip upload → private R2 → verify → paid/review + transRef dedup + admin confirm (wave 4)
+- [x] 02-07-PLAN.md — Hold-expiry worker + safety-net sweep + Flex milestone notifications + webhook extend (wave 4)
+
+**Wave 5** *(blocked on Wave 4)*
+
+- [x] 02-08-PLAN.md — LIFF checkout wizard + PromptPay pay screen + slip uploader (all payment states) (wave 5)
+- [x] 02-09-PLAN.md — Member order history + reorder (re-priced, unavailable flagged) (wave 5)
 
 ### Phase 3: Back-office, Crop Planning & B2B/Subscription
 
@@ -155,6 +176,6 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 0. Foundation & Platform | 8/8 | Complete   | 2026-07-02 |
 | 1. Commerce Core | 5/5 | Complete   | 2026-07-02 |
-| 2. LINE Storefront, Payments & Delivery | 0/TBD | Not started | - |
+| 2. LINE Storefront, Payments & Delivery | 9/9 | Complete   | 2026-07-04 |
 | 3. Back-office, Crop Planning & B2B/Subscription | 0/TBD | Not started | - |
 | 4. Web Store, Marketing & Scale | 0/TBD | Not started | - |

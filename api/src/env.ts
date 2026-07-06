@@ -27,6 +27,20 @@ export const EnvSchema = t.Object({
   CORS_ORIGINS: t.String({
     default: "https://saladee-web.pages.dev,http://localhost:5173,http://localhost:3000",
   }),
+  // ── Phase-2 payments/slip/hold config (RESEARCH 220-227) ────────────────────
+  // Slip-verification adapter selection + credentials. SLIP_VERIFY_PROVIDER picks
+  // the adapter (02-06). SLIPOK_* default to "" because the concrete SlipOK branch
+  // + key are not provisioned yet (flagged pre-planning: "surface SlipOK env gap")
+  // — env-driven, never logged (Phase-0 D-15); 02-06 validates they are non-empty
+  // before the slipok adapter actually calls out.
+  SLIP_VERIFY_PROVIDER: t.String({ default: "slipok" }),
+  SLIPOK_BRANCH_ID: t.String({ default: "" }),
+  SLIPOK_API_KEY: t.String({ default: "" }),
+  // The PromptPay payee (phone or national id) embedded in the merchant QR (D-02).
+  // Required — the app must refuse to start without a payee to bill (fail-fast).
+  PROMPTPAY_PAYEE_ID: t.String({ minLength: 1 }),
+  // QR hold window before pg-boss expires an unpaid order (seconds). 30 min default.
+  HOLD_WINDOW_SECONDS: t.String({ default: "1800" }),
 });
 
 export type Env = Static<typeof EnvSchema>;

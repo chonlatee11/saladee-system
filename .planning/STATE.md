@@ -2,16 +2,19 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: "Phase 01 shipped — PR #2"
-stopped_at: Phase 1 context gathered
-last_updated: "2026-07-04T05:22:00.771Z"
+current_phase: 02
+current_phase_name: line-storefront-payments-delivery
+status: verifying
+stopped_at: Completed 02-04-PLAN.md
+last_updated: "2026-07-04T12:43:48.335Z"
 last_activity: 2026-07-04
+last_activity_desc: Phase 02 execution started
 progress:
   total_phases: 5
-  completed_phases: 1
-  total_plans: 13
-  completed_plans: 13
-  percent: 20
+  completed_phases: 3
+  total_plans: 22
+  completed_plans: 22
+  percent: 60
 ---
 
 # Project State
@@ -21,16 +24,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-28)
 
 **Core value:** ลูกค้าสั่งผักสลัดผ่าน LINE แล้วจ่ายเงินจบในที่เดียว และจำนวนที่เปิดขายตรงกับผลผลิตจริงเสมอ (ไม่ oversell, ไม่เหลือทิ้ง)
-**Current focus:** Phase 2 — line storefront, payments & delivery
+**Current focus:** Phase 02 — line-storefront-payments-delivery
 
 ## Current Position
 
-Phase: 2
-Plan: Not started
-Status: Phase 01 shipped — PR #2
-Last activity: 2026-07-04
+Phase: 02 (line-storefront-payments-delivery) — EXECUTING
+Plan: 9 of 9
+Status: Phase complete — ready for verification
+Last activity: 2026-07-04 — Phase 02 execution started
+Note: CR-01/CR-02 code-review test-gaps CLOSED — added regression tests api/tests/verified-slip-park.test.ts (verified slip parked as awaiting_review + 202 when order cancelled mid-verify) and api/tests/created-hold-sweep.test.ts (created-path holdExpiresAt set + swept). api bun test 187 pass / 0 fail.
 
-Progress: [██████████] 100%
+Progress: [████████░░] 77%
 
 ## Performance Metrics
 
@@ -54,6 +58,15 @@ Progress: [██████████] 100%
 *Updated after each plan completion*
 | Phase 00 P01 | 8 | 3 tasks | 25 files |
 | Phase 00 P08 | 20 | 3 tasks | 5 files |
+| Phase 02 P01 | 15 | 3 tasks | 41 files |
+| Phase 02 P02 | 11min | 3 tasks | 20 files |
+| Phase 02 P03 | 25m | 2 tasks | 7 files |
+| Phase 02 P04 | 30min | 3 tasks | 11 files |
+| Phase 02 P05 | 6min | 2 tasks | 11 files |
+| Phase 02 P06 | ~35m | 2 tasks | 9 files |
+| Phase 02 P07 | 20m | 2 tasks | 6 files |
+| Phase 02 P09 | 6min | 2 tasks | 8 files |
+| Phase 02 P08 | 25m | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -68,6 +81,16 @@ Recent decisions affecting current work:
 - [Roadmap]: Phase 1 ships MANUAL sellable qty; crop-planning auto-feed (CROP-04) replaces it in Phase 3 with manual override kept permanently.
 - [Phase ?]: [00-01] Interface-first stub seams (db/storage/line/auth plugins + webhook/files/auth route stubs) with a FIXED index.ts composition order let wave-2 slices fill their own module only, never editing index.ts — enables parallel disjoint-file execution.
 - [Phase ?]: [00-01] .env.test committed at both repo root and api/ so 'cd api && bun test' boot-validates from the api cwd (Bun loads env from cwd); real .env stays gitignored.
+- [Phase ?]: [02-01] pg-boss runs on DATABASE_URL_DIRECT and starts only under import.meta.main so bun test never spins a worker.
+- [Phase ?]: [02-01] applyTransition() is the single guarded transition path reused by staff PATCH, slip-verify (02-06), and hold-expiry (02-07) — cannot re-break the concurrent-cancel oversell fix.
+- [Phase ?]: 02-03: delivery fee is a committed TypeBox-validated config file (zone×method flat rate); DB zones deferred to Phase 3
+- [Phase ?]: 02-03: /delivery/quote is public + display-only; checkout 02-04 recomputes+snapshots the fee (never trusts client)
+- [Phase ?]: 02-04: LINE checkout — delivery+consent optional; awaiting_payment/QR/hold/consent activate only with a delivery choice (preserves Phase-1 created-status oversell tests)
+- [Phase ?]: 02-04: PromptPay CRC produced by promptpay-qr and independently re-derived in the golden-vector test; never hand-rolled
+- [Phase ?]: 02-06: DB partial UNIQUE index is the sole system-wide slip dedup arbiter; 23505 unwrapped from DrizzleQueryError.cause → 409 duplicate_slip
+- [Phase ?]: 02-06: SlipVerifier seam (env-selected) keeps SlipOK swappable; ambiguous/quota/5xx/network → 'unavailable' → admin manual-confirm (money-safe)
+- [Phase 02]: 02-09 reorder returns a proposed cart (does not auto-place); re-prices at the current open round and flags sold-out/absent items (D-20)
+- [Phase 02]: 02-09 member-only /me/orders guard keyed on customers.line_user_id; guests 403, missing token 401 (D-19)
 
 ### Pending Todos
 
@@ -98,6 +121,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-02T14:53:23.596Z
-Stopped at: Phase 1 context gathered
-Resume file: .planning/phases/01-commerce-core/01-CONTEXT.md
+Last session: 2026-07-04T12:43:39.048Z
+Stopped at: Completed 02-04-PLAN.md
+Resume file: None

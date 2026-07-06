@@ -12,11 +12,14 @@
   "dependencies": {
     "@elysiajs/eden": "1.4.9",
     "@line/liff": "2.29.0",
-    "vue": "3.5.39"
+    "lucide-vue-next": "^1.0.0",
+    "vue": "3.5.39",
+    "vue-router": "^5.1.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.3.1",
     "@vitejs/plugin-vue": "6.0.7",
+    "@vue/compiler-sfc": "3.5.39",
     "tailwindcss": "4.3.1",
     "vite": "8.1.0"
   }

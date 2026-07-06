@@ -7,6 +7,7 @@
 import { cors } from "@elysiajs/cors";
 import { Elysia } from "elysia";
 import { env } from "./env";
+import { startJobs, stopJobs } from "./jobs/boss";
 import { log } from "./lib/logger";
 import { authPlugin } from "./plugins/auth.plugin";
 import { dbPlugin } from "./plugins/db.plugin";
@@ -15,9 +16,12 @@ import { storagePlugin } from "./plugins/storage.plugin";
 import { authRoutes } from "./routes/auth";
 import { boxesRoutes } from "./routes/boxes";
 import { catalogRoutes } from "./routes/catalog";
+import { deliveryRoutes } from "./routes/delivery";
 import { filesRoutes } from "./routes/files";
 import { healthRoutes } from "./routes/health";
+import { meOrdersRoutes } from "./routes/me-orders";
 import { ordersRoutes } from "./routes/orders";
+import { paymentsRoutes } from "./routes/payments";
 import { pricesRoutes } from "./routes/prices";
 import { roundsRoutes } from "./routes/rounds";
 import { stockRoutes } from "./routes/stock";
@@ -31,7 +35,10 @@ export const app = new Elysia()
   .use(
     cors({
       origin: env.CORS_ORIGINS.split(",").map((o) => o.trim()),
-      methods: ["GET", "POST", "OPTIONS"],
+      // WR-02: include PATCH/PUT/DELETE — the API exposes PATCH /orders/:id/status
+      // and PUT/DELETE /varieties/:id. Without them the browser preflight blocks
+      // every cross-origin mutation from the allowlisted web origin.
+      methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
       allowedHeaders: ["Content-Type", "Authorization"],
     }),
   )
@@ -49,14 +56,29 @@ export const app = new Elysia()
   .use(pricesRoutes)
   .use(catalogRoutes)
   .use(stockRoutes)
-  .use(boxesRoutes);
+  .use(boxesRoutes)
+  .use(deliveryRoutes)
+  .use(paymentsRoutes)
+  .use(meOrdersRoutes);
 
 // Eden Treaty contract consumed by web/ (compile-time-safe API calls).
 export type App = typeof app;
 
 // Bind the port only when run as the entry point (not when imported by tests).
+// The pg-boss worker starts under the SAME guard so `bun test` (which imports
+// `app`) never spins a background worker (RESEARCH Pitfall 6 / D-08).
 if (import.meta.main) {
   app.listen(Number(env.PORT), (server) => {
     log.info("listening", { port: server.port, env: env.NODE_ENV });
   });
+  startJobs().catch((err) => {
+    log.error("jobs failed to start", { error: String(err) });
+    process.exit(1);
+  });
+  // Graceful shutdown: drain the worker before exit.
+  for (const sig of ["SIGTERM", "SIGINT"] as const) {
+    process.on(sig, () => {
+      stopJobs().finally(() => process.exit(0));
+    });
+  }
 }
