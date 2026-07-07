@@ -16,7 +16,7 @@ import { join } from "node:path";
 import PdfPrinter from "pdfmake/src/printer";
 import virtualfs from "pdfmake/src/virtual-fs";
 import URLResolver from "pdfmake/src/URLResolver";
-import type { TDocumentDefinitions } from "pdfmake/interfaces";
+import type { Content, TDocumentDefinitions } from "pdfmake/interfaces";
 
 const FONTS_DIR = join(import.meta.dir, "..", "fonts");
 
@@ -75,4 +75,132 @@ export async function renderPackSlip(doc: TDocumentDefinitions): Promise<Buffer>
       .on("error", reject);
     pdf.end();
   });
+}
+
+// ── Pack-slip docDefinition builder (ORD-03 / D-20/21) ─────────────────────────
+// A pack slip is the packer's picking sheet for ONE delivery round: order lines
+// grouped by route (deliveryMethod/deliveryZone snapshot on the order) so the
+// packer walks the queue route-by-route. Print-safe per 03-UI-SPEC: a mono grid,
+// NO reliance on color for meaning (headers use weight/borders only). The doc-tree
+// build mirrors notify.ts buildOrderFlex's "return a plain nested spec" style.
+
+/** One picked line on a pack slip (order-line snapshot). */
+export interface PackSlipLine {
+  varietyName: string | null;
+  unitLabel: string | null;
+  qty: number;
+  unitPriceSatang: number | null;
+}
+
+/** One order block on a pack slip, carrying its route snapshot + lines. */
+export interface PackSlipOrder {
+  id: string;
+  recipientName: string | null;
+  recipientPhone: string | null;
+  recipientAddress: string | null;
+  deliveryMethod: string | null;
+  deliveryZone: string | null;
+  subtotalSatang: number;
+  deliveryFeeSatang: number | null;
+  lines: PackSlipLine[];
+}
+
+/** The full pack-slip input: a round label + its paid orders. */
+export interface PackSlipInput {
+  roundName: string;
+  orders: PackSlipOrder[];
+}
+
+/** Human route label from the delivery snapshot (method / zone), print-safe. */
+function routeLabel(method: string | null, zone: string | null): string {
+  const parts = [method ?? "ไม่ระบุวิธีส่ง", zone ?? "ไม่ระบุโซน"];
+  return parts.join(" / ");
+}
+
+/**
+ * Build the pack-slip document definition (orders grouped by route within the
+ * round). Feed the result to renderPackSlip() to get a Sarabun-embedded Buffer.
+ */
+export function buildPackSlipDoc(input: PackSlipInput): TDocumentDefinitions {
+  // Group orders by their route snapshot (method|zone), preserving input order.
+  const byRoute = new Map<string, PackSlipOrder[]>();
+  for (const o of input.orders) {
+    const key = `${o.deliveryMethod ?? ""}|${o.deliveryZone ?? ""}`;
+    const bucket = byRoute.get(key);
+    if (bucket) bucket.push(o);
+    else byRoute.set(key, [o]);
+  }
+
+  const content: Content[] = [
+    { text: `ใบแพ็ค — ${input.roundName}`, style: "header" },
+    {
+      text: `จำนวนออเดอร์ที่ต้องแพ็ค: ${input.orders.length}`,
+      style: "sub",
+      margin: [0, 2, 0, 8],
+    },
+  ];
+
+  for (const [, routeOrders] of byRoute) {
+    const first = routeOrders[0];
+    content.push({
+      text: `เส้นทาง: ${routeLabel(first?.deliveryMethod ?? null, first?.deliveryZone ?? null)} (${routeOrders.length} ออเดอร์)`,
+      style: "route",
+      margin: [0, 10, 0, 4],
+    });
+
+    for (const o of routeOrders) {
+      const lineRows = o.lines.map((l) => [
+        { text: l.varietyName ?? "-", style: "cell" },
+        { text: l.unitLabel ?? "-", style: "cell" },
+        { text: String(l.qty), style: "cellNum", alignment: "right" as const },
+        {
+          text: l.unitPriceSatang != null ? `฿${baht(l.unitPriceSatang)}` : "-",
+          style: "cellNum",
+          alignment: "right" as const,
+        },
+      ]);
+      content.push({
+        margin: [0, 4, 0, 6],
+        table: {
+          headerRows: 1,
+          widths: ["*", "auto", "auto", "auto"],
+          body: [
+            [
+              {
+                text: `ออเดอร์ #${o.id.slice(0, 8)} — ${o.recipientName ?? "ไม่ระบุผู้รับ"} (${o.recipientPhone ?? "-"})`,
+                colSpan: 4,
+                style: "orderHead",
+              },
+              {},
+              {},
+              {},
+            ],
+            [
+              { text: "รายการ", style: "th" },
+              { text: "หน่วย", style: "th" },
+              { text: "จำนวน", style: "th", alignment: "right" as const },
+              { text: "ราคา/หน่วย", style: "th", alignment: "right" as const },
+            ],
+            ...lineRows,
+          ],
+        },
+        layout: "lightHorizontalLines",
+      });
+    }
+  }
+
+  return {
+    pageSize: "A4",
+    pageMargins: [32, 32, 32, 32],
+    content,
+    styles: {
+      header: { fontSize: 18, bold: true },
+      sub: { fontSize: 12, color: "#333333" },
+      route: { fontSize: 14, bold: true },
+      orderHead: { fontSize: 12, bold: true, fillColor: "#f1f5ec" },
+      th: { fontSize: 11, bold: true },
+      cell: { fontSize: 11 },
+      cellNum: { fontSize: 11 },
+    },
+  };
 }
