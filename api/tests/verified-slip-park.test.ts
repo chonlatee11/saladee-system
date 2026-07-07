@@ -101,12 +101,14 @@ async function seedAwaitingPaymentOrder() {
 beforeAll(async () => {
   client = postgres(TEST_URL, { prepare: false, max: 4 });
   db = drizzle(client, { schema });
+  await client.file("drizzle/0004_phase3.down.sql").catch(() => {});
   await client.file("drizzle/0003_payments_delivery_consent.down.sql").catch(() => {});
   await client.file("drizzle/0001_commerce.down.sql").catch(() => {});
   await client.file("drizzle/0000_init.down.sql").catch(() => {});
   await client.file("drizzle/0000_init.sql");
   await client.file("drizzle/0001_commerce.sql");
   await client.file("drizzle/0003_payments_delivery_consent.sql");
+  await client.file("drizzle/0004_phase3.sql");
 });
 
 afterAll(async () => {
