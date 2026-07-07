@@ -14,6 +14,8 @@
 // the buffer render deterministic regardless of caller cwd.
 import { join } from "node:path";
 import PdfPrinter from "pdfmake/src/printer";
+import virtualfs from "pdfmake/src/virtual-fs";
+import URLResolver from "pdfmake/src/URLResolver";
 import type { TDocumentDefinitions } from "pdfmake/interfaces";
 
 const FONTS_DIR = join(import.meta.dir, "..", "fonts");
@@ -30,7 +32,17 @@ const FONTS = {
   },
 } as const;
 
-const printer = new PdfPrinter(FONTS);
+// pdfmake 0.3.x's server-side PdfPrinter constructor is
+// (fontDescriptors, virtualfs, urlResolver, localAccessPolicy). The urlResolver is
+// mandatory — createPdfKitDocument() calls resolveUrls() on every font entry, and a
+// missing resolver throws (`this.urlResolver.resolve` undefined). Local file-path
+// fonts are a no-op for the resolver (it only fetches http/https), then PDFDocument
+// reads the TTF straight from disk. localAccessPolicy = undefined ⇒ local reads
+// allowed (fonts are our own committed files, not user input — no path-traversal
+// surface). NOTE: 0.3.x changed createPdfKitDocument to ASYNC (returns a Promise
+// of the pdfkit document), unlike the 0.2.x sync API shown in older docs.
+const urlResolver = new URLResolver(virtualfs);
+const printer = new PdfPrinter(FONTS, virtualfs, urlResolver, undefined);
 
 /**
  * Money helper — mirrors notify.ts baht(satang) (55–60). Money is ALWAYS integer
@@ -50,8 +62,8 @@ export function baht(satang: number): string {
  * — the Pitfall-3 failure modes are (a) 'end' never firing (buffer never resolves)
  * and (b) squares instead of Thai. The smoke test asserts against both.
  */
-export function renderPackSlip(doc: TDocumentDefinitions): Promise<Buffer> {
-  const pdf = printer.createPdfKitDocument({
+export async function renderPackSlip(doc: TDocumentDefinitions): Promise<Buffer> {
+  const pdf = await printer.createPdfKitDocument({
     ...doc,
     defaultStyle: { font: "Sarabun", ...doc.defaultStyle },
   });
