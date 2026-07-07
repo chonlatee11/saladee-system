@@ -6,14 +6,14 @@ current_phase: 03
 current_phase_name: back-office-crop-planning-b2b-subscription
 status: executing
 stopped_at: Completed 03-01-PLAN.md
-last_updated: "2026-07-07T15:58:19.538Z"
+last_updated: "2026-07-07T16:14:51.154Z"
 last_activity: 2026-07-07
 last_activity_desc: Phase 03 execution started
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 34
-  completed_plans: 25
+  completed_plans: 26
   percent: 60
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-06-28)
 ## Current Position
 
 Phase: 03 (back-office-crop-planning-b2b-subscription) — EXECUTING
-Plan: 4 of 12
+Plan: 5 of 12
 Status: Ready to execute
 Last activity: 2026-07-07 — Phase 03 execution started
 Note: CR-01/CR-02 code-review test-gaps CLOSED — added regression tests api/tests/verified-slip-park.test.ts (verified slip parked as awaiting_review + 202 when order cancelled mid-verify) and api/tests/created-hold-sweep.test.ts (created-path holdExpiresAt set + swept). api bun test 187 pass / 0 fail.
@@ -71,6 +71,7 @@ Progress: [████████░░] 77%
 | Phase 03 P01 | 45 min | 3 tasks | 42 files |
 | Phase 03 P02 | 18min | 2 tasks | 7 files |
 | Phase 03 P03 | 30min | 2 tasks | 25 files |
+| Phase 03 P04 | 35min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -98,6 +99,8 @@ Recent decisions affecting current work:
 - [Phase 03]: [03-01] New varieties yield columns (days_to_harvest/survival_pct/shelf_life_days) are notNull WITH DB defaults (30/90/7), mirroring the deliveryClass additive idiom — notNull-no-default breaks ADD COLUMN on populated tables + existing insert sites; defaults keep migration prod-safe and let the CROP-01 slice enforce real values at the route layer
 - [Phase 03]: [03-01] Every self-resetting test file (26) + migrate.test.ts now register 0004 in their down/up sequences — 0004 child tables FK into varieties/customers/rounds/orders; teardown must drop 0004 first or 0001 down fails — keeps the 204-test regression gate green
 - [Phase 03]: 03-02: pdfmake 0.3.x server API — PdfPrinter(fonts, virtualfs, urlResolver, localAccessPolicy) + async createPdfKitDocument; A1 Thai-PDF spike PASSES on Bun, no vfs fallback needed
+- [Phase ?]: 03-04: forecast.ts pure UTC-date kernel (projected harvest / floored yield haircut D-02 / best-before D-05), reused by 03-05 publish
+- [Phase ?]: 03-04: planting-batch hard-delete (no active column in frozen schema); mix idempotency by plantDate+variety overlap (no template FK)
 
 ### Pending Todos
 
@@ -137,6 +140,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-07T15:58:04.592Z
+Last session: 2026-07-07T16:14:36.113Z
 Stopped at: Completed 03-01-PLAN.md
 Resume file: None
