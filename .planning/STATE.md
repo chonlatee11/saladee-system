@@ -2,17 +2,17 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 3
-current_phase_name: Back-office, Crop Planning & B2B/Subscription
-status: "Phase 02 shipped — PR #10"
-stopped_at: Phase 3 UI-SPEC approved
-last_updated: "2026-07-07T14:37:52.169Z"
+current_phase: 03
+current_phase_name: back-office-crop-planning-b2b-subscription
+status: executing
+stopped_at: Completed 03-01-PLAN.md
+last_updated: "2026-07-07T15:33:00.040Z"
 last_activity: 2026-07-07
-last_activity_desc: Phase 03 planning complete
+last_activity_desc: Phase 03 execution started
 progress:
   total_phases: 5
   completed_phases: 3
-  total_plans: 22
+  total_plans: 34
   completed_plans: 22
   percent: 60
 ---
@@ -24,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-28)
 
 **Core value:** ลูกค้าสั่งผักสลัดผ่าน LINE แล้วจ่ายเงินจบในที่เดียว และจำนวนที่เปิดขายตรงกับผลผลิตจริงเสมอ (ไม่ oversell, ไม่เหลือทิ้ง)
-**Current focus:** Phase 02 — line-storefront-payments-delivery
+**Current focus:** Phase 03 — back-office-crop-planning-b2b-subscription
 
 ## Current Position
 
-Phase: 3 — Back-office, Crop Planning & B2B/Subscription
-Plan: Not started
-Status: Phase 02 shipped — PR #10
-Last activity: 2026-07-07 — Phase 03 planning complete
+Phase: 03 (back-office-crop-planning-b2b-subscription) — EXECUTING
+Plan: 2 of 12
+Status: Ready to execute
+Last activity: 2026-07-07 — Phase 03 execution started
 Note: CR-01/CR-02 code-review test-gaps CLOSED — added regression tests api/tests/verified-slip-park.test.ts (verified slip parked as awaiting_review + 202 when order cancelled mid-verify) and api/tests/created-hold-sweep.test.ts (created-path holdExpiresAt set + swept). api bun test 187 pass / 0 fail.
 
 Progress: [████████░░] 77%
@@ -68,6 +68,7 @@ Progress: [████████░░] 77%
 | Phase 02 P07 | 20m | 2 tasks | 6 files |
 | Phase 02 P09 | 6min | 2 tasks | 8 files |
 | Phase 02 P08 | 25m | 2 tasks | 8 files |
+| Phase 03 P01 | 45 min | 3 tasks | 42 files |
 
 ## Accumulated Context
 
@@ -92,6 +93,8 @@ Recent decisions affecting current work:
 - [Phase ?]: 02-06: SlipVerifier seam (env-selected) keeps SlipOK swappable; ambiguous/quota/5xx/network → 'unavailable' → admin manual-confirm (money-safe)
 - [Phase 02]: 02-09 reorder returns a proposed cart (does not auto-place); re-prices at the current open round and flags sold-out/absent items (D-20)
 - [Phase 02]: 02-09 member-only /me/orders guard keyed on customers.line_user_id; guests 403, missing token 401 (D-19)
+- [Phase 03]: [03-01] New varieties yield columns (days_to_harvest/survival_pct/shelf_life_days) are notNull WITH DB defaults (30/90/7), mirroring the deliveryClass additive idiom — notNull-no-default breaks ADD COLUMN on populated tables + existing insert sites; defaults keep migration prod-safe and let the CROP-01 slice enforce real values at the route layer
+- [Phase 03]: [03-01] Every self-resetting test file (26) + migrate.test.ts now register 0004 in their down/up sequences — 0004 child tables FK into varieties/customers/rounds/orders; teardown must drop 0004 first or 0001 down fails — keeps the 204-test regression gate green
 
 ### Pending Todos
 
@@ -131,6 +134,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-07T12:19:30.808Z
-Stopped at: Phase 3 UI-SPEC approved
-Resume file: .planning/phases/03-back-office-crop-planning-b2b-subscription/03-UI-SPEC.md
+Last session: 2026-07-07T15:33:00.030Z
+Stopped at: Completed 03-01-PLAN.md
+Resume file: None
