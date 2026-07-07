@@ -5,9 +5,10 @@ milestone_name: milestone
 current_phase: 3
 current_phase_name: Back-office, Crop Planning & B2B/Subscription
 status: "Phase 02 shipped — PR #10"
-stopped_at: Phase 3 context gathered
-last_updated: "2026-07-07T12:08:24.361Z"
-last_activity: 2026-07-06
+stopped_at: Phase 3 UI-SPEC approved
+last_updated: "2026-07-07T14:37:52.169Z"
+last_activity: 2026-07-07
+last_activity_desc: Phase 03 planning complete
 progress:
   total_phases: 5
   completed_phases: 3
@@ -30,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-06-28)
 Phase: 3 — Back-office, Crop Planning & B2B/Subscription
 Plan: Not started
 Status: Phase 02 shipped — PR #10
-Last activity: 2026-07-06
+Last activity: 2026-07-07 — Phase 03 planning complete
 Note: CR-01/CR-02 code-review test-gaps CLOSED — added regression tests api/tests/verified-slip-park.test.ts (verified slip parked as awaiting_review + 202 when order cancelled mid-verify) and api/tests/created-hold-sweep.test.ts (created-path holdExpiresAt set + swept). api bun test 187 pass / 0 fail.
 
 Progress: [████████░░] 77%
@@ -130,6 +131,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-07T12:08:24.351Z
-Stopped at: Phase 3 context gathered
-Resume file: .planning/phases/03-back-office-crop-planning-b2b-subscription/03-CONTEXT.md
+Last session: 2026-07-07T12:19:30.808Z
+Stopped at: Phase 3 UI-SPEC approved
+Resume file: .planning/phases/03-back-office-crop-planning-b2b-subscription/03-UI-SPEC.md
