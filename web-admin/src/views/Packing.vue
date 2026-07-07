@@ -1,0 +1,19 @@
+<script setup lang="ts">
+// STUB (03-03 scaffold). Packing slice replaces this with the packing queue
+// (grouped by round → route, per-order pack state, print pack/label PDF, D-20/21).
+// Kept so the router import resolves and the build passes.
+</script>
+
+<template>
+  <section>
+    <h1 class="mb-lg text-[28px] font-semibold">คิวแพ็ค</h1>
+    <div
+      class="flex flex-col items-center justify-center gap-sm rounded-lg border border-hairline bg-canvas p-3xl text-center"
+    >
+      <p class="text-[20px] font-semibold text-ink">ยังไม่มีรายการที่ต้องแพ็ค</p>
+      <p class="max-w-[420px] text-[14px] text-muted">
+        เมื่อถึงรอบแพ็ค รายการที่จ่ายเงินแล้วจะจัดกลุ่มตามเส้นทางส่งที่นี่
+      </p>
+    </div>
+  </section>
+</template>
