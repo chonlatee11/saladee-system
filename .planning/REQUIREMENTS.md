@@ -64,10 +64,10 @@
 ### CUST — ลูกค้า & สมาชิก
 
 - [ ] **CUST-01**: ลูกค้าสมัคร/ล็อกอิน (รวม LINE Login) และสั่งแบบ guest ได้ — guest กรอกข้อมูลต่อครั้ง, สมาชิกบันทึกที่อยู่ไว้ใช้ซ้ำ (FR-25)
-- [ ] **CUST-02**: ระบบแยกประเภทลูกค้า B2C/B2B — B2B เห็นราคาส่ง, ตั้งวงเงิน/เครดิตเทอมได้ (FR-26)
+- [x] **CUST-02**: ระบบแยกประเภทลูกค้า B2C/B2B — B2B เห็นราคาส่ง, ตั้งวงเงิน/เครดิตเทอมได้ (FR-26)
 - [ ] **CUST-03**: ระบบสมาชิก/สะสมแต้ม — สะสมจากยอดซื้อ, แลกส่วนลด/ของแถม, ระดับสมาชิก (FR-27)
 - [x] **CUST-04**: ลูกค้าดูประวัติการสั่งซื้อและกด "สั่งซ้ำ" ได้ (FR-28)
-- [ ] **CUST-05**: B2B ตั้งออเดอร์ประจำ (Standing Order) ผูกรอบส่ง และระบบกันโควตาจากผลผลิตคาดการณ์ให้ B2B ก่อน (FR-39)
+- [x] **CUST-05**: B2B ตั้งออเดอร์ประจำ (Standing Order) ผูกรอบส่ง และระบบกันโควตาจากผลผลิตคาดการณ์ให้ B2B ก่อน (FR-39)
 
 ### MKT — การตลาด
 
@@ -168,10 +168,10 @@ Explicitly excluded (anti-features จาก research — ป้องกัน 
 | DEL-04 | Phase 2 | Complete |
 | DEL-05 | Phase 4 | Pending |
 | CUST-01 | Phase 1 | Pending |
-| CUST-02 | Phase 3 | Pending |
+| CUST-02 | Phase 3 | Complete |
 | CUST-03 | Phase 4 | Pending |
 | CUST-04 | Phase 2 | Complete |
-| CUST-05 | Phase 3 | Pending |
+| CUST-05 | Phase 3 | Complete |
 | MKT-01 | Phase 4 | Pending |
 | MKT-02 | Phase 3 | Pending |
 | MKT-03 | Phase 4 | Pending |
