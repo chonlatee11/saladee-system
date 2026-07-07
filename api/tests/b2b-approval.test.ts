@@ -9,7 +9,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "../src/db/schema";
-import { customers } from "../src/db/schema";
+import { customers, quotaOverflowFlags } from "../src/db/schema";
 import { issueSession } from "../src/plugins/auth.plugin";
 import { makeB2bRoutes } from "../src/routes/b2b";
 import { seedPrice, seedStockRow } from "./seed";
@@ -155,6 +155,29 @@ describe("RBAC gate — every b2b endpoint is staff-only (T-03-15)", () => {
   test("admin session → 200", async () => {
     const res = await fire(b2bRoutes, "GET", "/b2b/pending", { token: admin });
     expect(res.status).toBe(200);
+  });
+});
+
+describe("overflow flags read (D-10)", () => {
+  test("GET /b2b/overflow-flags surfaces unresolved flags with the variety name", async () => {
+    const { roundId, varietyId } = await seedStockRow(db, 50);
+    await db
+      .insert(quotaOverflowFlags)
+      .values({ roundId, varietyId, shortfall: 30, source: "b2b" });
+
+    const res = await fire(b2bRoutes, "GET", "/b2b/overflow-flags", { token: admin });
+    expect(res.status).toBe(200);
+    const flags = (await res.json()) as {
+      varietyId: string;
+      varietyName: string;
+      shortfall: number;
+      source: string;
+    }[];
+    const flag = flags.find((f) => f.varietyId === varietyId);
+    expect(flag).toBeDefined();
+    expect(flag?.shortfall).toBe(30);
+    expect(flag?.source).toBe("b2b");
+    expect(typeof flag?.varietyName).toBe("string");
   });
 });
 

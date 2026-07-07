@@ -17,8 +17,10 @@ import type * as schema from "../db/schema";
 import {
   customers,
   prices,
+  quotaOverflowFlags,
   standingOrderItems,
   standingOrders,
+  varieties,
 } from "../db/schema";
 import { requireRole } from "../plugins/auth.plugin";
 import { wholesaleVisible } from "../services/b2b";
@@ -147,6 +149,31 @@ export function makeB2bRoutes(database: CatalogDb = defaultDb) {
           };
         },
         { params: IdParams, query: WholesaleQuery, beforeHandle: staff },
+      )
+
+      // ── Overflow flags (D-10) ───────────────────────────────────────────────
+      // Unresolved standing/subscription shortfalls for the admin to act on
+      // (increase planting or trim standing). The system NEVER auto-decides; this
+      // read only surfaces the flags reserveStanding inserted (destructive severity
+      // in the UI). Joined with the variety name for display.
+      .get(
+        "/b2b/overflow-flags",
+        async () =>
+          database
+            .select({
+              id: quotaOverflowFlags.id,
+              roundId: quotaOverflowFlags.roundId,
+              varietyId: quotaOverflowFlags.varietyId,
+              varietyName: varieties.name,
+              shortfall: quotaOverflowFlags.shortfall,
+              source: quotaOverflowFlags.source,
+              resolvedAt: quotaOverflowFlags.resolvedAt,
+              createdAt: quotaOverflowFlags.createdAt,
+            })
+            .from(quotaOverflowFlags)
+            .innerJoin(varieties, eq(varieties.id, quotaOverflowFlags.varietyId))
+            .where(isNull(quotaOverflowFlags.resolvedAt)),
+        { beforeHandle: staff },
       )
 
       // ── Standing orders (CUST-05) ───────────────────────────────────────────
