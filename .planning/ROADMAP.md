@@ -140,14 +140,14 @@ Plans:
   4. Packing staff see a pack queue grouped by delivery route and print pack/label slips; role-based access limits owner/admin/grower/packer views.
   5. The dashboard summarizes today's/this-round sales, unpaid orders, near-sold-out items, and next-round yield; sales reports break down by period/channel/product/round; system settings are configurable; and a canned LINE chatbot answers menu/stock and takes orders.
 
-**Plans**: 1/12 plans executed
+**Plans**: 2/12 plans executed
 **UI hint**: yes
 
 Plans:
 **Wave 1** *(foundation — backbone, PDF risk-spike, web-admin scaffold)*
 
 - [x] 03-01-PLAN.md — Backbone: schema + migration 0004 [BLOCKING] + env keys + stub routers composed in index.ts (wave 1)
-- [ ] 03-02-PLAN.md — pdfmake Thai-font Wave-0 spike (A1) + Sarabun + pack/label render lib (wave 1)
+- [x] 03-02-PLAN.md — pdfmake Thai-font Wave-0 spike (A1) + Sarabun + pack/label render lib (wave 1)
 - [ ] 03-03-PLAN.md — web-admin/ app scaffold: shell + RBAC sidebar nav + session/login + DataTable + all deps/routes/stub views (wave 1)
 
 **Wave 2** *(vertical slices — blocked on Wave 1)*
@@ -195,5 +195,5 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 | 0. Foundation & Platform | 8/8 | Complete   | 2026-07-02 |
 | 1. Commerce Core | 5/5 | Complete   | 2026-07-02 |
 | 2. LINE Storefront, Payments & Delivery | 9/9 | Complete    | 2026-07-04 |
-| 3. Back-office, Crop Planning & B2B/Subscription | 1/12 | In Progress|  |
+| 3. Back-office, Crop Planning & B2B/Subscription | 2/12 | In Progress|  |
 | 4. Web Store, Marketing & Scale | 0/TBD | Not started | - |
