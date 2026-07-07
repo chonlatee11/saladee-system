@@ -24,8 +24,13 @@ export const EnvSchema = t.Object({
   // Cloudflare Pages web/ origin). Env-driven, NOT hardcoded in the composition:
   // to change the deployed web origin, override this env var — do not edit code.
   // The default keeps boot working without a new GitHub secret.
+  // web-admin origins added (Pitfall 6): the Phase-3 desktop staff app runs on its
+  // own Cloudflare Pages host + a distinct Vite dev port (5174) — without them the
+  // browser preflight blocks every admin mutation. Override the env var to change
+  // deployed origins; never edit code.
   CORS_ORIGINS: t.String({
-    default: "https://saladee-web.pages.dev,http://localhost:5173,http://localhost:3000",
+    default:
+      "https://saladee-web.pages.dev,https://saladee-admin.pages.dev,http://localhost:5173,http://localhost:5174,http://localhost:3000",
   }),
   // ── Phase-2 payments/slip/hold config (RESEARCH 220-227) ────────────────────
   // Slip-verification adapter selection + credentials. SLIP_VERIFY_PROVIDER picks
@@ -44,6 +49,13 @@ export const EnvSchema = t.Object({
   PROMPTPAY_PAYEE_ID: t.String({ minLength: 1 }),
   // QR hold window before pg-boss expires an unpaid order (seconds). 30 min default.
   HOLD_WINDOW_SECONDS: t.String({ default: "1800" }),
+  // ── Phase-3 crop/B2B config (kept as strings like PORT/HOLD_WINDOW_SECONDS —
+  //    env values are strings; consumers parse via Number() and enforce 0–100) ──
+  // Fallback confidence haircut when a variety has no per-variety survival_pct (D-02).
+  HAIRCUT_DEFAULT_PCT: t.String({ default: "90" }),
+  // Ceiling (% of a round's quota) that B2B + subscription reservations may take,
+  // leaving headroom for B2C (D-10). 100 = no reserved ceiling.
+  B2B_QUOTA_CEILING_PCT: t.String({ default: "100" }),
 });
 
 export type Env = Static<typeof EnvSchema>;
