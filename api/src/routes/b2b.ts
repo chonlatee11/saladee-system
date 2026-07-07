@@ -9,7 +9,7 @@
 // recurring per-round basket; the ACTUAL round-open reservation of that basket is
 // NOT triggered here — it runs through 03-05 publishQuota calling reserveStanding()
 // inside the round-open tx (single owner of the open sequence, no double-reserve).
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, isNotNull } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { Elysia, t } from "elysia";
 import { db as defaultDb } from "../db/client";
@@ -64,6 +64,15 @@ export function makeB2bRoutes(database: CatalogDb = defaultDb) {
         "/b2b/pending",
         async () =>
           database.select().from(customers).where(eq(customers.b2bStatus, "pending")),
+        { beforeHandle: staff },
+      )
+      // The full B2B roster (any b2bStatus) — powers the approvals screen's status
+      // badges (pending/approved/rejected) and the approved-customer picker used to
+      // set a standing order on behalf of a wholesale account.
+      .get(
+        "/b2b/customers",
+        async () =>
+          database.select().from(customers).where(isNotNull(customers.b2bStatus)),
         { beforeHandle: staff },
       )
       .post(

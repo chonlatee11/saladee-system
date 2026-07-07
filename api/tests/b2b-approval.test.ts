@@ -158,6 +158,20 @@ describe("RBAC gate — every b2b endpoint is staff-only (T-03-15)", () => {
   });
 });
 
+describe("B2B roster read (D-08)", () => {
+  test("GET /b2b/customers returns any-status B2B accounts (not plain B2C)", async () => {
+    const approved = await seedCustomer("approved");
+    // A plain B2C customer (b2bStatus null) must NOT appear in the roster.
+    const b2c = await seedCustomer(null);
+
+    const res = await fire(b2bRoutes, "GET", "/b2b/customers", { token: admin });
+    expect(res.status).toBe(200);
+    const roster = (await res.json()) as { id: string }[];
+    expect(roster.some((c) => c.id === approved)).toBe(true);
+    expect(roster.some((c) => c.id === b2c)).toBe(false);
+  });
+});
+
 describe("overflow flags read (D-10)", () => {
   test("GET /b2b/overflow-flags surfaces unresolved flags with the variety name", async () => {
     const { roundId, varietyId } = await seedStockRow(db, 50);
