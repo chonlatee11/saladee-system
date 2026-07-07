@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 03
 current_phase_name: back-office-crop-planning-b2b-subscription
 status: executing
-stopped_at: Completed 03-06-PLAN.md
-last_updated: "2026-07-07T16:32:37.631Z"
+stopped_at: Completed 03-07-PLAN.md (Task 3 human-verify pending)
+last_updated: "2026-07-07T16:52:03.454Z"
 last_activity: 2026-07-07
 last_activity_desc: Phase 03 execution started
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 34
-  completed_plans: 27
+  completed_plans: 28
   percent: 60
 ---
 
@@ -102,6 +102,7 @@ Recent decisions affecting current work:
 - [Phase 03]: 03-02: pdfmake 0.3.x server API — PdfPrinter(fonts, virtualfs, urlResolver, localAccessPolicy) + async createPdfKitDocument; A1 Thai-PDF spike PASSES on Bun, no vfs fallback needed
 - [Phase ?]: 03-04: forecast.ts pure UTC-date kernel (projected harvest / floored yield haircut D-02 / best-before D-05), reused by 03-05 publish
 - [Phase ?]: 03-04: planting-batch hard-delete (no active column in frozen schema); mix idempotency by plantDate+variety overlap (no template FK)
+- [Phase 03]: Subscription generator idempotency = DB UNIQUE(subscription,round) as last insert in per-sub own-tx (23505 rolls back order+reserve); subscription-generate trigger owned by 03-05 publishQuota, queue+worker defined in 03-07 — Retry-safe without a second counter; reuses reserveBox reserve-before-B2C path (Pitfall 1/2)
 
 ### Pending Todos
 
@@ -141,6 +142,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-07T16:32:37.622Z
-Stopped at: Completed 03-06-PLAN.md
+Last session: 2026-07-07T16:51:54.195Z
+Stopped at: Completed 03-07-PLAN.md (Task 3 human-verify pending)
 Resume file: None

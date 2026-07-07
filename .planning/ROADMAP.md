@@ -140,7 +140,7 @@ Plans:
   4. Packing staff see a pack queue grouped by delivery route and print pack/label slips; role-based access limits owner/admin/grower/packer views.
   5. The dashboard summarizes today's/this-round sales, unpaid orders, near-sold-out items, and next-round yield; sales reports break down by period/channel/product/round; system settings are configurable; and a canned LINE chatbot answers menu/stock and takes orders.
 
-**Plans**: 5/12 plans executed
+**Plans**: 6/12 plans executed
 **UI hint**: yes
 
 Plans:
@@ -154,7 +154,7 @@ Plans:
 
 - [x] 03-04-PLAN.md — Crop registry + planting batches + mix→auto-batches + forecast compute (CROP-01/02/03/06) (wave 2)
 - [x] 03-06-PLAN.md — B2B: wholesale visibility + approval + standing orders reserved-before-B2C + overflow flag (CUST-02/05) (wave 2)
-- [ ] 03-07-PLAN.md — Subscription backend + admin: box-fill + pg-boss generator (idempotent) + pause/skip/cancel + substitution (SALE-03) (wave 2)
+- [x] 03-07-PLAN.md — Subscription backend + admin: box-fill + pg-boss generator (idempotent) + pause/skip/cancel + substitution (SALE-03) (wave 2)
 - [ ] 03-09-PLAN.md — Packing queue by route + PDF pack/label + mark-packed (ORD-03, D-20/21) (wave 2)
 - [ ] 03-10-PLAN.md — Dashboard: 4 criterion cards + B2B/subscription card (ADM-01, D-23) (wave 2)
 - [ ] 03-11-PLAN.md — Reports: analytics charts + filters + CSV export (MKT-04, D-24) (wave 2)
@@ -195,5 +195,5 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 | 0. Foundation & Platform | 8/8 | Complete   | 2026-07-02 |
 | 1. Commerce Core | 5/5 | Complete   | 2026-07-02 |
 | 2. LINE Storefront, Payments & Delivery | 9/9 | Complete    | 2026-07-04 |
-| 3. Back-office, Crop Planning & B2B/Subscription | 5/12 | In Progress|  |
+| 3. Back-office, Crop Planning & B2B/Subscription | 6/12 | In Progress|  |
 | 4. Web Store, Marketing & Scale | 0/TBD | Not started | - |
