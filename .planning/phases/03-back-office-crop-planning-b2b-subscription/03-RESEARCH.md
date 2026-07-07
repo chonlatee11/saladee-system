@@ -459,25 +459,29 @@ export function makeCropRoutes(database = defaultDb) {
 | A5 | papaparse client-side CSV is adequate for MVP report volumes | §Pattern 8 | Large exports may need server streaming |
 | A6 | Sarabun TTF (Regular + SemiBold) is licensed/available to embed | §Pattern 6 | Sarabun is SIL OFL (free); confirm files added to `api/src/fonts/` |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **pdfmake under Bun (A1)**
    - Known: `PdfPrinter` is the server path; Bun ~98% Node-compat.
    - Unclear: pdfkit stream/fs behavior on Bun for Thai.
    - Recommendation: Wave-0 spike — render one Thai pack slip to a buffer, open it, confirm glyphs.
+   - **RESOLVED → 03-02**: Wave-0 pdfmake/Bun Thai-render spike owns this; fallback (standard vfs) documented in the plan.
 
 2. **Batch → round mapping when harvest spans a window (A3, CROP-01 harvest window)**
    - Known: D-07 maps by projected harvest date; CROP-01 adds a harvest *window*.
    - Unclear: does a batch map to the round containing its window start, or overlap?
    - Recommendation: planner picks equality-on-start for MVP; document as a decision.
+   - **RESOLVED → 03-05**: `computeDraftQuota` maps by equality-on-start for MVP (recorded as a decision in the plan/SUMMARY).
 
 3. **Subscription value-fill algorithm (A4, D-12/D-16)**
    - Known: package = value (฿); fill from round availability; substitute + notify.
    - Unclear: greedy fill order (by price? by freshness? by stock depth?) to hit target value.
    - Recommendation: define a deterministic fill order in `subscription.ts`; make it a tested pure fn.
+   - **RESOLVED → 03-07**: `fillBox` is a deterministic tested pure fn with an explicit fill order.
 
 4. **Manual-override persistence mechanism (Pitfall 5, D-03)**
    - Recommendation: add `is_manual_override boolean` (or `manual_quota_plants`) to `round_stock`; publish respects it.
+   - **RESOLVED → 03-01**: `round_stock.is_manual_override boolean` added in schema/migration; publish (03-05) skips override rows.
 
 ## Environment Availability
 
