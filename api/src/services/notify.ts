@@ -118,6 +118,98 @@ export function buildOrderFlex(order: OrderNotifyData, milestone: Milestone): me
   };
 }
 
+// ── Subscription substitution notice (D-16) ───────────────────────────────────
+// When the recurring generator (03-07) fills a member's box AROUND a sold-out
+// variety, it substitutes from what's available to reach the package value and must
+// tell the member. Reuses the SAME Flex idiom + module push client as the milestone
+// cards (no duplicate LINE client). The generator only calls this for a member
+// (line_user_id present) — guests are skipped upstream (D-23).
+
+/** The by-value payload the substitution push needs (mirrors subscription.ts). */
+export interface SubstitutionNotice {
+  lineUserId: string;
+  orderId: string;
+  boxName: string;
+  totalSatang: number;
+}
+
+/** Build the substitution Flex bubble (friendly farm-fresh tone, matches Phase 2). */
+export function buildSubstitutionFlex(notice: SubstitutionNotice): messagingApi.FlexMessage {
+  const shortId = notice.orderId.slice(0, 8);
+  const deepLink = `https://liff.line.me/${LIFF_ID}/orders/${notice.orderId}`;
+  return {
+    type: "flex",
+    altText: `กล่องผักรอบนี้มีการปรับผัก · ${shortId}`,
+    contents: {
+      type: "bubble",
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "md",
+        contents: [
+          {
+            type: "text",
+            text: "ปรับผักในกล่องรอบนี้ 🥬",
+            weight: "bold",
+            size: "lg",
+            color: "#3a7d20",
+            wrap: true,
+          },
+          {
+            type: "text",
+            text: `ผักบางชนิดหมดรอบนี้ เราจึงจัด ${notice.boxName} ให้ครบมูลค่าด้วยผักสดที่มีแทน`,
+            size: "sm",
+            color: "#555555",
+            wrap: true,
+          },
+          { type: "separator", margin: "md" },
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              { type: "text", text: "มูลค่ากล่อง", size: "sm", color: "#888888" },
+              {
+                type: "text",
+                text: `฿${baht(notice.totalSatang)}`,
+                size: "sm",
+                align: "end",
+                weight: "bold",
+                color: "#333333",
+              },
+            ],
+          },
+        ],
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            color: "#3a7d20",
+            action: { type: "uri", label: "ดูกล่องของฉัน", uri: deepLink },
+          },
+        ],
+      },
+    },
+  };
+}
+
+/**
+ * Push the substitution notice to a member (D-16). Guarded off the live LINE API
+ * under NODE_ENV=test (creds are harness-locked) so importing this in the suite
+ * never makes a real push. Fire-and-forget with its own error boundary — a push
+ * failure never affects the already-committed subscription box.
+ */
+export function notifySubstitution(notice: SubstitutionNotice): void {
+  if (env.NODE_ENV === "test") return;
+  const flex = buildSubstitutionFlex(notice);
+  void client
+    .pushMessage({ to: notice.lineUserId, messages: [flex] })
+    .catch((err) => log.error("notifySubstitution failed", { orderId: notice.orderId, error: String(err) }));
+}
+
 /**
  * Push the milestone card to the order's customer — ONLY a member with a
  * line_user_id (guests skipped silently, D-23 / T-02-28: never push to the wrong
