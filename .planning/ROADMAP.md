@@ -140,12 +140,30 @@ Plans:
   4. Packing staff see a pack queue grouped by delivery route and print pack/label slips; role-based access limits owner/admin/grower/packer views.
   5. The dashboard summarizes today's/this-round sales, unpaid orders, near-sold-out items, and next-round yield; sales reports break down by period/channel/product/round; system settings are configurable; and a canned LINE chatbot answers menu/stock and takes orders.
 
-**Plans**: TBD
+**Plans**: 12 plans
 **UI hint**: yes
 
 Plans:
+**Wave 1** *(foundation — backbone, PDF risk-spike, web-admin scaffold)*
 
-- [ ] 03-01: TBD (derived during plan-phase)
+- [ ] 03-01-PLAN.md — Backbone: schema + migration 0004 [BLOCKING] + env keys + stub routers composed in index.ts (wave 1)
+- [ ] 03-02-PLAN.md — pdfmake Thai-font Wave-0 spike (A1) + Sarabun + pack/label render lib (wave 1)
+- [ ] 03-03-PLAN.md — web-admin/ app scaffold: shell + RBAC sidebar nav + session/login + DataTable + all deps/routes/stub views (wave 1)
+
+**Wave 2** *(vertical slices — blocked on Wave 1)*
+
+- [ ] 03-04-PLAN.md — Crop registry + planting batches + mix→auto-batches + forecast compute (CROP-01/02/03/06) (wave 2)
+- [ ] 03-06-PLAN.md — B2B: wholesale visibility + approval + standing orders reserved-before-B2C + overflow flag (CUST-02/05) (wave 2)
+- [ ] 03-07-PLAN.md — Subscription backend + admin: box-fill + pg-boss generator (idempotent) + pause/skip/cancel + substitution (SALE-03) (wave 2)
+- [ ] 03-09-PLAN.md — Packing queue by route + PDF pack/label + mark-packed (ORD-03, D-20/21) (wave 2)
+- [ ] 03-10-PLAN.md — Dashboard: 4 criterion cards + B2B/subscription card (ADM-01, D-23) (wave 2)
+- [ ] 03-11-PLAN.md — Reports: analytics charts + filters + CSV export (MKT-04, D-24) (wave 2)
+- [ ] 03-12-PLAN.md — System settings (hot config, secret-safe) + canned LINE chatbot (ADM-03, MKT-02) (wave 2)
+
+**Wave 3** *(blocked on their slice deps)*
+
+- [ ] 03-05-PLAN.md — Forecast publish→sellable qty (admin gate + manual override) + harvest logging lot/best-before (CROP-04/05, INV-10) — deps 03-04 (wave 3)
+- [ ] 03-08-PLAN.md — LIFF customer: subscription signup/manage + B2B account (pending/wholesale/standing) + substitution detail (SALE-03/CUST-02/05) — deps 03-06/03-07 (wave 3)
 
 ### Phase 4: Web Store, Marketing & Scale
 
