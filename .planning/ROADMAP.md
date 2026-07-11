@@ -140,7 +140,7 @@ Plans:
   4. Packing staff see a pack queue grouped by delivery route and print pack/label slips; role-based access limits owner/admin/grower/packer views.
   5. The dashboard summarizes today's/this-round sales, unpaid orders, near-sold-out items, and next-round yield; sales reports break down by period/channel/product/round; system settings are configurable; and a canned LINE chatbot answers menu/stock and takes orders.
 
-**Plans**: 14/15 plans executed
+**Plans**: 15/15 plans complete
 **UI hint**: yes
 
 Plans:
@@ -168,7 +168,7 @@ Plans:
 **Gap closure** *(from 03-UAT.md — all parallel, wave 1 of the gap run)*
 
 - [x] 03-13-PLAN.md — Gate the b2b tier price in the public catalog behind wholesaleVisible() (USER DECISION, CUST-02) (wave 1)
-- [ ] 03-14-PLAN.md — LIFF entry points: Rich Menu 6th button → /subscription + in-app links to /subscription & /b2b + selected-package visual (SALE-03/CUST-02) (wave 1)
+- [x] 03-14-PLAN.md — LIFF entry points: Rich Menu 6th button → /subscription + in-app links to /subscription & /b2b + selected-package visual (SALE-03/CUST-02) (wave 1)
 - [x] 03-15-PLAN.md — Standing-order basket shows variety/customer names reactively, not UUID prefixes (CUST-05) (wave 1)
 
 ### Phase 4: Web Store, Marketing & Scale
@@ -201,5 +201,5 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 | 0. Foundation & Platform | 8/8 | Complete   | 2026-07-02 |
 | 1. Commerce Core | 5/5 | Complete   | 2026-07-02 |
 | 2. LINE Storefront, Payments & Delivery | 9/9 | Complete    | 2026-07-04 |
-| 3. Back-office, Crop Planning & B2B/Subscription | 14/15 | In Progress|  |
+| 3. Back-office, Crop Planning & B2B/Subscription | 15/15 | Complete   | 2026-07-11 |
 | 4. Web Store, Marketing & Scale | 0/TBD | Not started | - |

@@ -6,15 +6,15 @@ current_phase: 03
 current_phase_name: back-office-crop-planning-b2b-subscription
 status: executing
 stopped_at: Completed 03-08-PLAN.md (Task 3 human-verify pending)
-last_updated: "2026-07-11T07:05:54.164Z"
+last_updated: "2026-07-11T07:16:44.849Z"
 last_activity: 2026-07-11
 last_activity_desc: Phase 03 execution started
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 37
-  completed_plans: 36
-  percent: 60
+  completed_plans: 37
+  percent: 80
 ---
 
 # Project State
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-06-28)
 ## Current Position
 
 Phase: 03 (back-office-crop-planning-b2b-subscription) — EXECUTING
-Plan: 3 of 15
+Plan: 4 of 15
 Status: Ready to execute
 Last activity: 2026-07-11 — Phase 03 execution started
 Note: CR-01/CR-02 code-review test-gaps CLOSED — added regression tests api/tests/verified-slip-park.test.ts (verified slip parked as awaiting_review + 202 when order cancelled mid-verify) and api/tests/created-hold-sweep.test.ts (created-path holdExpiresAt set + swept). api bun test 187 pass / 0 fail.
@@ -80,6 +80,7 @@ Progress: [████████░░] 77%
 | Phase 03 P08 | ~40min | 3 tasks | 12 files |
 | Phase 03 P13 | 4min | 2 tasks | 3 files |
 | Phase 03 P15 | 3min | 1 tasks | 1 files |
+| Phase 03 P14 | 8min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -117,6 +118,8 @@ Recent decisions affecting current work:
 - [Phase 03]: 03-08 customer LIFF: package value is server authority (S/M/L code only); /me/* endpoints reuse me-orders member gate + 03-06 wholesaleVisible — Close T-03-20 money tamper + T-03-21 wholesale leak on the customer surface without new auth
 - [Phase ?]: 03-13: public catalog b2b tier gated via the ONE wholesaleVisible() rule (D-08/T-03-21) — optional-session .derive, fail-closed on invalid tokens, b2b keys nulled not removed (Eden shape unchanged)
 - [Phase 03]: Standing-orders table: display labels joined into DisplayRow row data (not accessorFn closures) because TanStack Table memoizes accessor results per row
+- [Phase 03]: 03-14: /b2b gets no Rich Menu cell (niche) — in-LIFF catalog quick-link covers CUST-02; catalog quick-links stay neutral (accent reserved for the sticky checkout CTA)
+- [Phase 03]: 03-14: selected package/frequency reuses the DeliveryMethodTiles ring-2 ring-accent + fixed-footprint check badge verbatim — one approved selected pattern, no second variant
 
 ### Pending Todos
 
@@ -156,6 +159,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-11T07:04:36.669Z
+Last session: 2026-07-11T07:15:50.024Z
 Stopped at: Completed 03-08-PLAN.md (Task 3 human-verify pending)
 Resume file: None
