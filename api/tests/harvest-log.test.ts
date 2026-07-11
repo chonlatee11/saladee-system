@@ -8,8 +8,8 @@ import postgres from "postgres";
 import * as schema from "../src/db/schema";
 import { plantingBatches, varieties } from "../src/db/schema";
 import { issueSession } from "../src/plugins/auth.plugin";
-import { logHarvest } from "../src/services/harvest";
 import { makeHarvestRoutes } from "../src/routes/harvest";
+import { logHarvest } from "../src/services/harvest";
 
 const TEST_URL =
   process.env.TEST_DATABASE_URL_DIRECT ??

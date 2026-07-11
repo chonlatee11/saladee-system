@@ -11,7 +11,7 @@
 // (is_manual_override) are never clobbered (D-03 / Pitfall 5). Raced against real
 // PostgreSQL 17 (:55432) — no mock of the reservation core.
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "../src/db/schema";
@@ -25,9 +25,9 @@ import {
   varieties,
 } from "../src/db/schema";
 import { issueSession } from "../src/plugins/auth.plugin";
+import { makeHarvestRoutes } from "../src/routes/harvest";
 import { computeDraftQuota, publishQuota } from "../src/services/harvest";
 import { reserve } from "../src/services/reservation";
-import { makeHarvestRoutes } from "../src/routes/harvest";
 
 const TEST_URL =
   process.env.TEST_DATABASE_URL_DIRECT ??
@@ -67,7 +67,9 @@ async function seedRoundWithHarvest(harvestDate: string): Promise<string> {
 }
 
 async function seedBatch(varietyId: string, plantDate: string, plantCount: number): Promise<void> {
-  await db.insert(plantingBatches).values({ varietyId, plantDate: new Date(plantDate), plantCount });
+  await db
+    .insert(plantingBatches)
+    .values({ varietyId, plantDate: new Date(plantDate), plantCount });
 }
 
 async function seedStandingItem(varietyId: string, plants: number): Promise<void> {
