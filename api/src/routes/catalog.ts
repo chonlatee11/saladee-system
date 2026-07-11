@@ -8,8 +8,12 @@
 //                              soldOut + label "หมดรอบนี้" when availability <= 0
 //                              (INV-08), the derived saleMode ("preorder" if the
 //                              round's harvest_date is in the future else "ready" —
-//                              SALE-01/02 / D-11), and the resolved b2c/b2b tiered
-//                              prices incl. whole-baht derived pack prices.
+//                              SALE-01/02 / D-11), and the resolved tiered prices
+//                              incl. whole-baht derived pack prices. The b2b
+//                              (wholesale) tier is GATED (D-08 / T-03-21): only an
+//                              approved-B2B customer bearer session receives it —
+//                              anonymous and non-approved callers get b2b: null
+//                              (key stays present; response shape unchanged).
 //   GET /catalog/rounds/:id   — OPEN: the same surface scoped to a single round
 //                              (round-centric: its varieties). 404 if the round
 //                              does not exist.
@@ -32,6 +36,8 @@ import {
   saleUnits,
   varieties,
 } from "../db/schema";
+import { type Session, verifySession } from "../plugins/auth.plugin";
+import { wholesaleVisible } from "../services/b2b";
 import { deriveUnitPriceSatang } from "../services/pricing";
 import { boxAvailability } from "../services/reservation";
 
@@ -41,6 +47,12 @@ type Tier = "b2c" | "b2b";
 const SOLD_OUT_LABEL = "หมดรอบนี้"; // INV-08
 
 const IdParams = t.Object({ id: t.String({ format: "uuid" }) });
+
+/** Extract a Bearer token from either the lower- or upper-case Authorization header. */
+function bearer(headers: Record<string, string | undefined>): string | undefined {
+  const header = headers.authorization ?? headers.Authorization;
+  return header?.startsWith("Bearer ") ? header.slice(7) : undefined;
+}
 
 type SaleUnitRow = typeof saleUnits.$inferSelect;
 type PriceRow = typeof prices.$inferSelect;
@@ -91,6 +103,7 @@ export function makeCatalogRoutes(database: CatalogDb = defaultDb) {
     units: SaleUnitRow[],
     priceRows: PriceRow[],
     today: string,
+    showB2b: boolean,
   ) {
     const availability = stockRow.quotaPlants - stockRow.reservedPlants;
     const soldOut = availability <= 0;
@@ -108,16 +121,40 @@ export function makeCatalogRoutes(database: CatalogDb = defaultDb) {
       soldOutLabel: soldOut ? SOLD_OUT_LABEL : null,
       prices: {
         b2c: tierPricePayload(resolveTierPrice(relevant, "b2c", today), units),
-        b2b: tierPricePayload(resolveTierPrice(relevant, "b2b", today), units),
+        // D-08 / T-03-21: wholesale tier only for approved-B2B customer sessions.
+        b2b: showB2b ? tierPricePayload(resolveTierPrice(relevant, "b2b", today), units) : null,
       },
     };
   }
 
+  /** D-08 / T-03-21: wholesale is visible ONLY to an approved-B2B CUSTOMER session.
+   *  Staff tokens and anonymous callers get false (staff read wholesale via the
+   *  staff /prices routes, not the public catalog). Fail-closed. */
+  async function showB2bFor(session: Session | null): Promise<boolean> {
+    return (
+      session !== null &&
+      session.role === "customer" &&
+      (await wholesaleVisible(database, session.sub))
+    );
+  }
+
   return (
     new Elysia()
+      // Resolve an OPTIONAL session per request (missing/invalid token → null).
+      // The catalog stays OPEN (D-03) — this is context, never a 401 gate.
+      .derive(async ({ headers }) => {
+        const token = bearer(headers);
+        if (!token) return { session: null as Session | null };
+        try {
+          return { session: (await verifySession(token)) as Session | null };
+        } catch {
+          return { session: null as Session | null };
+        }
+      })
       // OPEN (D-03): all open rounds' sellable varieties, grouped by variety.
-      .get("/catalog", async () => {
+      .get("/catalog", async ({ session }) => {
         const today = new Date().toISOString().slice(0, 10);
+        const showB2b = await showB2bFor(session);
         const openRounds = await database.select().from(rounds).where(eq(rounds.status, "open"));
         if (openRounds.length === 0) return { varieties: [], boxes: [] };
         const roundIds = openRounds.map((r) => r.id);
@@ -164,6 +201,7 @@ export function makeCatalogRoutes(database: CatalogDb = defaultDb) {
                 vUnits,
                 priceRows,
                 today,
+                showB2b,
               ),
             );
           return {
@@ -266,7 +304,11 @@ export function makeCatalogRoutes(database: CatalogDb = defaultDb) {
                   availability,
                   soldOut,
                   soldOutLabel: soldOut ? SOLD_OUT_LABEL : null,
-                  priceSatang: { b2c: priceForTier("b2c"), b2b: priceForTier("b2b") },
+                  // D-08 / T-03-21: wholesale box price gated like the variety tier.
+                  priceSatang: {
+                    b2c: priceForTier("b2c"),
+                    b2b: showB2b ? priceForTier("b2b") : null,
+                  },
                 };
               });
             return {
@@ -291,8 +333,9 @@ export function makeCatalogRoutes(database: CatalogDb = defaultDb) {
       // OPEN (D-03): the same surface scoped to one round (round-centric).
       .get(
         "/catalog/rounds/:id",
-        async ({ params, set }) => {
+        async ({ params, set, session }) => {
           const today = new Date().toISOString().slice(0, 10);
+          const showB2b = await showB2bFor(session);
           const [round] = await database
             .select()
             .from(rounds)
@@ -342,7 +385,7 @@ export function makeCatalogRoutes(database: CatalogDb = defaultDb) {
             .map((s) => {
               const v = vById.get(s.varietyId) as typeof varieties.$inferSelect;
               const vUnits = units.filter((u) => u.varietyId === v.id);
-              const entry = roundEntry(s, round, vUnits, priceRows, today);
+              const entry = roundEntry(s, round, vUnits, priceRows, today, showB2b);
               return {
                 id: v.id,
                 name: v.name,

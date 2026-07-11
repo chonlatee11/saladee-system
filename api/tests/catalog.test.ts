@@ -5,13 +5,17 @@
 //   - a fully-reserved variety in a round shows soldOut + label "หมดรอบนี้" (INV-08)
 //   - one variety surfaces MULTIPLE rounds/modes: preorder (future harvest, SALE-01)
 //     and ready-to-ship (already harvested, SALE-02) on one product surface (SALE-04)
-//   - resolved tiered prices (b2c/b2b) + derived whole-baht pack prices
+//   - resolved tiered prices + derived whole-baht pack prices; the b2b (wholesale)
+//     tier is GATED (03-13, D-08 / T-03-21): anonymous / pending / non-approved
+//     callers get prices.b2b === null; ONLY an approved-B2B customer bearer
+//     session receives the resolved wholesale payload
 //   - NO customer/order PII appears anywhere in a catalog response (T-01-15)
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "../src/db/schema";
-import { roundStock, rounds } from "../src/db/schema";
+import { customers, roundStock, rounds } from "../src/db/schema";
+import { issueSession } from "../src/plugins/auth.plugin";
 import { makeCatalogRoutes } from "../src/routes/catalog";
 import { deriveUnitPriceSatang } from "../src/services/pricing";
 import { seedPrice, seedSaleUnit, seedVariety } from "./seed";
@@ -30,8 +34,22 @@ let client: ReturnType<typeof postgres>;
 let db: ReturnType<typeof drizzle<typeof schema>>;
 let routes: ReturnType<typeof makeCatalogRoutes>;
 
-function req(method: string, path: string) {
-  return routes.handle(new Request(`http://localhost${path}`, { method }));
+function req(method: string, path: string, token?: string) {
+  const headers: Record<string, string> = {};
+  if (token) headers.authorization = `Bearer ${token}`;
+  return routes.handle(new Request(`http://localhost${path}`, { method, headers }));
+}
+
+/** Insert a customer row with the given b2bStatus and return its id. */
+async function seedCustomer(
+  b2bStatus: "pending" | "approved" | "rejected" | null,
+): Promise<string> {
+  const [row] = await db
+    .insert(customers)
+    .values({ name: `ลูกค้า ${crypto.randomUUID()}`, b2bStatus })
+    .returning({ id: customers.id });
+  if (!row) throw new Error("seedCustomer: insert returned no row");
+  return row.id;
 }
 
 interface PackResp {
@@ -149,7 +167,7 @@ describe("GET /catalog — availability, sold-out label, multi-mode surface (INV
     expect(ready?.soldOutLabel).toBe("หมดรอบนี้");
   });
 
-  test("resolved tiered prices + whole-baht derived pack prices are exposed", async () => {
+  test("resolved tiered prices + whole-baht derived pack prices are exposed (b2b gated to null anonymously)", async () => {
     const { varietyId, saleUnitId, preorderRoundId } = await arrange();
     const res = await req("GET", "/catalog");
     const body = (await res.json()) as CatalogResp;
@@ -157,7 +175,8 @@ describe("GET /catalog — availability, sold-out label, multi-mode surface (INV
     const pre = v?.rounds.find((r) => r.roundId === preorderRoundId);
 
     expect(pre?.prices.b2c?.pricePerKgSatang).toBe(KG_B2C);
-    expect(pre?.prices.b2b?.pricePerKgSatang).toBe(KG_B2B);
+    // 03-13 (D-08 / T-03-21): anonymous callers never see the wholesale tier.
+    expect(pre?.prices.b2b).toBeNull();
     const pack = pre?.prices.b2c?.packs.find((p) => p.saleUnitId === saleUnitId);
     expect(pack?.unitPriceSatang).toBe(deriveUnitPriceSatang(KG_B2C, GRAMS));
     expect((pack?.unitPriceSatang ?? 1) % 100).toBe(0); // whole baht
@@ -170,6 +189,75 @@ describe("GET /catalog — availability, sold-out label, multi-mode surface (INV
     for (const leak of ["recipient", "phone", "customerId", "subtotalSatang", "taxId"]) {
       expect(raw.includes(leak)).toBe(false);
     }
+  });
+});
+
+describe("b2b (wholesale) tier gate — 03-13, D-08 / T-03-21 / CUST-02", () => {
+  test("anonymous caller gets prices.b2b === null on every round entry", async () => {
+    const { varietyId } = await arrange();
+    const res = await req("GET", "/catalog");
+    const body = (await res.json()) as CatalogResp;
+    const v = body.varieties.find((x) => x.id === varietyId);
+    expect(v?.rounds.length).toBeGreaterThan(0);
+    for (const r of v?.rounds ?? []) {
+      expect(r.prices.b2b).toBeNull();
+      expect(r.prices.b2c).not.toBeNull(); // retail tier stays public (D-03)
+    }
+  });
+
+  test("approved-B2B customer session sees the resolved wholesale tier", async () => {
+    const { varietyId, preorderRoundId } = await arrange();
+    const customerId = await seedCustomer("approved");
+    const token = await issueSession(customerId, "customer");
+    const res = await req("GET", "/catalog", token);
+    const body = (await res.json()) as CatalogResp;
+    const v = body.varieties.find((x) => x.id === varietyId);
+    const pre = v?.rounds.find((r) => r.roundId === preorderRoundId);
+    expect(pre?.prices.b2b?.pricePerKgSatang).toBe(KG_B2B);
+  });
+
+  test("pending-B2B customer session gets b2b null, same as anonymous", async () => {
+    const { varietyId } = await arrange();
+    const customerId = await seedCustomer("pending");
+    const token = await issueSession(customerId, "customer");
+    const res = await req("GET", "/catalog", token);
+    const body = (await res.json()) as CatalogResp;
+    const v = body.varieties.find((x) => x.id === varietyId);
+    for (const r of v?.rounds ?? []) {
+      expect(r.prices.b2b).toBeNull();
+    }
+  });
+
+  test("invalid/forged bearer token fails closed — b2b null (T-03-13-02)", async () => {
+    const { varietyId } = await arrange();
+    const res = await req("GET", "/catalog", "forged-token");
+    expect(res.status).toBe(200); // catalog stays OPEN (D-03), never a 401 gate
+    const body = (await res.json()) as CatalogResp;
+    const v = body.varieties.find((x) => x.id === varietyId);
+    for (const r of v?.rounds ?? []) {
+      expect(r.prices.b2b).toBeNull();
+    }
+  });
+
+  test("GET /catalog/rounds/:id applies the same gate (anonymous null, approved sees b2b)", async () => {
+    const { varietyId, preorderRoundId } = await arrange();
+    type RoundView = {
+      varieties: { id: string; prices: { b2b: TierPriceResp | null } }[];
+    };
+
+    const anon = await req("GET", `/catalog/rounds/${preorderRoundId}`);
+    expect(anon.status).toBe(200);
+    const anonBody = (await anon.json()) as RoundView;
+    const anonV = anonBody.varieties.find((x) => x.id === varietyId);
+    expect(anonV?.prices.b2b).toBeNull();
+
+    const customerId = await seedCustomer("approved");
+    const token = await issueSession(customerId, "customer");
+    const ok = await req("GET", `/catalog/rounds/${preorderRoundId}`, token);
+    expect(ok.status).toBe(200);
+    const okBody = (await ok.json()) as RoundView;
+    const okV = okBody.varieties.find((x) => x.id === varietyId);
+    expect(okV?.prices.b2b?.pricePerKgSatang).toBe(KG_B2B);
   });
 });
 
