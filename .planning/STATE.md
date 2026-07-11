@@ -6,14 +6,14 @@ current_phase: 03
 current_phase_name: back-office-crop-planning-b2b-subscription
 status: executing
 stopped_at: Completed 03-08-PLAN.md (Task 3 human-verify pending)
-last_updated: "2026-07-11T07:01:13.418Z"
+last_updated: "2026-07-11T07:05:54.164Z"
 last_activity: 2026-07-11
 last_activity_desc: Phase 03 execution started
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 37
-  completed_plans: 35
+  completed_plans: 36
   percent: 60
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-06-28)
 ## Current Position
 
 Phase: 03 (back-office-crop-planning-b2b-subscription) — EXECUTING
-Plan: 2 of 15
+Plan: 3 of 15
 Status: Ready to execute
 Last activity: 2026-07-11 — Phase 03 execution started
 Note: CR-01/CR-02 code-review test-gaps CLOSED — added regression tests api/tests/verified-slip-park.test.ts (verified slip parked as awaiting_review + 202 when order cancelled mid-verify) and api/tests/created-hold-sweep.test.ts (created-path holdExpiresAt set + swept). api bun test 187 pass / 0 fail.
@@ -79,6 +79,7 @@ Progress: [████████░░] 77%
 | Phase 03 P05 | ~45min | 3 tasks | 7 files |
 | Phase 03 P08 | ~40min | 3 tasks | 12 files |
 | Phase 03 P13 | 4min | 2 tasks | 3 files |
+| Phase 03 P15 | 3min | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -115,6 +116,7 @@ Recent decisions affecting current work:
 - [Phase ?]: publishQuota single-owns the round-open sequence: reserveStanding in the quota-write tx (atomic reserve-before-B2C) + subscription-generate once post-commit, one-shot per round — Guarantees CUST-05 reserve-before-B2C with no race window and no double-reserve on re-publish
 - [Phase 03]: 03-08 customer LIFF: package value is server authority (S/M/L code only); /me/* endpoints reuse me-orders member gate + 03-06 wholesaleVisible — Close T-03-20 money tamper + T-03-21 wholesale leak on the customer surface without new auth
 - [Phase ?]: 03-13: public catalog b2b tier gated via the ONE wholesaleVisible() rule (D-08/T-03-21) — optional-session .derive, fail-closed on invalid tokens, b2b keys nulled not removed (Eden shape unchanged)
+- [Phase 03]: Standing-orders table: display labels joined into DisplayRow row data (not accessorFn closures) because TanStack Table memoizes accessor results per row
 
 ### Pending Todos
 
@@ -154,6 +156,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-11T07:00:37.254Z
+Last session: 2026-07-11T07:04:36.669Z
 Stopped at: Completed 03-08-PLAN.md (Task 3 human-verify pending)
 Resume file: None
