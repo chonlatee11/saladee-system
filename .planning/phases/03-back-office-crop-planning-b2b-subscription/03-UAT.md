@@ -1,10 +1,10 @@
 ---
 phase: 03-back-office-crop-planning-b2b-subscription
 source: 03-VERIFICATION.md
-status: testing
+status: complete
 generated: 2026-07-11
 total_items: 10
-passed: 9
+passed: 10
 issues: 3
 fixed: 2
 ---
@@ -73,6 +73,11 @@ reported: "1.publish ทำได้ 2.override survive re-publish ทำได�
 ### 9. Reports charts + CSV — **pass** (cosmetic polish noted)
 - Period/channel/product/round filters update charts ✓; stable channel↔color mapping ✓; best-sellers/AOV/repeat correct ✓; Thai CSV opens without mojibake ✓.
 - User noted general visual-polish concerns (cosmetic, non-blocking) — candidate for a dedicated /gsd-ui-review pass.
+
+### 10. Settings secret-safety + canned chatbot — **pass**
+- Settings: editing haircut %/hold window takes effect with no redeploy; no payee/slip-key ever in form or response ✓.
+- Chatbot: keyword → Flex + LIFF deep-link ✓; other text → fallback ✓.
+- Follow-up (shipped, PR #13): renamed keywords per user request — เมนูรอบนี้→ผักรอบนี้, ราคาวันนี้→ราคาผักรอบนี้, ของเหลือ→สั่งผักรอบนี้ (repointed to catalog/order).
 
 ## Gaps
 
