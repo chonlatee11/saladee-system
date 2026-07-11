@@ -1,12 +1,15 @@
 ---
 phase: 03-back-office-crop-planning-b2b-subscription
 source: 03-VERIFICATION.md
-status: complete
+status: testing
 generated: 2026-07-11
+updated: 2026-07-11
 total_items: 10
 passed: 10
 issues: 3
 fixed: 2
+gaps_resolved_in_code: 4
+awaiting_live_confirm: 4
 ---
 
 # Phase 3 — UAT Checklist (live human verification)
@@ -28,9 +31,9 @@ Automated verification passed 5/5 success criteria (api 298 pass / 0 fail, web 3
 | 9 | 03-11 | reports charts + CSV | period/channel/product/round filters update charts with stable channel↔color mapping; best-sellers/AOV/repeat correct; Thai CSV opens without mojibake |
 | 10 | 03-12 | settings secret-safety + canned chatbot | editing haircut %/hold window takes effect with no redeploy and no payee/slip-key ever in form/response; LINE keywords เมนูรอบนี้/ราคาวันนี้/ของเหลือ → Flex + LIFF deep-link; other text → fallback |
 
-## Follow-up decision (warning, not phase-blocking)
+## Follow-up decision (warning, not phase-blocking) — RESOLVED by 03-13
 
-- **`api/src/routes/catalog.ts` (lines 110-111, 269)** returns the b2b (wholesale) tier price to **all** callers ungated — a potential wholesale-price / PDPA exposure. Pre-existing (not caused by Phase 3), flagged by 03-08 in `deferred-items.md`. CUST-02 is met via the gated `/me/b2b/prices` path, so the phase goal is not blocked. **Decision needed:** gate/omit the b2b tier in the public catalog, or confirm it is intentionally public.
+- **`api/src/routes/catalog.ts`** returned the b2b (wholesale) tier price to **all** callers ungated. **RESOLVED (03-13, commit f873a71):** decision was to gate. `showB2b` now nulls `prices.b2b` + box `priceSatang.b2b` for anonymous / pending / forged sessions on both `GET /catalog` and `GET /catalog/rounds/:id`; only an approved-B2B customer session sees wholesale (reuses `wholesaleVisible()`, fresh DB check per request). `deferred-items.md` marked resolved. Test coverage added (anonymous→null, approved→visible, pending→null, forged→null+200, /rounds/:id gated). Code-review confirmed the gate fail-closed, no leak in code.
 
 ## Live run results (2026-07-11, API :3001 / web-admin :5174 / web :5173, dev-seed applied)
 
@@ -82,7 +85,8 @@ reported: "1.publish ทำได้ 2.override survive re-publish ทำได�
 ## Gaps
 
 - truth: "A LINE customer can reach subscription sign-up (SALE-03) and B2B account (CUST-02) from the LIFF"
-  status: failed
+  status: resolved
+  resolution: "03-14 (commits fb217dd, 96a29c7): Rich Menu extended 5→6 areas with a สมาชิกกล่องผัก button deep-linking /subscription; catalog gained in-LIFF quick-links (/subscription + /b2b) placed outside the v-if chain so they show in every state. /b2b intentionally has no Rich Menu button (targeted group, reached via in-app link). NEEDS LIVE CONFIRM: operator must regenerate the 6-cell Rich Menu PNG and run provision-rich-menu.ts with real LIFF creds (user_setup — Claude cannot run it); then confirm links are visible/tappable on a real device."
   reason: "The /subscription and /b2b views exist but have NO entry point — the Rich Menu deep-links only 5 unrelated routes and no in-app navigation links to them. Reachable only by manually opening a LIFF deep link."
   severity: major
   test: 6
@@ -97,7 +101,8 @@ reported: "1.publish ทำได้ 2.override survive re-publish ทำได�
   debug_session: ""
 
 - truth: "The subscription signup makes the currently-selected package obvious"
-  status: failed
+  status: resolved
+  resolution: "03-14 (commit b47b30d): selected package tile now gets ring-2 ring-accent + a solid ✓ badge (copied from DeliveryMethodTiles), and selected frequency gets ring + font-semibold. NEEDS LIVE CONFIRM: verify the selected state reads clearly on a real mobile device (visual judgment)."
   reason: "User reported: during signup 'ดูไม่ออกว่าเลือกอะไร' — cannot tell which package is selected"
   severity: minor
   test: 6
@@ -111,7 +116,8 @@ reported: "1.publish ทำได้ 2.override survive re-publish ทำได�
 
 
 - truth: "Standing-order basket shows human-readable variety names, not raw ids"
-  status: failed
+  status: resolved
+  resolution: "03-15 (commit 9788dc3): moved name lookup into the rows computed (new DisplayRow with customerLabel/basketLabel) and switched the columns from accessorFn to accessorKey, so when the varieties/customers query resolves a fresh row array rebuilds the table with real names. typecheck + build green. NEEDS LIVE CONFIRM: web-admin has no tests — confirm names render (not UUID prefixes) once the query resolves on a real page load."
   reason: "User reported: basket shows '6fb95842 ×20, 00de7524 ×20' — unreadable variety UUID prefixes"
   severity: minor
   test: 4
@@ -152,6 +158,15 @@ reported: "1.publish ทำได้ 2.override survive re-publish ทำได�
   missing:
     - "Reset failed=false on route change (watch useRoute path) so client-side navigation recovers the shell"
   debug_session: ""
+
+## Gap-closure live confirmation (2026-07-11, after 03-13/03-14/03-15)
+
+All 4 UAT gaps are closed **in code** and every automated suite is green (api 303/0, web 33/0, web + web-admin builds ✓, code-review = 0 blockers). Before final sign-off, confirm on real devices:
+
+1. **Operator rich-menu re-provision (user_setup — Claude cannot run):** create the new 6-cell Rich Menu image (2500×1686), then `cd api && LIFF_ID=<id> bun run scripts/provision-rich-menu.ts ./rich-menu.png`.
+2. **LIFF discoverability:** on a real phone, confirm the สมาชิกกล่องผัก Rich Menu button and the catalog quick-links (/subscription + /b2b) are visible and tappable.
+3. **Selected-state clarity:** confirm the package/frequency selected ring + ✓ read clearly on mobile.
+4. **Standing-order names:** confirm web-admin standing baskets show variety/customer names (no UUID prefixes) after the query resolves.
 
 ## How to verify
 

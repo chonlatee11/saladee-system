@@ -1,181 +1,183 @@
 ---
 phase: 03-back-office-crop-planning-b2b-subscription
-verified: 2026-07-11T02:03:03Z
+verified: 2026-07-11T12:26:59Z
 status: human_needed
-score: 5/5 must-haves verified
-behavior_unverified: 0
+score: 8/12 gap-closure must-haves verified (phase-goal 5/5 ROADMAP SCs hold — regression green)
+behavior_unverified: 4
 overrides_applied: 0
+re_verification:
+  previous_status: human_needed
+  previous_score: 5/5
+  gaps_closed:
+    - "gap #4 (catalog b2b price leak) — GET /catalog + /catalog/rounds/:id now null the b2b tier unless approved-B2B session (03-13, behaviorally test-pinned)"
+    - "gap #1 (LIFF subscription/B2B unreachable) — in-LIFF catalog quick-links to /subscription + /b2b, test-pinned (03-14 Task 2)"
+    - "gap #2 (selected package too subtle) — ring-2 ring-accent + ✓ badge, test-pinned (03-14 Task 3)"
+    - "gap #3 (standing basket raw UUID) — reactive customerLabel/basketLabel join, typecheck+build green (03-15)"
+    - "prior warning (catalog b2b wholesale exposure) — RESOLVED by 03-13; deferred-items.md struck through"
+  gaps_remaining: []
+  regressions: []
 gaps: []
-warnings:
-  - concern: "catalog GET / exposes b2b (wholesale) tier price unconditionally"
-    file: "api/src/routes/catalog.ts"
-    detail: >
-      GET /catalog returns prices: { b2c, b2b } for every variety (lines 110-111)
-      and priceSatang: { b2c, b2b } for boxes (line 269) regardless of caller B2B
-      approval. Pre-existing, NOT caused by Phase 3; flagged by 03-08 and recorded in
-      deferred-items.md. CUST-02 positive criterion is met via the gated
-      /me/b2b/prices + wholesaleVisible() path, so the phase goal is not blocked, but
-      this is a genuine wholesale-price / PDPA exposure needing a follow-up decision:
-      gate/omit the b2b tier in the public catalog, or confirm it is intentionally public.
-    severity: warning
+behavior_unverified_items:
+  - truth: "A LINE customer can reach subscription sign-up from a Rich Menu สมาชิกกล่องผัก button that deep-links {liff}/subscription"
+    test: "Operator regenerates the 6-cell 2500×1686 rich-menu PNG, then runs: cd api && LIFF_ID=<id> LINE_CHANNEL_ACCESS_TOKEN=<tok> bun run scripts/provision-rich-menu.ts ./rich-menu.png; open the LINE OA and tap the new bottom-left button"
+    expected: "The 6-button menu publishes idempotently; the สมาชิกกล่องผัก cell opens {liff}/subscription in the LIFF"
+    why_human: "Live re-provision against LINE requires channel credentials + a new menu image; Claude updated the script (compiles, 6 bounds tile the canvas) but cannot execute it or observe the LINE client"
+  - truth: "Standing-orders basket column shows human-readable variety names (e.g. กรีนโอ๊ค ×20) after the varieties query resolves — never a frozen UUID prefix"
+    test: "Open web-admin → Standing Orders with the dev seed; watch the ตะกร้าประจำรอบ column"
+    expected: "Rows show variety names (กรีนโอ๊ค ×20, เรดโอ๊ค ×10) and customer names; any transient id-prefix updates in place once the lookup queries arrive"
+    why_human: "Reactive re-render on async TanStack-Query resolution; web-admin has no automated StandingOrders test — code is the correct reactive join but the resolution behavior is not test-exercised (plan defers to UAT walk)"
+  - truth: "The standing-orders customer column shows the customer name once the customers query resolves"
+    test: "Same view; watch the ลูกค้า column"
+    expected: "Customer names render (not id.slice fallback) after data loads"
+    why_human: "Same async-resolution reactivity, no automated test"
+  - truth: "Name resolution is reactive: rows rendered before the lookup lists finish loading update in place when they arrive"
+    test: "Reload Standing Orders on a cold cache and observe cells during the load"
+    expected: "Any id-prefix placeholder is replaced by the real name in place (no frozen prefix, no manual refresh)"
+    why_human: "State transition on query settle; not covered by any test"
 human_verification:
-  - test: "03-03 web-admin RBAC nav + direct-URL 403"
-    expected: "grower/packer see only their menus; out-of-role direct URL is server-403'd (requireRole authority, not just cosmetic nav)"
-    why_human: "role-session browser interaction + visual sidebar; server guard proven in code but end-to-end session flow needs a live browser"
-  - test: "03-04 crop planning end-to-end (variety params → batch → 1-click mix → harvest calendar)"
-    expected: "grower sets variety params, logs a batch showing projected harvest date + expected yield, one click spawns the week's batches from the mix template"
-    why_human: "multi-screen admin UI flow; visual confirmation of projected dates/yields"
-  - test: "03-05 publish gate + manual-override permanence + harvest log"
-    expected: "publish writes sellable qty; a hand-set (override) row survives re-publish; actual harvest logs lot/best-before + shows delta; B2C sees quota − (standing+subscription reserved) from first view"
-    why_human: "cross-slice seeded state (standing + subscription) + visual catalog availability after publish"
-  - test: "03-06 B2B approval + standing reserve-before-B2C + overflow flag"
-    expected: "approving a B2B account reveals wholesale price; a standing order pre-decrements reserved_plants before B2C sees the round; over-forecast demand raises an admin overflow flag (no auto-trim)"
-    why_human: "live approval → price-visibility toggle + round-open ordering observed in browser"
-  - test: "03-07 subscription generator + idempotency + substitution"
-    expected: "round-open auto-creates one box order per active subscription, reserved before B2C; a re-trigger creates no duplicate; a sold-out variety fires a LINE substitution notice; admin can pause/skip/cancel"
-    why_human: "pg-boss trigger + LINE push + admin state changes across a live round cut-off"
-  - test: "03-08 LIFF subscription/B2B customer flows"
-    expected: "customer signs up/manages a subscription, requests B2B (pending → wholesale after approval), sees a standing order + substitution detail — all on mobile/LINE"
-    why_human: "LIFF mini-app in the LINE in-app browser on a phone"
-  - test: "03-09 packing queue by route + Thai PDF pack/label"
-    expected: "packer sees paid orders grouped by round → delivery zone/method; pack/label PDF opens with legible Sarabun Thai (no tofu), print-safe"
-    why_human: "must open the real PDF and inspect Thai glyph rendering + print layout"
-  - test: "03-10 dashboard cards"
-    expected: "dashboard shows today's/this-round sales, unpaid orders, near-sold-out items, next-round yield + the B2B/subscription card with the overflow flag"
-    why_human: "visual card layout + live aggregate numbers"
-  - test: "03-11 reports charts + CSV export"
-    expected: "period/channel/product/round filters update charts with stable channel↔color mapping; best-sellers/AOV/repeat customers correct; Thai CSV opens without mojibake"
-    why_human: "visual chart interaction + opening the exported CSV in a spreadsheet"
-  - test: "03-12 settings secret-safety + canned LINE chatbot"
-    expected: "editing haircut %/hold window takes effect with no redeploy and no payee/slip-key ever in the form/response; LINE keywords เมนูรอบนี้/ราคาวันนี้/ของเหลือ return Flex cards + a LIFF deep-link; other text falls back"
-    why_human: "must test inside the real LINE OA client + confirm secret absence in the live UI"
+  - test: "Operator rich-menu re-provision + on-device check (03-14 user_setup, gap #1)"
+    expected: "New 6-cell menu image produced; provision-rich-menu.ts run with real LIFF_ID + channel token; the สมาชิกกล่องผัก button appears in LINE and deep-links {liff}/subscription"
+    why_human: "Uncompletable by Claude — needs LINE channel credentials, a new menu image, and observation of the live LINE client"
+  - test: "LIFF discoverability re-walk on device (03-14 Task 2, gap #1 test 6)"
+    expected: "Opening the LIFF catalog at / shows tappable quick-links to /subscription (สมาชิกกล่องผัก) and /b2b (ลูกค้าขายส่ง) in every state — reachable without a hand-built deep link"
+    why_human: "Code + view-test verified (href assertions pass), but the original gap was found live on mobile; confirm on the real LINE in-app browser"
+  - test: "Subscription selected-state obvious on mobile (03-14 Task 3, gap #2 test 6)"
+    expected: "The chosen package tile shows an accent ring + filled ✓ badge and the chosen frequency an accent ring — unmistakable on a phone"
+    why_human: "Mechanism is test-pinned (ring-accent + ✓ + single aria-pressed), but 'obvious on mobile' is a visual judgment the user reported live"
+  - test: "Standing-orders readable names re-walk (03-15, gap #3 test 4)"
+    expected: "web-admin Standing Orders basket + customer columns show names, not UUID prefixes, and update in place as data loads"
+    why_human: "Reactive async-resolution render with no automated web-admin test"
 ---
 
-# Phase 3: Back-office, Crop Planning & B2B/Subscription — Verification Report
+# Phase 3: Back-office, Crop Planning & B2B/Subscription — Verification Report (gap-closure re-verify)
 
 **Phase Goal:** The farm runs operations from the back-office — crop plans forecast harvests that auto-feed sellable quantities, B2B quota and standing orders are guaranteed, subscriptions auto-generate, and staff manage packing, dashboards, and reports by role.
-**Verified:** 2026-07-11T02:03:03Z
+**Verified:** 2026-07-11T12:26:59Z
 **Status:** human_needed
-**Re-verification:** No — initial verification
+**Re-verification:** Yes — after UAT gap closure (plans 03-13, 03-14, 03-15)
 
 ## Goal Achievement
 
-The phase goal is **structurally and behaviorally achieved in code**. The self-feeding
-chain (crop plan → forecast → published sellable quota → standing/subscription reserved
-before B2C through the single NFR-02 guard) is implemented as designed, and the full
-automated suite is green (**api 298 pass / 0 fail**, web-admin build ✓). What remains is
-**10 blocking live-browser/LINE UAT checkpoints** that every Wave-2/3 plan deliberately
-deferred to end-of-phase — these are not auto-verifiable, so the phase lands at
-`human_needed`, not `passed`.
+The phase goal was already verified in code and **live-walked 10/10 in the 03-UAT.md run**.
+This re-verification confirms the four UAT gaps found during that walk are now closed:
 
-### Observable Truths (mapped to the 5 ROADMAP Success Criteria)
+- **gap #4** (catalog leaks wholesale b2b price) → **03-13**, closed and *behaviorally test-pinned*.
+- **gap #1** (LIFF /subscription + /b2b unreachable) → **03-14**, in-app catalog links closed and test-pinned; a Rich Menu button was added in the script but its LIVE publication is an operator step.
+- **gap #2** (selected package too subtle) → **03-14**, ring + ✓ badge, test-pinned.
+- **gap #3** (standing basket raw UUID) → **03-15**, reactive name join; typecheck+build green, no automated test (deferred to UAT walk).
 
-| # | Truth (Success Criterion) | Status | Evidence |
-|---|---------------------------|--------|----------|
-| 1 | Variety params + per-round planting mix → auto-create batches + weekly harvest calendar with expected yield | ✓ VERIFIED | `services/crop.ts` + pure `services/forecast.ts` kernel (`projectedHarvestDate`, `forecastPlants`); `routes/crop.ts` grower-gated, expected yield derived on read; views VarietyParams/PlantingMix/PlantingBatches/HarvestCalendar wired via `useCrop`. Tests: `forecast.test.ts` green. |
-| 2 | Harvest calendar auto-populates sellable qty (manual override retained) + actual harvest logged with lot/best-before | ✓ VERIFIED | `harvest.publishQuota` UPSERTs `quota_plants` with `setWhere: isManualOverride=false` (override never clobbered, D-03); `logHarvest` = 1 batch = 1 lot via UNIQUE(batch_id), auto lotCode + best-before = harvest+shelfLifeDays, returns delta (shown-only, no auto-tune). Tests: `forecast-publish.test.ts`, `harvest-log.test.ts` green. |
-| 3 | B2B sees wholesale pricing + standing order reserved from forecast before B2C; subscriptions auto-generate per round with pause/skip/cancel | ✓ VERIFIED | `b2b.reserveStanding` is a thin loop over the EXISTING guarded `reserve()` (no 2nd counter), called INSIDE `publishQuota`'s tx before any B2C order can run → reserved-before-B2C with no race window; overflow → `quota_overflow_flags` (no auto-trim); `wholesaleVisible()` gates the b2b tier. `subscription.generateForRound` fills by value, reserves via guarded `reserveBox()`, idempotent via UNIQUE(subscription_id, round_id) inserted LAST; `jobs/boss.ts` wires the `subscription-generate` queue/worker, triggered post-commit by `publishQuota`. Tests: `standing-reserve.test.ts`, `b2b-approval.test.ts`, `subscription-fill.test.ts`, `subscription-gen.test.ts` green. |
-| 4 | Pack queue grouped by delivery route + Thai pack/label PDF; RBAC limits owner/admin/grower/packer | ✓ VERIFIED | `routes/packing.ts` packer-gated, grouped by round → deliveryZone/method (D-20), `packed_at` state, `Cache-Control: no-store, private` on PDFs (PDPA); `pdf/pack-slip.ts` + `pdf/label-slip.ts` use `PdfPrinter` reading Sarabun TTFs from `api/src/fonts/` (Regular+SemiBold present). RBAC end-to-end: `requireRole` role-scoped across every route (crop/harvest=grower, packing=packer, dashboard/reports/settings/b2b=owner/admin); `web-admin/router.ts` `meta.roles` (CROP/PACK/OWNER_ADMIN). Tests: `packing-queue.test.ts`, `pdf-thai.test.ts` green. |
-| 5 | Dashboard (4 cards + B2B/sub) + reports by period/channel/product/round + configurable settings + canned LINE chatbot | ✓ VERIFIED | `routes/dashboard.ts` (staff-gated, 4 criterion cards + B2B/subscription + overflow flag, D-23); `routes/reports.ts` analytics + CSV; `services/settings.ts` + `routes/settings.ts` hot config with allowlist → secret-shaped key = 422 both directions (secrets never in/out); `routes/webhook.ts` canned keyword/postback → Flex + LIFF deep-link, signature preserved, no NLU (D-25). Tests: `dashboard.test.ts`, `reports.test.ts`, `settings.test.ts`, `chatbot-router.test.ts` green. |
+Two earlier UAT gaps (`web-admin date.ts` fmtDate crash, `App.vue` error-boundary reset)
+were already fixed and re-verified in the UAT walk itself; they are not re-litigated here.
 
-**Score:** 5/5 truths verified (0 present-behavior-unverified). All behavior-dependent
-invariants — reserve-before-B2C ordering, publish idempotency + manual-override
-permanence, subscription-generate idempotency, overflow-flag-no-auto-trim — carry
-passing behavioral tests, so they are VERIFIED on behavior, not merely on symbol presence.
+The prior verification's single **warning** (public catalog wholesale exposure) is now
+**RESOLVED** by 03-13 and struck through in `deferred-items.md`.
 
-### Core Invariant Check (NFR-02 self-feeding chain — the phase's load-bearing seam)
+### ROADMAP Success Criteria (phase goal) — regression check
 
-| Property | Verdict | Evidence |
-|----------|---------|----------|
-| `publishQuota` is the single owner of the round-open sequence | ✓ | `harvest.ts:136` — the only writer of `quota_plants` from draft; comment + code confirm one-shot reserve+trigger on first publish only. |
-| No second stock counter; standing/subscription reserve through the ONE guard | ✓ | `reserveStanding` → `reserve()` (reservation.ts UNCHANGED guarded conditional UPDATE); `generateForRound` → `reserveBox()` → `reserve()`. `reserved_plants` moved EXCLUSIVELY by the guard. |
-| Standing reserved atomically BEFORE B2C (no race window) | ✓ | `reserveStanding` runs inside the same tx that writes `quota_plants` (`harvest.ts:168-171`); a B2C reader can only ever see `quota − reserved`. |
-| Re-publish is idempotent, manual override permanent | ✓ | `firstPublish` gate (no round_stock rows) → reserve+trigger once; UPSERT `setWhere isManualOverride=false` never clobbers a hand-set qty. |
-| Subscription generation idempotent under worker retry | ✓ | UNIQUE(subscription_id, round_id) inserted LAST in per-sub tx → 23505 rolls back order+reservation; no in-code pre-check. |
+All 5 ROADMAP SCs from the initial verification remain VERIFIED. The gap-closure run touched
+only catalog price shaping, two LIFF views, the rich-menu script, and one web-admin view; the
+full automated suites are green with **no regressions**.
+
+| Suite | Result |
+|-------|--------|
+| api `bun test` (full) | 303 pass / 0 fail, 54 files, 15.4s |
+| web `bun test` (full) | 33 pass / 0 fail, 7 files |
+| web build (`vite build`) | ✓ built 523ms |
+| web-admin `vue-tsc --noEmit` + build | ✓ typecheck clean, built 584ms |
+
+### Gap-closure Observable Truths
+
+| # | Plan / Gap | Truth | Status | Evidence |
+|---|-----------|-------|--------|----------|
+| 1 | 03-13 / #4 | Anonymous `GET /catalog` → every `prices.b2b`/`priceSatang.b2b` is null | ✓ VERIFIED | `catalog.ts:125,310` gate on `showB2b`; `catalog.test.ts` "anonymous caller gets prices.b2b === null" passes |
+| 2 | 03-13 / #4 | `GET /catalog/rounds/:id` applies the same gate | ✓ VERIFIED | `catalog.ts:336-388` threads `showB2b` into `roundEntry`; test "…applies the same gate" passes |
+| 3 | 03-13 / #4 | Approved-B2B customer session sees the wholesale tier | ✓ VERIFIED | `showB2bFor` = role==customer && `wholesaleVisible`; test "approved-B2B customer session sees the resolved wholesale tier" passes |
+| 4 | 03-13 / #4 | Pending/rejected/B2C/forged → b2b null (fail-closed) | ✓ VERIFIED | `.derive` verifySession→null on throw; tests "pending…null", "forged…fails closed" pass |
+| 5 | 03-13 / #4 | `/me/b2b/prices` untouched, still serves gated wholesale | ✓ VERIFIED | `b2b-approval.test.ts` unchanged; 21 pass across catalog+b2b-approval |
+| 6 | 03-14 / #1 | Rich Menu สมาชิกกล่องผัก button deep-links {liff}/subscription | ⚠️ PRESENT_BEHAVIOR_UNVERIFIED | Script has 6 bounds tiling 2500×1686 (0/833/1667 ×843/843), `${liffBase}/subscription` present, compiles — but LIVE publish is an operator step (user_setup) |
+| 7 | 03-14 / #1 | Customer reaches /subscription AND /b2b from in-LIFF catalog links | ✓ VERIFIED | `CatalogView.vue:58` `<nav>` OUTSIDE the v-if chain; `catalog-view.test.ts` href="/subscription"+"/b2b" pass |
+| 8 | 03-14 / #2 | Selected package obvious: accent ring + ✓ badge | ✓ VERIFIED | `SubscriptionSignup.vue:178-195` ring-2 ring-accent + fixed-footprint ✓; `subscription-view.test.ts` pins ring-accent + ✓ + single aria-pressed |
+| 9 | 03-14 / #2 | Selected frequency carries the same ring treatment | ✓ VERIFIED | `SubscriptionSignup.vue:213-214` ring-2 ring-accent + font-semibold; grep ring-accent=2 |
+| 10 | 03-15 / #3 | Standing basket column shows variety names, not UUID | ⚠️ PRESENT_BEHAVIOR_UNVERIFIED | `StandingOrders.vue:86-97` basketLabel joined into reactive `rows`, column `accessorKey:"basketLabel"` — correct reactive fix, but no web-admin test exercises async resolution |
+| 11 | 03-15 / #3 | Customer column shows the customer name | ⚠️ PRESENT_BEHAVIOR_UNVERIFIED | `customerLabel` join + `accessorKey:"customerLabel"`; same untested async-resolution reactivity |
+| 12 | 03-15 / #3 | Name resolution reactive: rows update in place when lookups arrive | ⚠️ PRESENT_BEHAVIOR_UNVERIFIED | computed reads `varieties.value`/`customers.value` → new row array invalidates TanStack per-row cache; state-transition behavior, no test |
+
+**Score:** 8/12 gap-closure truths verified, 4 present-behavior-unverified (routed to live re-walk). Phase-goal 5/5 ROADMAP SCs hold under regression.
 
 ### Required Artifacts
 
 | Artifact | Expected | Status | Details |
 |----------|----------|--------|---------|
-| `api/src/services/harvest.ts` | publishQuota + computeDraftQuota + logHarvest | ✓ VERIFIED | Substantive, wired into `routes/harvest.ts` POST /harvest/publish. |
-| `api/src/services/b2b.ts` | reserveStanding + wholesaleVisible | ✓ VERIFIED | Thin loop over reserve(); wired into `routes/b2b.ts`. |
-| `api/src/services/subscription.ts` | fillBox + generateForRound | ✓ VERIFIED | Wired into `jobs/boss.ts` subscription-generate worker. |
-| `api/src/services/reservation.ts` | reserve/release/reserveBox guard | ✓ VERIFIED | UNCHANGED Phase-1 guard reused (no 2nd counter). |
-| `api/src/jobs/boss.ts` | subscription-generate queue+worker | ✓ VERIFIED | Queue created + worker attached; triggered by publishQuota post-commit. |
-| `api/src/pdf/pack-slip.ts`, `label-slip.ts` + `api/src/fonts/Sarabun-*.ttf` | Thai PDF via embedded Sarabun | ✓ VERIFIED | PdfPrinter reads TTFs from disk; fonts present; `pdf-thai.test.ts` green. |
-| `api/src/routes/*` (crop/harvest/b2b/subscriptions/packing/dashboard/reports/settings/webhook) | role-gated feature routes | ✓ VERIFIED | All composed in index.ts; requireRole role-scoped; no stubs. |
-| `web-admin/` (13 views + AppShell + DataTable + router + 8 composables) | back-office SPA on typed Eden client | ✓ VERIFIED | All 13 views import typed composables → Eden Treaty `api`; build ✓ (570ms); no placeholder/TODO/WIP in views. |
+| `api/src/routes/catalog.ts` | session-aware b2b gate on both GET endpoints | ✓ VERIFIED | `bearer` + `.derive` optional session; `showB2bFor` reuses `wholesaleVisible`; b2b keys nulled not removed (grep b2b:=…, shape preserved) |
+| `api/tests/catalog.test.ts` | anonymous/approved/pending/forged + /rounds/:id cases | ✓ VERIFIED | Gate describe block present; 21 pass with b2b-approval |
+| `api/scripts/provision-rich-menu.ts` | 6-area menu incl. subscription button | ✓ VERIFIED (code) | 6 bounds tile the canvas; /subscription,/contact,/care all present; compiles. LIVE publish deferred to operator |
+| `web/src/views/CatalogView.vue` | member quick-links row (sub + B2B) | ✓ VERIFIED | nav outside v-if chain; both RouterLinks |
+| `web/src/views/SubscriptionSignup.vue` | ring + ✓ selected state | ✓ VERIFIED | package + frequency tiles; test-pinned |
+| `web-admin/src/views/StandingOrders.vue` | reactive name join | ✓ VERIFIED (structure) | DisplayRow + labels in reactive rows + accessorKey; typecheck+build green; render behavior untested |
+| `deferred-items.md` | catalog exposure marked resolved | ✓ VERIFIED | struck through + "Resolved 2026-07-11 by 03-13"; vue-tsc bullet intact |
 
 ### Behavioral Spot-Checks
 
 | Behavior | Command | Result | Status |
 |----------|---------|--------|--------|
-| Full API suite (includes all Phase-3 invariant tests) | `bun test` | 298 pass / 0 fail, 54 files, 14.5s | ✓ PASS |
-| web-admin production build (real deliverable, not just typecheck) | `bun run build` | built in 570ms, Reports/DataTable/session chunks emitted | ✓ PASS |
-| Live-browser / LINE UAT (10 checkpoints) | — | requires phone/LINE OA + role sessions | ? SKIP → human |
+| Catalog b2b gate (anonymous null / approved sees / forged closed) | `bun test tests/catalog.test.ts tests/b2b-approval.test.ts` | 21 pass / 0 fail | ✓ PASS |
+| Full API suite (regression) | `bun test` | 303 pass / 0 fail | ✓ PASS |
+| LIFF catalog links + signup selected-state | `bun test tests/catalog-view.test.ts tests/subscription-view.test.ts` | 14 pass / 0 fail | ✓ PASS |
+| web full suite (regression) | `bun test` | 33 pass / 0 fail | ✓ PASS |
+| Rich-menu script compiles | `bun build scripts/provision-rich-menu.ts --target=bun` | 0.54 MB entry, exit 0 | ✓ PASS |
+| web-admin typecheck + build | `vue-tsc --noEmit && vite build` | clean + built 584ms | ✓ PASS |
+| Standing-orders reactive name render | — | no automated test; live UAT re-walk | ? SKIP → human |
+| Rich-menu live publish + LINE-client button | — | operator credentials + device | ? SKIP → human |
 
-### Requirements Coverage
+### Requirements Coverage (gap-closure scope)
 
 | Requirement | Description | Status | Evidence |
 |-------------|-------------|--------|----------|
-| CROP-01/02/03/06 | variety params, batches, auto harvest date+yield, mix→auto-batches | ✓ SATISFIED | crop.ts + forecast.ts + views (SC1) |
-| CROP-04 | harvest calendar → auto sellable qty (override kept) | ✓ SATISFIED | publishQuota (SC2) |
-| CROP-05 / INV-10 | actual harvest logging vs forecast + lot/best-before | ✓ SATISFIED | logHarvest 1-batch-1-lot (SC2) |
-| CUST-02 | B2B wholesale visibility + credit terms | ✓ SATISFIED (see warning) | wholesaleVisible gate + b2b_status/credit terms; ⚠ public catalog leaks b2b tier (follow-up) |
-| CUST-05 | B2B standing order + forecast quota reserved before B2C | ✓ SATISFIED | reserveStanding inside publishQuota tx (SC3) |
-| SALE-03 | subscription box: auto-generate, pause/skip/cancel | ✓ SATISFIED | generateForRound + boss worker (SC3) |
-| ORD-03 | pack queue by route + printable slips | ✓ SATISFIED | packing.ts + pack/label PDF (SC4) |
-| ADM-02 | role-based access | ✓ SATISFIED | requireRole + router meta.roles (SC4) |
-| ADM-01 | dashboard | ✓ SATISFIED | dashboard.ts (SC5) |
-| MKT-04 | sales reports by period/channel/product/round + CSV | ✓ SATISFIED | reports.ts (SC5) |
-| ADM-03 | configurable system settings (secret-safe) | ✓ SATISFIED | settings.ts 422 gate (SC5) |
-| MKT-02 | canned LINE chatbot menu/stock + routes to LIFF | ✓ SATISFIED | webhook.ts canned map (SC5) |
+| CUST-02 | B2C/B2B split, B2B sees wholesale price | ✓ SATISFIED | 03-13 catalog gate (behavioral) + 03-14 /b2b entry; REQUIREMENTS.md line 67, Phase 3 Complete |
+| CUST-05 | B2B standing order, forecast quota reserved before B2C | ✓ SATISFIED (display) | 03-15 readable basket names on the D-09 staff surface; reserve-before-B2C already verified initially; REQUIREMENTS.md line 70 |
+| SALE-03 | Subscription box: auto-generate + pause/skip/cancel | ✓ SATISFIED (discovery) | 03-14 subscription entry points; generator verified initially; REQUIREMENTS.md line 38 |
+
+All 16 phase requirement IDs (INV-10, SALE-03, ORD-03, CUST-02, CUST-05, MKT-02, MKT-04,
+ADM-01/02/03, CROP-01..06) were SATISFIED in the initial verification and remain so under
+regression. This gap-closure run touched only CUST-02, CUST-05, SALE-03; none are orphaned —
+all three appear in the plan frontmatter and in REQUIREMENTS.md (marked Phase 3 / Complete).
 
 ### Anti-Patterns Found
 
 | File | Pattern | Severity | Impact |
 |------|---------|----------|--------|
-| `api/src/routes/catalog.ts` (110-111, 269) | b2b wholesale tier returned to all callers ungated | ⚠️ Warning | Potential wholesale-price / PDPA exposure. Pre-existing, out-of-Phase-3 scope, documented in deferred-items.md. CUST-02 met via gated /me/b2b/prices → not a goal blocker; needs a follow-up gate/confirm decision. |
+| — | none | — | No debt markers (TBD/FIXME/XXX), no stub returns, no placeholder views introduced by 03-13/14/15. The `id.slice(0,8)` in StandingOrders is the plan-specified transient fallback while lookups load, not a stub. |
 
-No debt markers (TBD/FIXME/XXX), no stub returns, no placeholder views detected in
-Phase-3 modified files.
+Prior warning (catalog wholesale exposure) is **resolved** — no longer carried.
 
-### Human Verification Required (10 blocking UAT checkpoints — deferred by every slice)
+### Human Verification Required
 
-Each Wave-2/3 plan carries a `gate="blocking"` `checkpoint:human-verify` that was
-deferred to end-of-phase; these exercise live browser / LINE-client / real-PDF behavior
-that grep and unit tests cannot see. See the `human_verification` frontmatter block for
-the full test/expected/why-human detail for 03-03 through 03-12. Summary:
+Status is `human_needed` because of one uncompletable operator step and three
+live-UI/async-render behaviors best re-confirmed on the device UAT re-walk:
 
-1. **03-03** — web-admin RBAC nav + direct-URL 403 (role sessions)
-2. **03-04** — crop planning end-to-end (params → batch → 1-click mix → calendar)
-3. **03-05** — publish gate + manual-override permanence + harvest log
-4. **03-06** — B2B approval + standing reserve-before-B2C + overflow flag
-5. **03-07** — subscription generator + idempotency + substitution notice
-6. **03-08** — LIFF subscription/B2B customer flows (mobile/LINE)
-7. **03-09** — packing queue by route + Thai (Sarabun) PDF legibility
-8. **03-10** — dashboard cards + B2B/subscription card
-9. **03-11** — reports charts (stable channel colors) + Thai CSV export
-10. **03-12** — settings secret-absence + canned LINE chatbot in the LINE client
+1. **Operator rich-menu re-provision** — regenerate the 6-cell menu image, run
+   `provision-rich-menu.ts` with real LIFF_ID + channel token, confirm the สมาชิกกล่องผัก
+   button in the LINE client (code ready; Claude cannot run it).
+2. **LIFF discoverability** — on the real LINE in-app browser, confirm the catalog
+   quick-links to /subscription and /b2b are visible and tappable (code + test verified;
+   re-confirm live since the gap was found on mobile).
+3. **Subscription selected-state** — confirm the ring + ✓ makes the chosen package/frequency
+   obvious on a phone (mechanism test-pinned; visual judgment).
+4. **Standing-orders readable names** — confirm web-admin basket/customer columns render names
+   (not UUID prefixes) and update in place as data loads (no automated test).
 
 ### Gaps Summary
 
-No FAILED truths, no missing/stub artifacts, no broken key links — the phase goal is
-achieved in code with full automated coverage (298/0 + build). Two items carry forward:
-
-- **1 warning (follow-up, not a blocker):** the public `GET /catalog` leaks the b2b
-  wholesale tier to unauthenticated callers. Pre-existing and out-of-scope for Phase 3
-  (CUST-02's positive requirement is served by the gated `/me/b2b/prices`), but it is a
-  real wholesale-price / PDPA exposure that needs a decision — gate/omit the b2b tier in
-  the public catalog, or explicitly confirm it is intended to be public.
-- **10 blocking live-UAT checkpoints** must be exercised by a human before the phase is
-  signed off. These are behavioral surfaces (browser role-gating, LINE Flex/deep-link,
-  real Thai PDF glyphs, mobile LIFF) that are not auto-verifiable.
-
-Because automated verification is fully green but blocking human items remain, the phase
-status is **human_needed** (not `passed`).
+No FAILED truths, no missing/stub artifacts, no broken links, no regressions. All four UAT
+gaps are closed in code: gap #4 is fully behaviorally test-pinned (VERIFIED); gaps #1/#2 have
+code + view-test coverage plus one operator-only live step; gap #3 is the structurally-correct
+reactive fix but its async render behavior has no web-admin test. Because a genuine operator
+action remains and several closures are live-UI/async-render behaviors without automated
+coverage, the phase lands at **human_needed** — the automated surface is fully green
+(303/0 api, 33/0 web, both builds + web-admin typecheck), so a short device re-walk of the
+four items above completes sign-off.
 
 ---
 
-_Verified: 2026-07-11T02:03:03Z_
+_Verified: 2026-07-11T12:26:59Z_
 _Verifier: Claude (gsd-verifier)_
