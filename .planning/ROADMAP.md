@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 0: Foundation & Platform** - Single deployable backend, DB, storage, LINE client, HTTPS on VPS (completed 2026-07-02)
 - [x] **Phase 1: Commerce Core** - Oversell-safe harvest-bound reservation engine, catalog, pricing, rounds, mixed box (completed 2026-07-02)
 - [x] **Phase 2: LINE Storefront, Payments & Delivery** - LIFF + Rich Menu ordering, PromptPay + verified slips, hold-expiry, delivery, PDPA (completed 2026-07-04)
-- [ ] **Phase 3: Back-office, Crop Planning & B2B/Subscription** - Crop forecast auto-feeds stock, B2B quota, subscriptions, packing, dashboards, reports
+- [x] **Phase 3: Back-office, Crop Planning & B2B/Subscription** - Crop forecast auto-feeds stock, B2B quota, subscriptions, packing, dashboards, reports (completed 2026-07-11)
 - [ ] **Phase 4: Web Store, Marketing & Scale** - Web storefront, promotions/loyalty, broadcast, multi-carrier delivery, demand-driven planting
 
 ## Phase Details
@@ -140,7 +140,7 @@ Plans:
   4. Packing staff see a pack queue grouped by delivery route and print pack/label slips; role-based access limits owner/admin/grower/packer views.
   5. The dashboard summarizes today's/this-round sales, unpaid orders, near-sold-out items, and next-round yield; sales reports break down by period/channel/product/round; system settings are configurable; and a canned LINE chatbot answers menu/stock and takes orders.
 
-**Plans**: 11/12 plans executed
+**Plans**: 12/12 plans complete
 **UI hint**: yes
 
 Plans:
@@ -163,7 +163,7 @@ Plans:
 **Wave 3** *(blocked on their slice deps)*
 
 - [x] 03-05-PLAN.md — Forecast publish→sellable qty (admin gate + manual override) + harvest logging lot/best-before (CROP-04/05, INV-10) — deps 03-04 (wave 3)
-- [ ] 03-08-PLAN.md — LIFF customer: subscription signup/manage + B2B account (pending/wholesale/standing) + substitution detail (SALE-03/CUST-02/05) — deps 03-06/03-07 (wave 3)
+- [x] 03-08-PLAN.md — LIFF customer: subscription signup/manage + B2B account (pending/wholesale/standing) + substitution detail (SALE-03/CUST-02/05) — deps 03-06/03-07 (wave 3)
 
 ### Phase 4: Web Store, Marketing & Scale
 
@@ -195,5 +195,5 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 | 0. Foundation & Platform | 8/8 | Complete   | 2026-07-02 |
 | 1. Commerce Core | 5/5 | Complete   | 2026-07-02 |
 | 2. LINE Storefront, Payments & Delivery | 9/9 | Complete    | 2026-07-04 |
-| 3. Back-office, Crop Planning & B2B/Subscription | 11/12 | In Progress|  |
+| 3. Back-office, Crop Planning & B2B/Subscription | 12/12 | Complete   | 2026-07-11 |
 | 4. Web Store, Marketing & Scale | 0/TBD | Not started | - |

@@ -5,16 +5,16 @@ milestone_name: milestone
 current_phase: 03
 current_phase_name: back-office-crop-planning-b2b-subscription
 status: executing
-stopped_at: Completed 03-05-PLAN.md
-last_updated: "2026-07-11T01:36:52.356Z"
+stopped_at: Completed 03-08-PLAN.md (Task 3 human-verify pending)
+last_updated: "2026-07-11T01:58:07.099Z"
 last_activity: 2026-07-07
 last_activity_desc: Phase 03 execution started
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 34
-  completed_plans: 33
-  percent: 60
+  completed_plans: 34
+  percent: 80
 ---
 
 # Project State
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-06-28)
 ## Current Position
 
 Phase: 03 (back-office-crop-planning-b2b-subscription) — EXECUTING
-Plan: 11 of 12
+Plan: 12 of 12
 Status: Ready to execute
 Last activity: 2026-07-07 — Phase 03 execution started
 Note: CR-01/CR-02 code-review test-gaps CLOSED — added regression tests api/tests/verified-slip-park.test.ts (verified slip parked as awaiting_review + 202 when order cancelled mid-verify) and api/tests/created-hold-sweep.test.ts (created-path holdExpiresAt set + swept). api bun test 187 pass / 0 fail.
@@ -77,6 +77,7 @@ Progress: [████████░░] 77%
 | Phase 03 P11 | 35min | 3 tasks | 5 files |
 | Phase 03 P12 | 20min | 2 tasks | 8 files |
 | Phase 03 P05 | ~45min | 3 tasks | 7 files |
+| Phase 03 P08 | ~40min | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -111,6 +112,7 @@ Recent decisions affecting current work:
 - [Phase ?]: PUT /settings validates raw body via Value.Check (closed schema), not Elysia body schema which strips unknown props — secret-shaped key rejected 422
 - [Phase ?]: Canned LINE chatbot: keyword/postback -> Flex + LIFF deep-link; webhook signature block unchanged (D-25/Pitfall 1)
 - [Phase ?]: publishQuota single-owns the round-open sequence: reserveStanding in the quota-write tx (atomic reserve-before-B2C) + subscription-generate once post-commit, one-shot per round — Guarantees CUST-05 reserve-before-B2C with no race window and no double-reserve on re-publish
+- [Phase 03]: 03-08 customer LIFF: package value is server authority (S/M/L code only); /me/* endpoints reuse me-orders member gate + 03-06 wholesaleVisible — Close T-03-20 money tamper + T-03-21 wholesale leak on the customer surface without new auth
 
 ### Pending Todos
 
@@ -150,6 +152,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-11T01:36:38.297Z
-Stopped at: Completed 03-05-PLAN.md
+Last session: 2026-07-11T01:58:06.958Z
+Stopped at: Completed 03-08-PLAN.md (Task 3 human-verify pending)
 Resume file: None
