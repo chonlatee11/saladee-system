@@ -13,7 +13,7 @@
 // The recurring generation itself is NOT triggered here — jobs/boss.ts defines the
 // queue+worker and 03-05 publishQuota fires it post-publish (single trigger owner).
 // DI: makeSubscriptionsRoutes(db) mirrors the other route factories.
-import { and, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { Elysia, t } from "elysia";
 import { db as defaultDb } from "../db/client";
@@ -32,6 +32,23 @@ type SubscriptionsDb = PostgresJsDatabase<typeof schema>;
 
 const IdParams = t.Object({ id: t.String({ format: "uuid" }) });
 const SkipBody = t.Object({ roundId: t.String({ format: "uuid" }) });
+
+// Server-defined subscription package values (D-12 — a package is BY VALUE, S/M/L).
+// The customer picks a CODE only; the box's satang value is SERVER authority so a
+// tampered client body can never inflate the box (T-03-20 money surface). fillBox()
+// (03-07) fills each round's availability up to this value.
+const PACKAGE_VALUES: Record<"S" | "M" | "L", number> = {
+  S: 30000, // ฿300
+  M: 50000, // ฿500
+  L: 80000, // ฿800
+};
+
+// Customer signup body (03-08 LIFF): the client sends the CODE + frequency ONLY —
+// never the money value. packageValueSatang is resolved from PACKAGE_VALUES server-side.
+const CreateSubscriptionBody = t.Object({
+  packageCode: t.Union([t.Literal("S"), t.Literal("M"), t.Literal("L")]),
+  frequency: t.Union([t.Literal("weekly"), t.Literal("biweekly")]),
+});
 
 /** Extract a Bearer token from either the lower- or upper-case Authorization header. */
 function bearer(headers: Record<string, string | undefined>): string | undefined {
@@ -64,6 +81,52 @@ export function makeSubscriptionsRoutes(database: SubscriptionsDb = defaultDb) {
     }
     // A customer touching someone else's subscription — hide its existence (T-03-18).
     return { ok: false, status: 404, error: "subscription_not_found" };
+  }
+
+  // Member gate for the customer self-service list/create (03-08 LIFF): a valid
+  // CUSTOMER session whose customer row bears a line_user_id (mirrors me-orders
+  // D-19). Returns the member customerId when allowed, else an HTTP mapping. Staff
+  // manage subscriptions through the admin roster, not this member surface.
+  async function requireMember(
+    session: Session | null,
+    set: { status?: number | string },
+  ): Promise<{ ok: true; customerId: string } | { ok: false; error: string }> {
+    if (!session) {
+      set.status = 401;
+      return { ok: false, error: "unauthorized" };
+    }
+    if (session.role !== "customer") {
+      set.status = 403;
+      return { ok: false, error: "forbidden" };
+    }
+    const [cust] = await database
+      .select({ lineUserId: customers.lineUserId })
+      .from(customers)
+      .where(eq(customers.id, session.sub))
+      .limit(1);
+    if (!cust || cust.lineUserId === null) {
+      set.status = 403;
+      return { ok: false, error: "forbidden" };
+    }
+    return { ok: true, customerId: session.sub };
+  }
+
+  // The soonest upcoming OPEN round (id · name · cut-off · delivery) — the customer
+  // manage view needs it to offer a round-specific skip and render the after-cut-off
+  // locked notice (D-14). The cut-off is SERVER authority; the UI only mirrors it.
+  async function nextOpenRound() {
+    const [round] = await database
+      .select({
+        id: rounds.id,
+        name: rounds.name,
+        cutoffAt: rounds.cutoffAt,
+        deliveryDate: rounds.deliveryDate,
+      })
+      .from(rounds)
+      .where(eq(rounds.status, "open"))
+      .orderBy(asc(rounds.cutoffAt), asc(rounds.deliveryDate))
+      .limit(1);
+    return round ?? null;
   }
 
   /** Flip a subscription's status (pause/resume/cancel share this shape). */
@@ -225,6 +288,54 @@ export function makeSubscriptionsRoutes(database: SubscriptionsDb = defaultDb) {
           return { subscriptionId: params.id, roundId: body.roundId, skipped: true };
         },
         { params: IdParams, body: SkipBody },
+      )
+
+      // ── Customer self-service: list own + sign up (03-08 LIFF, SALE-03) ────────
+      // The member's OWN subscriptions + the next open round (for skip + cut-off
+      // notice). Scoped by session.sub — never another member's (T-03-20 IDOR).
+      .get("/me/subscriptions", async ({ session, set }) => {
+        const guard = await requireMember(session, set);
+        if (!guard.ok) return { error: guard.error };
+        const subs = await database
+          .select({
+            id: subscriptions.id,
+            packageCode: subscriptions.packageCode,
+            packageValueSatang: subscriptions.packageValueSatang,
+            frequency: subscriptions.frequency,
+            status: subscriptions.status,
+            createdAt: subscriptions.createdAt,
+          })
+          .from(subscriptions)
+          .where(eq(subscriptions.customerId, guard.customerId))
+          .orderBy(asc(subscriptions.createdAt));
+        return { subscriptions: subs, nextRound: await nextOpenRound() };
+      })
+      // Sign up for a box (D-12): CODE + frequency in; packageValueSatang is resolved
+      // SERVER-side from PACKAGE_VALUES (never trusts a client money value, T-03-20).
+      .post(
+        "/me/subscriptions",
+        async ({ session, body, set }) => {
+          const guard = await requireMember(session, set);
+          if (!guard.ok) return { error: guard.error };
+          const [row] = await database
+            .insert(subscriptions)
+            .values({
+              customerId: guard.customerId,
+              packageCode: body.packageCode,
+              packageValueSatang: PACKAGE_VALUES[body.packageCode],
+              frequency: body.frequency,
+            })
+            .returning({
+              id: subscriptions.id,
+              packageCode: subscriptions.packageCode,
+              packageValueSatang: subscriptions.packageValueSatang,
+              frequency: subscriptions.frequency,
+              status: subscriptions.status,
+            });
+          set.status = 201;
+          return row;
+        },
+        { body: CreateSubscriptionBody },
       )
   );
 }

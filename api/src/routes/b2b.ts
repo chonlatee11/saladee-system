@@ -22,10 +22,16 @@ import {
   standingOrders,
   varieties,
 } from "../db/schema";
-import { requireRole } from "../plugins/auth.plugin";
+import { requireRole, type Session, verifySession } from "../plugins/auth.plugin";
 import { wholesaleVisible } from "../services/b2b";
 
 type CatalogDb = PostgresJsDatabase<typeof schema>;
+
+/** Extract a Bearer token from either the lower- or upper-case Authorization header. */
+function bearer(headers: Record<string, string | undefined>): string | undefined {
+  const header = headers.authorization ?? headers.Authorization;
+  return header?.startsWith("Bearer ") ? header.slice(7) : undefined;
+}
 
 // ── TypeBox schemas (input validation, T-03-09) ───────────────────────────────
 const IdParams = t.Object({ id: t.String({ format: "uuid" }) });
@@ -48,6 +54,15 @@ const CreateStandingBody = t.Object({
   customerId: t.String({ format: "uuid" }),
   items: t.Array(StandingItemBody, { minItems: 1 }),
 });
+// Customer self-service standing order (03-08 LIFF): the customerId is the SESSION,
+// never a client field — a customer can only ever set their OWN basket (T-03-20).
+const CustomerStandingBody = t.Object({
+  items: t.Array(StandingItemBody, { minItems: 1 }),
+});
+const WholesalePriceQuery = t.Object({
+  roundId: t.String({ format: "uuid" }),
+  varietyId: t.String({ format: "uuid" }),
+});
 const PatchStandingBody = t.Object({
   active: t.Optional(t.Boolean()),
   items: t.Optional(t.Array(StandingItemBody, { minItems: 1 })),
@@ -56,8 +71,51 @@ const PatchStandingBody = t.Object({
 export function makeB2bRoutes(database: CatalogDb = defaultDb) {
   const staff = requireRole("owner", "admin");
 
+  // Member gate for the customer B2B self-service surface (03-08 LIFF): a valid
+  // CUSTOMER session whose customer row bears a line_user_id (mirrors me-orders
+  // D-19). The staff routes above use their own requireRole beforeHandle and ignore
+  // this — the `.derive` only ADDS `session` to context, never gates the staff paths.
+  async function requireMember(
+    session: Session | null,
+    set: { status?: number | string },
+  ): Promise<
+    | { ok: true; customerId: string; row: typeof customers.$inferSelect }
+    | { ok: false; error: string }
+  > {
+    if (!session) {
+      set.status = 401;
+      return { ok: false, error: "unauthorized" };
+    }
+    if (session.role !== "customer") {
+      set.status = 403;
+      return { ok: false, error: "forbidden" };
+    }
+    const [row] = await database
+      .select()
+      .from(customers)
+      .where(eq(customers.id, session.sub))
+      .limit(1);
+    if (!row || row.lineUserId === null) {
+      set.status = 403;
+      return { ok: false, error: "forbidden" };
+    }
+    return { ok: true, customerId: session.sub, row };
+  }
+
   return (
     new Elysia()
+      // Resolve the session once per request (null for missing/invalid tokens). Only
+      // the /me/* customer routes below read it; staff routes keep their requireRole
+      // beforeHandle (which re-reads the header itself), so this is additive.
+      .derive(async ({ headers }) => {
+        const token = bearer(headers);
+        if (!token) return { session: null as Session | null };
+        try {
+          return { session: (await verifySession(token)) as Session | null };
+        } catch {
+          return { session: null as Session | null };
+        }
+      })
       // ── Approval (D-08 / CUST-02) ───────────────────────────────────────────
       // Pending applicants awaiting an approve/reject decision.
       .get(
@@ -292,6 +350,127 @@ export function makeB2bRoutes(database: CatalogDb = defaultDb) {
           return { id: order.id, active: false };
         },
         { params: IdParams, beforeHandle: staff },
+      )
+
+      // ══ Customer self-service B2B surface (03-08 LIFF, CUST-02 / CUST-05) ══════
+      // The LIFF B2B account view. All scoped to session.sub — a customer can only
+      // see/act on their OWN account (T-03-20); wholesale price stays gated on
+      // approved (T-03-21). UI mirrors these states; the server is the authority.
+
+      // Own B2B account status (null=not applied / pending / approved / rejected).
+      .get("/me/b2b", async ({ session, set }) => {
+        const guard = await requireMember(session, set);
+        if (!guard.ok) return { error: guard.error };
+        return {
+          b2bStatus: guard.row.b2bStatus,
+          creditTerms: guard.row.creditTerms,
+          b2bApprovedAt: guard.row.b2bApprovedAt,
+        };
+      })
+      // Apply for a B2B account: a plain B2C customer (b2bStatus null) requests
+      // approval → pending. Idempotent-ish: only null flips to pending (never
+      // re-opens an approved/rejected decision, which is staff-owned, D-08).
+      .post("/me/b2b/apply", async ({ session, set }) => {
+        const guard = await requireMember(session, set);
+        if (!guard.ok) return { error: guard.error };
+        if (guard.row.b2bStatus !== null) {
+          return { b2bStatus: guard.row.b2bStatus };
+        }
+        const [row] = await database
+          .update(customers)
+          .set({ b2bStatus: "pending" })
+          .where(eq(customers.id, guard.customerId))
+          .returning({ b2bStatus: customers.b2bStatus });
+        set.status = 201;
+        return row;
+      })
+      // Own wholesale price — gated behind wholesaleVisible() (approved-only, D-08 /
+      // T-03-21). A pending/rejected/B2C member never sees the b2b tier → 403.
+      .get(
+        "/me/b2b/prices",
+        async ({ session, query, set }) => {
+          const guard = await requireMember(session, set);
+          if (!guard.ok) return { error: guard.error };
+          if (!(await wholesaleVisible(database, guard.customerId))) {
+            set.status = 403;
+            return { error: "not_b2b_approved" };
+          }
+          const [row] = await database
+            .select({ pricePerKgSatang: prices.pricePerKgSatang })
+            .from(prices)
+            .where(
+              and(
+                eq(prices.roundId, query.roundId),
+                eq(prices.varietyId, query.varietyId),
+                eq(prices.tier, "b2b"),
+                isNull(prices.effectiveDate),
+              ),
+            )
+            .limit(1);
+          if (!row) {
+            set.status = 404;
+            return { error: "no_price" };
+          }
+          return {
+            roundId: query.roundId,
+            varietyId: query.varietyId,
+            tier: "b2b" as const,
+            pricePerKgSatang: row.pricePerKgSatang,
+          };
+        },
+        { query: WholesalePriceQuery },
+      )
+      // Own standing orders (the recurring basket) + their items.
+      .get("/me/standing-orders", async ({ session, set }) => {
+        const guard = await requireMember(session, set);
+        if (!guard.ok) return { error: guard.error };
+        const orders = await database
+          .select()
+          .from(standingOrders)
+          .where(eq(standingOrders.customerId, guard.customerId));
+        if (orders.length === 0) return { standingOrders: [] };
+        const items = await database.select().from(standingOrderItems);
+        return {
+          standingOrders: orders.map((o) => ({
+            ...o,
+            items: items.filter((it) => it.standingId === o.id),
+          })),
+        };
+      })
+      // Set own standing order (CUST-05) — gated on approved (T-03-21); customerId is
+      // the SESSION, never a client field (T-03-20). Reservation at round-open still
+      // runs only through 03-05 publishQuota → reserveStanding (single owner).
+      .post(
+        "/me/standing-orders",
+        async ({ session, body, set }) => {
+          const guard = await requireMember(session, set);
+          if (!guard.ok) return { error: guard.error };
+          if (!(await wholesaleVisible(database, guard.customerId))) {
+            set.status = 403;
+            return { error: "not_b2b_approved" };
+          }
+          const created = await database.transaction(async (tx) => {
+            const [order] = await tx
+              .insert(standingOrders)
+              .values({ customerId: guard.customerId })
+              .returning();
+            if (!order) throw new Error("standing order insert returned no row");
+            const items = await tx
+              .insert(standingOrderItems)
+              .values(
+                body.items.map((it) => ({
+                  standingId: order.id,
+                  varietyId: it.varietyId,
+                  plantsPerRound: it.plantsPerRound,
+                })),
+              )
+              .returning();
+            return { ...order, items };
+          });
+          set.status = 201;
+          return created;
+        },
+        { body: CustomerStandingBody },
       )
   );
 }
