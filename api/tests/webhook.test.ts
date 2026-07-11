@@ -35,8 +35,13 @@ function post(headers: Record<string, string>, body: string): Promise<Response> 
   return app.handle(new Request("http://localhost/webhook", { method: "POST", headers, body }));
 }
 
-describe("POST /webhook — raw-body signature validation + echo", () => {
-  test("valid signature over a Thai payload → 200 and echoes the text back", async () => {
+describe("POST /webhook — raw-body signature validation + canned reply", () => {
+  // The raw-bytes-first signature path is UNCHANGED (Pitfall 1). What changed in
+  // 03-12 is the post-validation reply: the placeholder echo is replaced by the
+  // canned chatbot router (D-25). An unmatched keyword now yields a fallback text —
+  // exhaustive canned/keyword coverage lives in chatbot-router.test.ts; here we only
+  // re-assert the signature boundary still admits a valid Thai-payload request.
+  test("valid signature over a Thai payload → 200 and a reply is sent", async () => {
     replySpy.mockClear();
     const body = JSON.stringify({
       events: [
@@ -56,10 +61,11 @@ describe("POST /webhook — raw-body signature validation + echo", () => {
     expect(res.status).toBe(200);
     expect(replySpy).toHaveBeenCalledTimes(1);
     const arg = replySpy.mock.calls.at(0)?.at(0) as
-      | { replyToken: string; messages: { type: string; text: string }[] }
+      | { replyToken: string; messages: { type: string; text?: string }[] }
       | undefined;
     expect(arg?.replyToken).toBe("reply-token-abc");
-    expect(arg?.messages.at(0)?.text).toBe("สวัสดีจากสวนสลัด");
+    // Unmatched keyword → fallback text guiding the user to the canned keywords.
+    expect(arg?.messages.at(0)?.text).toContain("เมนูรอบนี้");
   });
 
   test("wrong signature → 401 and no reply is sent", async () => {
