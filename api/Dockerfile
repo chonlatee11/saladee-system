@@ -14,6 +14,7 @@ ENV NODE_ENV=production
 COPY package.json bun.lock ./
 COPY api/package.json ./api/package.json
 COPY web/package.json ./web/package.json
+COPY web-admin/package.json ./web-admin/package.json
 RUN bun install --frozen-lockfile
 
 # 2) API source (the web workspace is built + deployed separately to Pages).
