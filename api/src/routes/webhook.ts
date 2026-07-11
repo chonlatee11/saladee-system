@@ -44,9 +44,9 @@ type CannedKey = "menu" | "price" | "stock";
 
 // Thai keyword (exact text) → canned card. Copy per 03-UI-SPEC §Chatbot.
 const KEYWORD_TO_KEY: Record<string, CannedKey> = {
-  เมนูรอบนี้: "menu",
-  ราคาวันนี้: "price",
-  ของเหลือ: "stock",
+  ผักรอบนี้: "menu",
+  ราคาผักรอบนี้: "price",
+  สั่งผักรอบนี้: "stock",
 };
 
 // Rich-menu / quick-reply postback data → the same cards.
@@ -59,28 +59,28 @@ const POSTBACK_TO_KEY: Record<string, CannedKey> = {
 // Per-card copy: title, body, CTA label, and the LIFF path the button opens.
 const CANNED_COPY: Record<CannedKey, { title: string; body: string; cta: string; path: string }> = {
   menu: {
-    title: "เมนูรอบนี้ 🥬",
+    title: "ผักรอบนี้ 🥬",
     body: "ดูรายชื่อผักสลัดที่เปิดขายรอบนี้และสั่งได้เลยในแอป",
-    cta: "สั่งเลย",
+    cta: "ดูเมนู",
     path: "",
   },
   price: {
-    title: "ราคาวันนี้ 💰",
-    body: "ดูราคาต่อชนิดของวันนี้ (ราคาส่งเฉพาะบัญชี B2B ที่อนุมัติแล้ว)",
+    title: "ราคาผักรอบนี้ 💰",
+    body: "ดูราคาต่อชนิดของรอบนี้ (ราคาส่งเฉพาะบัญชี B2B ที่อนุมัติแล้ว)",
     cta: "ดูทั้งหมด",
     path: "prices",
   },
+  // "สั่งผักรอบนี้" → open the catalog to order (path=""); no longer the low-stock card.
   stock: {
-    title: "ของเหลือรอบนี้ ⏳",
-    body: "เช็กชนิดที่ใกล้หมด/หมดแล้วรอบนี้ แล้วสั่งก่อนหมด",
-    cta: "สั่งก่อนหมด",
-    path: "?filter=low",
+    title: "สั่งผักรอบนี้ 🛒",
+    body: "เลือกผักสลัดรอบนี้ ใส่ตะกร้า แล้วสั่งได้เลยในแอป",
+    cta: "สั่งเลย",
+    path: "",
   },
 };
 
 // Fallback for unmatched input (03-UI-SPEC §Chatbot fallback row).
-const FALLBACK_TEXT =
-  'พิมพ์ "เมนูรอบนี้", "ราคาวันนี้" หรือ "ของเหลือ" เพื่อดูข้อมูล หรือกดเมนูด้านล่างเพื่อสั่งซื้อ';
+const FALLBACK_TEXT = 'พิมพ์ "ผักรอบนี้", "ราคาผักรอบนี้" หรือ "สั่งผักรอบนี้" เพื่อดูข้อมูล หรือกดเมนูด้านล่างเพื่อสั่งซื้อ';
 
 /** Build a canned Flex bubble with a footer LIFF deep-link button (like buildOrderFlex). */
 export function buildCannedFlex(key: CannedKey): messagingApi.FlexMessage {
@@ -96,7 +96,14 @@ export function buildCannedFlex(key: CannedKey): messagingApi.FlexMessage {
         layout: "vertical",
         spacing: "md",
         contents: [
-          { type: "text", text: copy.title, weight: "bold", size: "lg", color: "#3a7d20", wrap: true },
+          {
+            type: "text",
+            text: copy.title,
+            weight: "bold",
+            size: "lg",
+            color: "#3a7d20",
+            wrap: true,
+          },
           { type: "text", text: copy.body, size: "sm", color: "#555555", wrap: true },
         ],
       },

@@ -65,7 +65,7 @@ describe("POST /webhook — raw-body signature validation + canned reply", () =>
       | undefined;
     expect(arg?.replyToken).toBe("reply-token-abc");
     // Unmatched keyword → fallback text guiding the user to the canned keywords.
-    expect(arg?.messages.at(0)?.text).toContain("เมนูรอบนี้");
+    expect(arg?.messages.at(0)?.text).toContain("ผักรอบนี้");
   });
 
   test("wrong signature → 401 and no reply is sent", async () => {

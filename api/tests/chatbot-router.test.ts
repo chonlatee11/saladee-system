@@ -1,7 +1,7 @@
 // MKT-02 / D-25 — canned LINE chatbot router on the EXISTING /webhook route.
 //
 // The keyword/postback router replies with a Flex card + a LIFF deep-link button
-// for "เมนูรอบนี้" / "ราคาวันนี้" / "ของเหลือ"; anything else gets a fallback text
+// for "ผักรอบนี้" / "ราคาผักรอบนี้" / "สั่งผักรอบนี้"; anything else gets a fallback text
 // (NO NLU, NO in-chat order state). CRITICALLY the raw-bytes-first signature check
 // (Pitfall 1 / T-03-32) is unchanged: a forged or absent x-line-signature is still
 // rejected with 401 BEFORE the router ever runs. We sign a NON-ASCII Thai payload
@@ -57,23 +57,23 @@ function deepLinkOf(flex: Record<string, unknown>): string | undefined {
 }
 
 describe("canned chatbot router — keyword → Flex + LIFF deep-link (MKT-02/D-25)", () => {
-  test('"เมนูรอบนี้" → a Flex card whose footer button deep-links into LIFF', async () => {
-    const { res, arg } = await sendText("เมนูรอบนี้");
+  test('"ผักรอบนี้" → a Flex card whose footer button deep-links into LIFF', async () => {
+    const { res, arg } = await sendText("ผักรอบนี้");
     expect(res.status).toBe(200);
     const msg = arg?.messages.at(0) as Record<string, unknown>;
     expect(msg?.type).toBe("flex");
     expect(deepLinkOf(msg)).toContain("https://liff.line.me/");
   });
 
-  test('"ราคาวันนี้" → Flex + deep-link', async () => {
-    const { arg } = await sendText("ราคาวันนี้");
+  test('"ราคาผักรอบนี้" → Flex + deep-link', async () => {
+    const { arg } = await sendText("ราคาผักรอบนี้");
     const msg = arg?.messages.at(0) as Record<string, unknown>;
     expect(msg?.type).toBe("flex");
     expect(deepLinkOf(msg)).toContain("https://liff.line.me/");
   });
 
-  test('"ของเหลือ" → Flex + deep-link', async () => {
-    const { arg } = await sendText("ของเหลือ");
+  test('"สั่งผักรอบนี้" → Flex + deep-link', async () => {
+    const { arg } = await sendText("สั่งผักรอบนี้");
     const msg = arg?.messages.at(0) as Record<string, unknown>;
     expect(msg?.type).toBe("flex");
     expect(deepLinkOf(msg)).toContain("https://liff.line.me/");
@@ -84,7 +84,7 @@ describe("canned chatbot router — keyword → Flex + LIFF deep-link (MKT-02/D-
     expect(res.status).toBe(200);
     const msg = arg?.messages.at(0) as { type: string; text?: string };
     expect(msg?.type).toBe("text");
-    expect(msg?.text).toContain("เมนูรอบนี้");
+    expect(msg?.text).toContain("ผักรอบนี้");
   });
 
   test("postback data routes to a Flex card too", async () => {
