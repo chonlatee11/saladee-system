@@ -4,8 +4,8 @@ source: 03-VERIFICATION.md
 status: testing
 generated: 2026-07-11
 total_items: 10
-passed: 5
-issues: 1
+passed: 9
+issues: 3
 fixed: 2
 ---
 
@@ -56,7 +56,54 @@ reported: "1.publish ทำได้ 2.override survive re-publish ทำได�
 - pause/skip/cancel via UI ✓
 - Substitution notice ✓ (simulated: sold-out variety → box filled from available + notify() fired with {lineUserId, box, totalSatang}; real LINE push needs live creds but trigger+payload path confirmed)
 
+### 6. LIFF subscription/B2B customer flows — **partial** (flows work; 1 major discoverability gap + 1 minor)
+- Catalog/round-open ✓ (after publishing the round; deployed LIFF reflects same Neon).
+- Subscription signup ✓ (customer subscribed successfully) — minor: selected package is hard to see (selected state is only `border-accent bg-accent/5` at 5% opacity).
+- B2B apply → pending → approve (web-admin) → wholesale ✓.
+- Standing order + substitution detail ✓ (live customer line U199…2980: B2B approved, standing order กรีนโอ๊ค×15/เรดโอ๊ค×10 shown on /b2b, subscription box #bbe4afd6 shows substitution notice on order detail) — user confirmed all pass.
+- **MAJOR discoverability gap:** the /subscription and /b2b views + routes + /me endpoints all exist (03-08) but there is NO entry point — the Rich Menu (`provision-rich-menu.ts`) only deep-links 5 buttons (catalog/prices/orders/contact/care) and no in-app link points to them. Reachable only via a hand-built LIFF deep link.
+
+### 7. Packing queue by route + Thai PDF — **pass**
+- Paid orders grouped by round → delivery zone/method ✓; pack/label PDF opens with legible Sarabun Thai (no tofu), print-safe ✓.
+
+### 8. Dashboard cards — **pass**
+- Cards 1–4 (sales today/round, unpaid, near-sold-out, next-round yield) live + correct ✓.
+- Card 5 (B2B/subscription + overflow) ✓ — showed standingDue 2 / subsDue 1 / overflow warning (กรีนโอ๊ค ขาด 25). Note: dashboard picks the *latest* open round; a leftover test round (created during Test 6 setup) briefly masked the overflow card until it was closed — test-data artefact, not a code defect.
+
+### 9. Reports charts + CSV — **pass** (cosmetic polish noted)
+- Period/channel/product/round filters update charts ✓; stable channel↔color mapping ✓; best-sellers/AOV/repeat correct ✓; Thai CSV opens without mojibake ✓.
+- User noted general visual-polish concerns (cosmetic, non-blocking) — candidate for a dedicated /gsd-ui-review pass.
+
 ## Gaps
+
+- truth: "A LINE customer can reach subscription sign-up (SALE-03) and B2B account (CUST-02) from the LIFF"
+  status: failed
+  reason: "The /subscription and /b2b views exist but have NO entry point — the Rich Menu deep-links only 5 unrelated routes and no in-app navigation links to them. Reachable only by manually opening a LIFF deep link."
+  severity: major
+  test: 6
+  root_cause: "03-08 added the LIFF views + routes + /me endpoints but did not add discovery: provision-rich-menu.ts was not extended with subscription/B2B buttons, and no in-app nav (menu/link) points to /subscription or /b2b."
+  artifacts:
+    - path: "api/scripts/provision-rich-menu.ts"
+      issue: "Rich Menu provisions 5 areas (catalog/prices/orders/contact/care); no /subscription or /b2b"
+    - path: "web/src"
+      issue: "no RouterLink / navigation to /subscription or /b2b from any view"
+  missing:
+    - "Add discoverable entry points for /subscription and /b2b (Rich Menu buttons and/or an in-LIFF account menu/links)"
+  debug_session: ""
+
+- truth: "The subscription signup makes the currently-selected package obvious"
+  status: failed
+  reason: "User reported: during signup 'ดูไม่ออกว่าเลือกอะไร' — cannot tell which package is selected"
+  severity: minor
+  test: 6
+  root_cause: "web/src/views/SubscriptionSignup.vue selected state is only border-accent + bg-accent/5 (5% opacity) — too subtle to read on mobile; functionally correct (aria-pressed toggles)."
+  artifacts:
+    - path: "web/src/views/SubscriptionSignup.vue"
+      issue: "selected package indication too subtle (line ~172-178)"
+  missing:
+    - "Strengthen the selected-package visual (e.g. solid accent border/ring, check icon, stronger bg)"
+  debug_session: ""
+
 
 - truth: "Standing-order basket shows human-readable variety names, not raw ids"
   status: failed
