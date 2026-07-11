@@ -80,8 +80,7 @@ const CANNED_COPY: Record<CannedKey, { title: string; body: string; cta: string;
 };
 
 // Fallback for unmatched input (03-UI-SPEC §Chatbot fallback row).
-const FALLBACK_TEXT =
-  'พิมพ์ "ผักรอบนี้", "ราคาผักรอบนี้" หรือ "สั่งผักรอบนี้" เพื่อดูข้อมูล หรือกดเมนูด้านล่างเพื่อสั่งซื้อ';
+const FALLBACK_TEXT = 'พิมพ์ "ผักรอบนี้", "ราคาผักรอบนี้" หรือ "สั่งผักรอบนี้" เพื่อดูข้อมูล หรือกดเมนูด้านล่างเพื่อสั่งซื้อ';
 
 /** Build a canned Flex bubble with a footer LIFF deep-link button (like buildOrderFlex). */
 export function buildCannedFlex(key: CannedKey): messagingApi.FlexMessage {
@@ -97,7 +96,14 @@ export function buildCannedFlex(key: CannedKey): messagingApi.FlexMessage {
         layout: "vertical",
         spacing: "md",
         contents: [
-          { type: "text", text: copy.title, weight: "bold", size: "lg", color: "#3a7d20", wrap: true },
+          {
+            type: "text",
+            text: copy.title,
+            weight: "bold",
+            size: "lg",
+            color: "#3a7d20",
+            wrap: true,
+          },
           { type: "text", text: copy.body, size: "sm", color: "#555555", wrap: true },
         ],
       },
