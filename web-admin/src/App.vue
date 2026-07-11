@@ -3,7 +3,7 @@
 // inside the AppShell (sidebar + toolbar). A Suspense boundary shows a Thai loading
 // state for the lazily-imported view chunks and an onErrorCaptured boundary keeps a
 // failed chunk from blanking the whole app.
-import { computed, onErrorCaptured, ref } from "vue";
+import { computed, onErrorCaptured, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import AppShell from "./components/AppShell.vue";
 import type { AdminRouteMeta } from "./router";
@@ -16,6 +16,15 @@ onErrorCaptured(() => {
   failed.value = true;
   return false; // contain the error at the shell
 });
+// Clear the contained-error state on navigation so a single failed view never
+// poisons every other route until a hard refresh (a caught error otherwise keeps
+// `failed` true for the whole AppShell across client-side navigations).
+watch(
+  () => route.path,
+  () => {
+    failed.value = false;
+  },
+);
 </script>
 
 <template>

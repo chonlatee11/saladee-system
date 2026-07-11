@@ -11,6 +11,7 @@ import { computed, ref } from "vue";
 import DataTable from "../components/DataTable.vue";
 import { usePlantingBatches } from "../composables/useCrop";
 import { useHarvestLogs, useLogHarvest } from "../composables/useHarvest";
+import { fmtDate } from "../lib/date";
 
 interface BatchRow {
   id: string;
@@ -51,12 +52,12 @@ const columns: ColumnDef<LogRow, unknown>[] = [
   {
     id: "harvested",
     header: "วันเก็บเกี่ยว",
-    accessorFn: (r) => r.harvestedAt.slice(0, 10),
+    accessorFn: (r) => fmtDate(r.harvestedAt),
   },
   {
     id: "bestBefore",
     header: "ควรใช้ก่อน",
-    accessorFn: (r) => r.bestBefore.slice(0, 10),
+    accessorFn: (r) => fmtDate(r.bestBefore),
   },
   { id: "actual", header: "เก็บได้ (ต้น)", accessorKey: "actualPlants", meta: { numeric: true } },
   { id: "delta", header: "เทียบคาดการณ์", accessorKey: "delta", meta: { numeric: true } },
@@ -180,7 +181,7 @@ async function submitForm(): Promise<void> {
             @change="formActualPlants = selectedBatch?.expectedPlants ?? 0"
           >
             <option v-for="b in loggableBatches" :key="b.id" :value="b.id">
-              {{ b.varietyName }} · ปลูก {{ b.plantDate.slice(0, 10) }} · คาด {{ b.expectedPlants }} ต้น
+              {{ b.varietyName }} · ปลูก {{ fmtDate(b.plantDate) }} · คาด {{ b.expectedPlants }} ต้น
             </option>
           </select>
         </label>

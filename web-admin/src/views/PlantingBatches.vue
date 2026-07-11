@@ -13,6 +13,7 @@ import {
   useUpdateBatch,
   useVarieties,
 } from "../composables/useCrop";
+import { fmtDate } from "../lib/date";
 
 interface BatchRow {
   id: string;
@@ -31,11 +32,10 @@ const createBatch = useCreateBatch();
 const updateBatch = useUpdateBatch();
 const deleteBatch = useDeleteBatch();
 
-// Eden infers Date for timestamptz columns; at runtime they arrive as ISO
-// strings (JSON), which fmtDate slices — cast through unknown to bridge the two.
+// Eden infers Date for timestamptz columns and at runtime hands back Date
+// objects (NOT ISO strings), so date fields go through the shared fmtDate() which
+// accepts Date | string — cast through unknown to bridge the declared string type.
 const rows = computed<BatchRow[]>(() => (batches.value ?? []) as unknown as BatchRow[]);
-
-const fmtDate = (iso: string) => iso.slice(0, 10);
 
 const columns: ColumnDef<BatchRow, unknown>[] = [
   { accessorKey: "varietyName", header: "พันธุ์ผัก" },
