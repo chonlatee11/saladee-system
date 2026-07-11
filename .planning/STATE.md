@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 03
 current_phase_name: back-office-crop-planning-b2b-subscription
 status: executing
-stopped_at: Completed 03-11-PLAN.md (Task 3 human-verify pending)
-last_updated: "2026-07-11T01:14:49.753Z"
+stopped_at: Completed 03-05-PLAN.md
+last_updated: "2026-07-11T01:36:52.356Z"
 last_activity: 2026-07-07
 last_activity_desc: Phase 03 execution started
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 34
-  completed_plans: 32
+  completed_plans: 33
   percent: 60
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-06-28)
 ## Current Position
 
 Phase: 03 (back-office-crop-planning-b2b-subscription) — EXECUTING
-Plan: 10 of 12
+Plan: 11 of 12
 Status: Ready to execute
 Last activity: 2026-07-07 — Phase 03 execution started
 Note: CR-01/CR-02 code-review test-gaps CLOSED — added regression tests api/tests/verified-slip-park.test.ts (verified slip parked as awaiting_review + 202 when order cancelled mid-verify) and api/tests/created-hold-sweep.test.ts (created-path holdExpiresAt set + swept). api bun test 187 pass / 0 fail.
@@ -76,6 +76,7 @@ Progress: [████████░░] 77%
 | Phase 03 P10 | 22min | 2 tasks | 4 files |
 | Phase 03 P11 | 35min | 3 tasks | 5 files |
 | Phase 03 P12 | 20min | 2 tasks | 8 files |
+| Phase 03 P05 | ~45min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -109,6 +110,7 @@ Recent decisions affecting current work:
 - [Phase ?]: Settings hot surface = 4 allow-listed keys; secrets stay in env.ts, never in settings table/API (T-03-31)
 - [Phase ?]: PUT /settings validates raw body via Value.Check (closed schema), not Elysia body schema which strips unknown props — secret-shaped key rejected 422
 - [Phase ?]: Canned LINE chatbot: keyword/postback -> Flex + LIFF deep-link; webhook signature block unchanged (D-25/Pitfall 1)
+- [Phase ?]: publishQuota single-owns the round-open sequence: reserveStanding in the quota-write tx (atomic reserve-before-B2C) + subscription-generate once post-commit, one-shot per round — Guarantees CUST-05 reserve-before-B2C with no race window and no double-reserve on re-publish
 
 ### Pending Todos
 
@@ -148,6 +150,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-11T01:14:06.639Z
-Stopped at: Completed 03-11-PLAN.md (Task 3 human-verify pending)
+Last session: 2026-07-11T01:36:38.297Z
+Stopped at: Completed 03-05-PLAN.md
 Resume file: None

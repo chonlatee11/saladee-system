@@ -29,7 +29,7 @@
 - [ ] **INV-07**: กล่องสลัดผสม (Mixed Salad Box / Bundle) — จำนวนที่ขายได้ = จำกัดตามชนิดที่มีน้อยสุด, ตัดสต็อกทุกส่วนประกอบใน transaction เดียว (FR-51)
 - [ ] **INV-08**: สินค้าที่หมดตั้งสถานะ "หมดรอบนี้" และลูกค้ากดขอแจ้งเตือนเมื่อมีของได้ (FR-06)
 - [ ] **INV-09**: กำหนดนโยบายสินค้าทดแทน (substitution) ต่อออเดอร์ (อนุญาต/ไม่อนุญาต) (FR-07)
-- [ ] **INV-10**: บันทึกล็อต/วันเก็บเกี่ยว/best-before เพื่อ traceability (FR-05)
+- [x] **INV-10**: บันทึกล็อต/วันเก็บเกี่ยว/best-before เพื่อ traceability (FR-05)
 
 ### SALE — รูปแบบการขาย
 
@@ -87,8 +87,8 @@
 - [x] **CROP-01**: ทะเบียนชนิดผัก (Variety) พร้อมพารามิเตอร์ — days-to-harvest, น้ำหนักเฉลี่ย/ต้น, อัตรารอด, หน้าต่างเก็บเกี่ยว (FR-40)
 - [x] **CROP-02**: บันทึกรุ่นปลูก (Planting Batch) — ชนิดผัก, วันปลูก, จำนวนต้น, แปลง/โต๊ะ/ราง (FR-41)
 - [x] **CROP-03**: ระบบคำนวณอัตโนมัติ — วันเก็บคาด, ผลผลิตคาด (ต้น/น้ำหนัก) จากพารามิเตอร์ชนิดผัก (FR-42)
-- [ ] **CROP-04**: ปฏิทินเก็บเกี่ยว (Harvest Calendar) รายสัปดาห์ → ป้อนเป็นจำนวนเปิดขายต่อรอบอัตโนมัติ (แทนการกรอกมือ) (FR-43)
-- [ ] **CROP-05**: บันทึกผลเก็บเกี่ยวจริง (วันเก็บ/จำนวน/น้ำหนัก/ของเสีย) เทียบค่าคาดเพื่อปรับพารามิเตอร์ (FR-44)
+- [x] **CROP-04**: ปฏิทินเก็บเกี่ยว (Harvest Calendar) รายสัปดาห์ → ป้อนเป็นจำนวนเปิดขายต่อรอบอัตโนมัติ (แทนการกรอกมือ) (FR-43)
+- [x] **CROP-05**: บันทึกผลเก็บเกี่ยวจริง (วันเก็บ/จำนวน/น้ำหนัก/ของเสีย) เทียบค่าคาดเพื่อปรับพารามิเตอร์ (FR-44)
 - [x] **CROP-06**: แผนการปลูกผสมต่อรุ่น (Planting Mix) — กำหนดสูตรชนิด/จำนวนต่อรุ่น (~200 ต้น) ระบบสร้างหลาย Batch วันปลูกเดียวกันอัตโนมัติ (FR-50)
 - [ ] **CROP-07**: ระบบแนะนำการปลูกย้อนกลับ — จากดีมานด์เฉลี่ยแนะนำจำนวนต้นที่ควรปลูกแต่ละจันทร์ (FR-45)
 
@@ -148,7 +148,7 @@ Explicitly excluded (anti-features จาก research — ป้องกัน 
 | INV-07 | Phase 1 | Pending |
 | INV-08 | Phase 1 | Pending |
 | INV-09 | Phase 1 | Pending |
-| INV-10 | Phase 3 | Pending |
+| INV-10 | Phase 3 | Complete |
 | SALE-01 | Phase 1 | Pending |
 | SALE-02 | Phase 1 | Pending |
 | SALE-03 | Phase 3 | Complete |
@@ -182,8 +182,8 @@ Explicitly excluded (anti-features จาก research — ป้องกัน 
 | CROP-01 | Phase 3 | Complete |
 | CROP-02 | Phase 3 | Complete |
 | CROP-03 | Phase 3 | Complete |
-| CROP-04 | Phase 3 | Pending |
-| CROP-05 | Phase 3 | Pending |
+| CROP-04 | Phase 3 | Complete |
+| CROP-05 | Phase 3 | Complete |
 | CROP-06 | Phase 3 | Complete |
 | CROP-07 | Phase 4 | Pending |
 | LINE-01 | Phase 2 | Complete |
