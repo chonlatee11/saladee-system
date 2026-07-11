@@ -23,6 +23,8 @@ async function renderCatalog(loader: Loader): Promise<string> {
     routes: [
       { path: "/", name: "catalog", component: CatalogView },
       { path: "/variety/:id", name: "variety", component: { template: "<div/>" } },
+      { path: "/subscription", name: "subscription", component: { template: "<div/>" } },
+      { path: "/b2b", name: "b2b", component: { template: "<div/>" } },
     ],
   });
   const app = createSSRApp(CatalogView, { loader });
@@ -87,5 +89,27 @@ describe("CatalogView (02-05, LINE-02)", () => {
   it("shows the error state when the catalog read fails", async () => {
     const html = await renderCatalog(async () => ({ data: null, error: { status: 500 } }));
     expect(html).toContain("เกิดข้อผิดพลาด โปรดลองใหม่อีกครั้ง");
+  });
+
+  // 03-14 (UAT gap test 6): member quick-links must be reachable from the catalog
+  // in EVERY state — /subscription (SALE-03) and /b2b (CUST-02).
+  it("renders the /subscription and /b2b quick-links in the has-items state", async () => {
+    const html = await renderCatalog(async () => ({
+      data: { varieties: [variety()], boxes: [] },
+      error: null,
+    }));
+    expect(html).toContain('href="/subscription"');
+    expect(html).toContain('href="/b2b"');
+    expect(html).toContain("สมาชิกกล่องผัก");
+    expect(html).toContain("ลูกค้าขายส่ง (B2B)");
+  });
+
+  it("renders the /subscription and /b2b quick-links in the empty state too", async () => {
+    const html = await renderCatalog(async () => ({
+      data: { varieties: [], boxes: [] },
+      error: null,
+    }));
+    expect(html).toContain('href="/subscription"');
+    expect(html).toContain('href="/b2b"');
   });
 });
