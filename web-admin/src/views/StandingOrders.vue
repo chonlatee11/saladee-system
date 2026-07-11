@@ -58,7 +58,12 @@ const createOrder = useCreateStandingOrder();
 const updateOrder = useUpdateStandingOrder();
 const cancelOrder = useCancelStandingOrder();
 
-const rows = computed<StandingRow[]>(() => (standing.value ?? []) as unknown as StandingRow[]);
+// Row shape fed to the table: StandingRow plus precomputed display labels.
+interface DisplayRow extends StandingRow {
+  customerLabel: string;
+  basketLabel: string;
+}
+
 const overflow = computed<OverflowFlag[]>(() => (flags.value ?? []) as unknown as OverflowFlag[]);
 const approvedCustomers = computed<CustomerRow[]>(() =>
   ((customers.value ?? []) as unknown as CustomerRow[]).filter((c) => c.b2bStatus === "approved"),
@@ -69,14 +74,27 @@ const customerName = (id: string): string =>
   ((customers.value ?? []) as unknown as CustomerRow[]).find((c) => c.id === id)?.name ?? id.slice(0, 8);
 const varietyName = (id: string): string =>
   varietyList.value.find((v) => v.id === id)?.name ?? id.slice(0, 8);
-const basketSummary = (r: StandingRow): string =>
-  r.items.map((it) => `${varietyName(it.varietyId)} ×${it.plantsPerRound}`).join(", ") || "—";
 const totalPlants = (r: StandingRow): number =>
   r.items.reduce((sum, it) => sum + it.plantsPerRound, 0);
 
-const columns: ColumnDef<StandingRow, unknown>[] = [
-  { id: "customer", header: "ลูกค้า", accessorFn: (r) => customerName(r.customerId) },
-  { id: "basket", header: "ตะกร้าประจำรอบ", accessorFn: (r) => basketSummary(r) },
+// Display labels are joined INTO the row data (not resolved in column accessorFn
+// closures): TanStack Table memoizes accessor results per row, so a lookup living
+// outside the data prop freezes the id-prefix fallback when the varieties/customers
+// queries resolve after first render. Because this computed reads varieties.value
+// and customers.value, a late-resolving query produces a NEW array → DataTable's
+// data prop changes → the per-row value cache is rebuilt with real names.
+const rows = computed<DisplayRow[]>(() =>
+  ((standing.value ?? []) as unknown as StandingRow[]).map((r) => ({
+    ...r,
+    customerLabel: customerName(r.customerId),
+    basketLabel:
+      r.items.map((it) => `${varietyName(it.varietyId)} ×${it.plantsPerRound}`).join(", ") || "—",
+  })),
+);
+
+const columns: ColumnDef<DisplayRow, unknown>[] = [
+  { id: "customer", header: "ลูกค้า", accessorKey: "customerLabel" },
+  { id: "basket", header: "ตะกร้าประจำรอบ", accessorKey: "basketLabel" },
   { id: "total", header: "รวม (ต้น/รอบ)", accessorFn: (r) => totalPlants(r), meta: { numeric: true } },
   { id: "active", header: "สถานะ", accessorKey: "active" },
 ];
