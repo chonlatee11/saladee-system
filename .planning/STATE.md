@@ -6,14 +6,14 @@ current_phase: 03
 current_phase_name: back-office-crop-planning-b2b-subscription
 status: executing
 stopped_at: Completed 03-11-PLAN.md (Task 3 human-verify pending)
-last_updated: "2026-07-11T01:02:12.806Z"
+last_updated: "2026-07-11T01:14:49.753Z"
 last_activity: 2026-07-07
 last_activity_desc: Phase 03 execution started
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 34
-  completed_plans: 31
+  completed_plans: 32
   percent: 60
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-06-28)
 ## Current Position
 
 Phase: 03 (back-office-crop-planning-b2b-subscription) — EXECUTING
-Plan: 9 of 12
+Plan: 10 of 12
 Status: Ready to execute
 Last activity: 2026-07-07 — Phase 03 execution started
 Note: CR-01/CR-02 code-review test-gaps CLOSED — added regression tests api/tests/verified-slip-park.test.ts (verified slip parked as awaiting_review + 202 when order cancelled mid-verify) and api/tests/created-hold-sweep.test.ts (created-path holdExpiresAt set + swept). api bun test 187 pass / 0 fail.
@@ -75,6 +75,7 @@ Progress: [████████░░] 77%
 | Phase 03 P06 | ~40min | 2 tasks | 7 files |
 | Phase 03 P10 | 22min | 2 tasks | 4 files |
 | Phase 03 P11 | 35min | 3 tasks | 5 files |
+| Phase 03 P12 | 20min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -105,6 +106,9 @@ Recent decisions affecting current work:
 - [Phase ?]: 03-04: forecast.ts pure UTC-date kernel (projected harvest / floored yield haircut D-02 / best-before D-05), reused by 03-05 publish
 - [Phase ?]: 03-04: planting-batch hard-delete (no active column in frozen schema); mix idempotency by plantDate+variety overlap (no template FK)
 - [Phase 03]: Subscription generator idempotency = DB UNIQUE(subscription,round) as last insert in per-sub own-tx (23505 rolls back order+reserve); subscription-generate trigger owned by 03-05 publishQuota, queue+worker defined in 03-07 — Retry-safe without a second counter; reuses reserveBox reserve-before-B2C path (Pitfall 1/2)
+- [Phase ?]: Settings hot surface = 4 allow-listed keys; secrets stay in env.ts, never in settings table/API (T-03-31)
+- [Phase ?]: PUT /settings validates raw body via Value.Check (closed schema), not Elysia body schema which strips unknown props — secret-shaped key rejected 422
+- [Phase ?]: Canned LINE chatbot: keyword/postback -> Flex + LIFF deep-link; webhook signature block unchanged (D-25/Pitfall 1)
 
 ### Pending Todos
 
@@ -144,6 +148,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-11T01:02:12.796Z
+Last session: 2026-07-11T01:14:06.639Z
 Stopped at: Completed 03-11-PLAN.md (Task 3 human-verify pending)
 Resume file: None
