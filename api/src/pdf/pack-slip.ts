@@ -12,6 +12,15 @@
 // happens to run from api/, and would silently break when invoked from elsewhere
 // (e.g. a worker, a test harness with a different cwd). Absolute resolution keeps
 // the buffer render deterministic regardless of caller cwd.
+//
+// The pdfmake SERVER entrypoints (src/printer, src/virtual-fs, src/URLResolver)
+// are untyped by @types/pdfmake, so their module shapes live in the adjacent
+// ambient declaration. This triple-slash reference pins that declaration TO this
+// file so EVERY consumer's program loads it — not only api's own tsc (whose
+// include already globs it) but also web-admin's vue-tsc, which pulls this module
+// transitively through the Eden `App` type (packing.ts imports buildPackSlipDoc)
+// and would otherwise report "Cannot find module 'pdfmake/src/printer'".
+/// <reference path="./pdfmake-printer.d.ts" />
 import { join } from "node:path";
 import PdfPrinter from "pdfmake/src/printer";
 import virtualfs from "pdfmake/src/virtual-fs";
