@@ -13,8 +13,9 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { Elysia, t } from "elysia";
 import { db as defaultDb } from "../db/client";
 import type * as schema from "../db/schema";
-import { roundStock, rounds, varieties } from "../db/schema";
+import { harvestLogs, plantingBatches, roundStock, rounds, varieties } from "../db/schema";
 import { requireRole } from "../plugins/auth.plugin";
+import { forecastPlants } from "../services/forecast";
 import {
   BatchNotFoundError,
   computeDraftQuota,
@@ -142,6 +143,50 @@ export function makeHarvestRoutes(database: CatalogDb = defaultDb, trigger?: Pub
           return row;
         },
         { body: QuotaOverrideBody, beforeHandle: grower },
+      )
+
+      // ── Logged harvest history (CROP-05 / D-04) ───────────────────────────────
+      // Read the confirmed lots joined with batch + variety, each carrying the
+      // actual-vs-forecast delta (shown only — the system never auto-tunes params).
+      // Powers the HarvestLog "logged history" state (UI-SPEC).
+      .get(
+        "/harvest/logs",
+        async () => {
+          const rows = await database
+            .select({
+              id: harvestLogs.id,
+              batchId: harvestLogs.batchId,
+              varietyName: varieties.name,
+              lotCode: harvestLogs.lotCode,
+              harvestedAt: harvestLogs.harvestedAt,
+              actualPlants: harvestLogs.actualPlants,
+              actualGrams: harvestLogs.actualGrams,
+              wasteGrams: harvestLogs.wasteGrams,
+              bestBefore: harvestLogs.bestBefore,
+              plantCount: plantingBatches.plantCount,
+              survivalPct: varieties.survivalPct,
+            })
+            .from(harvestLogs)
+            .innerJoin(plantingBatches, eq(plantingBatches.id, harvestLogs.batchId))
+            .innerJoin(varieties, eq(varieties.id, plantingBatches.varietyId));
+          return rows.map((r) => {
+            const expectedPlants = forecastPlants(r.plantCount, r.survivalPct);
+            return {
+              id: r.id,
+              batchId: r.batchId,
+              varietyName: r.varietyName,
+              lotCode: r.lotCode,
+              harvestedAt: r.harvestedAt,
+              actualPlants: r.actualPlants,
+              actualGrams: r.actualGrams,
+              wasteGrams: r.wasteGrams,
+              bestBefore: r.bestBefore,
+              expectedPlants,
+              delta: r.actualPlants - expectedPlants,
+            };
+          });
+        },
+        { beforeHandle: grower },
       )
 
       // ── Actual harvest log (CROP-05 / INV-10) — 1 batch = 1 lot ───────────────

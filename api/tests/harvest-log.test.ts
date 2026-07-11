@@ -155,4 +155,37 @@ describe("POST /harvest/logs — grower-gated route (T-03-12)", () => {
     const dup = await fire(routes, "POST", "/harvest/logs", { token: admin, body });
     expect(dup.status).toBe(409);
   });
+
+  test("GET /harvest/logs returns the logged history with variety name + delta", async () => {
+    const routes = makeHarvestRoutes(db, async () => {});
+    const batchId = await seedBatch({ survivalPct: 90, plantCount: 100 });
+    const admin = await issueSession(crypto.randomUUID(), "admin");
+    await fire(routes, "POST", "/harvest/logs", {
+      token: admin,
+      body: {
+        batchId,
+        harvestedAt: "2026-07-01T00:00:00.000Z",
+        actualPlants: 85,
+        actualGrams: 9000,
+        wasteGrams: 100,
+      },
+    });
+
+    const res = await fire(routes, "GET", "/harvest/logs", { token: admin });
+    expect(res.status).toBe(200);
+    const logs = (await res.json()) as {
+      batchId: string;
+      varietyName: string;
+      lotCode: string;
+      expectedPlants: number;
+      delta: number;
+    }[];
+    const mine = logs.find((l) => l.batchId === batchId);
+    expect(mine).toBeDefined();
+    expect(typeof mine?.varietyName).toBe("string");
+    expect(mine?.expectedPlants).toBe(90);
+    expect(mine?.delta).toBe(-5);
+    // Guard: no token → 401.
+    expect((await fire(routes, "GET", "/harvest/logs")).status).toBe(401);
+  });
 });
