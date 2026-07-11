@@ -26,6 +26,8 @@ const PRICES_DEFAULT_UP = "drizzle/0002_prices_default_uniq.sql";
 const PRICES_DEFAULT_DOWN = "drizzle/0002_prices_default_uniq.down.sql";
 const PAYMENTS_UP = "drizzle/0003_payments_delivery_consent.sql";
 const PAYMENTS_DOWN = "drizzle/0003_payments_delivery_consent.down.sql";
+const PHASE3_UP = "drizzle/0004_phase3.sql";
+const PHASE3_DOWN = "drizzle/0004_phase3.down.sql";
 
 let client: ReturnType<typeof postgres>;
 let db: ReturnType<typeof drizzle>;
@@ -47,16 +49,28 @@ async function indexExists(indexname: string): Promise<boolean> {
   return rows.length > 0;
 }
 
-// Apply every up (identity → commerce) or every down (commerce → identity) in
-// the correct dependency order.
+async function columnExists(table: string, column: string): Promise<boolean> {
+  const rows = await db.execute(
+    sql`SELECT 1 AS ok FROM information_schema.columns
+        WHERE table_name = ${table} AND column_name = ${column}`,
+  );
+  return rows.length > 0;
+}
+
+// Apply every up (identity → commerce → phase-3) or every down (phase-3 →
+// identity) in the correct dependency order.
 async function applyAllUp(): Promise<void> {
   await client.file(INIT_UP);
   await client.file(COMMERCE_UP);
   await client.file(PRICES_DEFAULT_UP);
   await client.file(PAYMENTS_UP);
+  await client.file(PHASE3_UP);
 }
 async function applyAllDown(): Promise<void> {
-  // Latest migration first (children before parents, delivery_class type last).
+  // Latest migration first (children before parents, enum types last). 0004's
+  // child tables FK into varieties/customers/rounds/orders, so its down MUST run
+  // before 0001's down drops those parents.
+  await client.file(PHASE3_DOWN);
   await client.file(PAYMENTS_DOWN);
   await client.file(PRICES_DEFAULT_DOWN);
   await client.file(COMMERCE_DOWN);
@@ -96,6 +110,16 @@ describe("migration up→down→up (Criterion 2)", () => {
     expect(await tableExists("public.consent_logs")).toBe(true);
     expect(await indexExists("payments_trans_ref_idx")).toBe(true);
     expect(await enumExists("delivery_class")).toBe(true);
+    // 0004_phase3 — new tables, enums, additive columns, and idempotency index.
+    expect(await tableExists("public.planting_batches")).toBe(true);
+    expect(await tableExists("public.harvest_logs")).toBe(true);
+    expect(await tableExists("public.subscriptions")).toBe(true);
+    expect(await tableExists("public.settings")).toBe(true);
+    expect(await enumExists("subscription_status")).toBe(true);
+    expect(await enumExists("b2b_status")).toBe(true);
+    expect(await columnExists("varieties", "days_to_harvest")).toBe(true);
+    expect(await columnExists("round_stock", "is_manual_override")).toBe(true);
+    expect(await indexExists("subscription_orders_sub_round_idx")).toBe(true);
   });
 
   test("down: identity + commerce tables and enums are all gone", async () => {
@@ -113,6 +137,14 @@ describe("migration up→down→up (Criterion 2)", () => {
     expect(await tableExists("public.payments")).toBe(false);
     expect(await tableExists("public.consent_logs")).toBe(false);
     expect(await enumExists("delivery_class")).toBe(false);
+    // 0004 objects gone (children dropped before parents, enum types last).
+    expect(await tableExists("public.planting_batches")).toBe(false);
+    expect(await tableExists("public.subscriptions")).toBe(false);
+    expect(await tableExists("public.settings")).toBe(false);
+    expect(await enumExists("subscription_status")).toBe(false);
+    expect(await enumExists("b2b_status")).toBe(false);
+    // varieties table itself is gone, so its added column is gone with it.
+    expect(await columnExists("varieties", "days_to_harvest")).toBe(false);
   });
 
   test("up again: full schema is back with no residue", async () => {
@@ -121,5 +153,9 @@ describe("migration up→down→up (Criterion 2)", () => {
     expect(await tableExists("public.round_stock")).toBe(true);
     expect(await tableExists("public.orders")).toBe(true);
     expect(await enumExists("order_status")).toBe(true);
+    // 0004 back with no residue (leaves the shared DB at full schema for the
+    // rest of the suite, which inserts varieties carrying the new columns).
+    expect(await tableExists("public.planting_batches")).toBe(true);
+    expect(await columnExists("varieties", "days_to_harvest")).toBe(true);
   });
 });

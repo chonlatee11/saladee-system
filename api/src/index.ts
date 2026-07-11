@@ -14,17 +14,25 @@ import { dbPlugin } from "./plugins/db.plugin";
 import { linePlugin } from "./plugins/line.plugin";
 import { storagePlugin } from "./plugins/storage.plugin";
 import { authRoutes } from "./routes/auth";
+import { b2bRoutes } from "./routes/b2b";
 import { boxesRoutes } from "./routes/boxes";
 import { catalogRoutes } from "./routes/catalog";
+import { cropRoutes } from "./routes/crop";
+import { dashboardRoutes } from "./routes/dashboard";
 import { deliveryRoutes } from "./routes/delivery";
 import { filesRoutes } from "./routes/files";
+import { harvestRoutes } from "./routes/harvest";
 import { healthRoutes } from "./routes/health";
 import { meOrdersRoutes } from "./routes/me-orders";
 import { ordersRoutes } from "./routes/orders";
+import { packingRoutes } from "./routes/packing";
 import { paymentsRoutes } from "./routes/payments";
 import { pricesRoutes } from "./routes/prices";
+import { reportsRoutes } from "./routes/reports";
 import { roundsRoutes } from "./routes/rounds";
+import { settingsRoutes } from "./routes/settings";
 import { stockRoutes } from "./routes/stock";
+import { subscriptionsRoutes } from "./routes/subscriptions";
 import { varietiesRoutes } from "./routes/varieties";
 import { webhookRoutes } from "./routes/webhook";
 
@@ -59,7 +67,18 @@ export const app = new Elysia()
   .use(boxesRoutes)
   .use(deliveryRoutes)
   .use(paymentsRoutes)
-  .use(meOrdersRoutes);
+  .use(meOrdersRoutes)
+  // Phase-3 back-office stub routers — APPENDED at the END (fixed-order invariant,
+  // 3–6): Wave-2/3 slices fill each router's own file only, never reorder this
+  // chain. Bodies are empty stubs today; composing now keeps the App type stable.
+  .use(cropRoutes)
+  .use(harvestRoutes)
+  .use(subscriptionsRoutes)
+  .use(b2bRoutes)
+  .use(packingRoutes)
+  .use(reportsRoutes)
+  .use(dashboardRoutes)
+  .use(settingsRoutes);
 
 // Eden Treaty contract consumed by web/ (compile-time-safe API calls).
 export type App = typeof app;

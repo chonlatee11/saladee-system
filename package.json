@@ -1,7 +1,7 @@
 {
   "name": "saladee-system",
   "private": true,
-  "workspaces": ["api", "web"],
+  "workspaces": ["api", "web", "web-admin"],
   "scripts": {
     "lint": "biome check .",
     "format": "biome format --write ."

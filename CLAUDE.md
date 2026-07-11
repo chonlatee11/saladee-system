@@ -157,6 +157,10 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 
 ### ตอบกลับเป็นภาษาไทยเสมอ
 
+### Caveman mode เสมอ
+
+ทุก session ในโปรเจกต์นี้ ให้เรียก Skill `caveman` (intensity: full) ตั้งแต่เริ่มงาน แล้วสื่อสารแบบ caveman ตลอด — ตัด token ~65% แต่คงความถูกต้องทางเทคนิคครบถ้วน ยังตอบเป็นภาษาไทย
+
 <!-- rtk-instructions v2 -->
 # RTK (Rust Token Killer) - Token-Optimized Commands
 

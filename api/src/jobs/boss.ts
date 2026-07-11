@@ -14,7 +14,9 @@ import * as schema from "../db/schema";
 import { orders, payments } from "../db/schema";
 import { env } from "../env";
 import { log } from "../lib/logger";
+import { notifySubstitution } from "../services/notify";
 import { applyTransition } from "../services/order-transition";
+import { generateForRound } from "../services/subscription";
 
 // Pitfall 6 / T-02-02: pg-boss MUST use the DIRECT (unpooled) endpoint. Its
 // advisory-lock maintenance breaks on a PgBouncer transaction-pooled connection.
@@ -129,7 +131,34 @@ export async function startJobs(): Promise<void> {
     await sweepExpiredHolds(db);
   });
 
-  log.info("jobs started", { queues: ["hold-expiry", "hold-sweep"] });
+  // Recurring subscription-box generation (SALE-03 / D-13). This file defines the
+  // queue + worker ONLY; it does NOT trigger it. The single boss.send trigger lives
+  // in 03-05 publishQuota, fired AFTER a round's quota is published+committed
+  // (`boss.send("subscription-generate", { roundId }, { singletonKey: roundId })`),
+  // because the box fill needs the round's published availability (Wave-3,
+  // post-publish). Idempotency is enforced by the DB UNIQUE(subscription_id,
+  // round_id) inside generateForRound (23505 → skip), NOT by singletonKey alone
+  // (Pitfall 2). Runs on the DIRECT worker db; substitution notices reuse notify.ts.
+  const subHoldWindowSeconds = Number(env.HOLD_WINDOW_SECONDS);
+  await boss.createQueue("subscription-generate");
+  await boss.work("subscription-generate", async (jobs) => {
+    for (const job of jobs) {
+      const roundId = (job.data as { roundId: string }).roundId;
+      const res = await generateForRound(db, roundId, {
+        notify: notifySubstitution,
+        holdWindowSeconds: subHoldWindowSeconds,
+      });
+      log.info("subscription-generate ran", {
+        roundId,
+        generated: res.generated.length,
+        skipped: res.skipped.length,
+      });
+    }
+  });
+
+  log.info("jobs started", {
+    queues: ["hold-expiry", "hold-sweep", "subscription-generate"],
+  });
 }
 
 /** Graceful shutdown — drain and disconnect the worker on process stop. */

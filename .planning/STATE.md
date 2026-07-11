@@ -2,18 +2,19 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 3
-current_phase_name: Back-office, Crop Planning & B2B/Subscription
-status: "Phase 02 shipped — PR #10"
-stopped_at: Completed 02-04-PLAN.md
-last_updated: "2026-07-06T16:52:37.950Z"
-last_activity: 2026-07-06
+current_phase: 03
+current_phase_name: back-office-crop-planning-b2b-subscription
+status: executing
+stopped_at: Completed 03-08-PLAN.md (Task 3 human-verify pending)
+last_updated: "2026-07-11T01:58:07.099Z"
+last_activity: 2026-07-07
+last_activity_desc: Phase 03 execution started
 progress:
   total_phases: 5
-  completed_phases: 3
-  total_plans: 22
-  completed_plans: 22
-  percent: 60
+  completed_phases: 4
+  total_plans: 34
+  completed_plans: 34
+  percent: 80
 ---
 
 # Project State
@@ -23,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-28)
 
 **Core value:** ลูกค้าสั่งผักสลัดผ่าน LINE แล้วจ่ายเงินจบในที่เดียว และจำนวนที่เปิดขายตรงกับผลผลิตจริงเสมอ (ไม่ oversell, ไม่เหลือทิ้ง)
-**Current focus:** Phase 02 — line-storefront-payments-delivery
+**Current focus:** Phase 03 — back-office-crop-planning-b2b-subscription
 
 ## Current Position
 
-Phase: 3 — Back-office, Crop Planning & B2B/Subscription
-Plan: Not started
-Status: Phase 02 shipped — PR #10
-Last activity: 2026-07-06
+Phase: 03 (back-office-crop-planning-b2b-subscription) — EXECUTING
+Plan: 12 of 12
+Status: Ready to execute
+Last activity: 2026-07-07 — Phase 03 execution started
 Note: CR-01/CR-02 code-review test-gaps CLOSED — added regression tests api/tests/verified-slip-park.test.ts (verified slip parked as awaiting_review + 202 when order cancelled mid-verify) and api/tests/created-hold-sweep.test.ts (created-path holdExpiresAt set + swept). api bun test 187 pass / 0 fail.
 
 Progress: [████████░░] 77%
@@ -67,6 +68,16 @@ Progress: [████████░░] 77%
 | Phase 02 P07 | 20m | 2 tasks | 6 files |
 | Phase 02 P09 | 6min | 2 tasks | 8 files |
 | Phase 02 P08 | 25m | 2 tasks | 8 files |
+| Phase 03 P01 | 45 min | 3 tasks | 42 files |
+| Phase 03 P02 | 18min | 2 tasks | 7 files |
+| Phase 03 P03 | 30min | 2 tasks | 25 files |
+| Phase 03 P04 | 35min | 3 tasks | 9 files |
+| Phase 03 P06 | ~40min | 2 tasks | 7 files |
+| Phase 03 P10 | 22min | 2 tasks | 4 files |
+| Phase 03 P11 | 35min | 3 tasks | 5 files |
+| Phase 03 P12 | 20min | 2 tasks | 8 files |
+| Phase 03 P05 | ~45min | 3 tasks | 7 files |
+| Phase 03 P08 | ~40min | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -91,6 +102,17 @@ Recent decisions affecting current work:
 - [Phase ?]: 02-06: SlipVerifier seam (env-selected) keeps SlipOK swappable; ambiguous/quota/5xx/network → 'unavailable' → admin manual-confirm (money-safe)
 - [Phase 02]: 02-09 reorder returns a proposed cart (does not auto-place); re-prices at the current open round and flags sold-out/absent items (D-20)
 - [Phase 02]: 02-09 member-only /me/orders guard keyed on customers.line_user_id; guests 403, missing token 401 (D-19)
+- [Phase 03]: [03-01] New varieties yield columns (days_to_harvest/survival_pct/shelf_life_days) are notNull WITH DB defaults (30/90/7), mirroring the deliveryClass additive idiom — notNull-no-default breaks ADD COLUMN on populated tables + existing insert sites; defaults keep migration prod-safe and let the CROP-01 slice enforce real values at the route layer
+- [Phase 03]: [03-01] Every self-resetting test file (26) + migrate.test.ts now register 0004 in their down/up sequences — 0004 child tables FK into varieties/customers/rounds/orders; teardown must drop 0004 first or 0001 down fails — keeps the 204-test regression gate green
+- [Phase 03]: 03-02: pdfmake 0.3.x server API — PdfPrinter(fonts, virtualfs, urlResolver, localAccessPolicy) + async createPdfKitDocument; A1 Thai-PDF spike PASSES on Bun, no vfs fallback needed
+- [Phase ?]: 03-04: forecast.ts pure UTC-date kernel (projected harvest / floored yield haircut D-02 / best-before D-05), reused by 03-05 publish
+- [Phase ?]: 03-04: planting-batch hard-delete (no active column in frozen schema); mix idempotency by plantDate+variety overlap (no template FK)
+- [Phase 03]: Subscription generator idempotency = DB UNIQUE(subscription,round) as last insert in per-sub own-tx (23505 rolls back order+reserve); subscription-generate trigger owned by 03-05 publishQuota, queue+worker defined in 03-07 — Retry-safe without a second counter; reuses reserveBox reserve-before-B2C path (Pitfall 1/2)
+- [Phase ?]: Settings hot surface = 4 allow-listed keys; secrets stay in env.ts, never in settings table/API (T-03-31)
+- [Phase ?]: PUT /settings validates raw body via Value.Check (closed schema), not Elysia body schema which strips unknown props — secret-shaped key rejected 422
+- [Phase ?]: Canned LINE chatbot: keyword/postback -> Flex + LIFF deep-link; webhook signature block unchanged (D-25/Pitfall 1)
+- [Phase ?]: publishQuota single-owns the round-open sequence: reserveStanding in the quota-write tx (atomic reserve-before-B2C) + subscription-generate once post-commit, one-shot per round — Guarantees CUST-05 reserve-before-B2C with no race window and no double-reserve on re-publish
+- [Phase 03]: 03-08 customer LIFF: package value is server authority (S/M/L code only); /me/* endpoints reuse me-orders member gate + 03-06 wholesaleVisible — Close T-03-20 money tamper + T-03-21 wholesale leak on the customer surface without new auth
 
 ### Pending Todos
 
@@ -130,6 +152,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-04T12:43:39.048Z
-Stopped at: Completed 02-04-PLAN.md
+Last session: 2026-07-11T01:58:06.958Z
+Stopped at: Completed 03-08-PLAN.md (Task 3 human-verify pending)
 Resume file: None

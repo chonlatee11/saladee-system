@@ -28,6 +28,18 @@ const routes: RouteRecordRaw[] = [
     component: () => import("./views/OrderDetailView.vue"),
   },
   { path: "/contact", name: "contact", component: () => import("./views/ContactView.vue") },
+  // Phase-3 LIFF customer additions (03-08): subscription sign-up/manage + B2B account.
+  {
+    path: "/subscription",
+    name: "subscription",
+    component: () => import("./views/SubscriptionSignup.vue"),
+  },
+  {
+    path: "/subscription/manage",
+    name: "subscription-manage",
+    component: () => import("./views/SubscriptionManage.vue"),
+  },
+  { path: "/b2b", name: "b2b", component: () => import("./views/B2bAccount.vue") },
   // Unknown paths fall back to the catalog (the Rich Menu entry point).
   { path: "/:pathMatch(.*)*", redirect: "/" },
 ];

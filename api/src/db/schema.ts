@@ -56,6 +56,13 @@ export const roundStatusEnum = pgEnum("round_status", ["open", "closed"]);
 // Delivery freshness class per variety (D-13/D-24). Declared before `varieties`
 // (Pitfall 4 migration ordering) — gates which delivery methods a cart allows.
 export const deliveryClassEnum = pgEnum("delivery_class", ["very_fresh", "normal"]);
+// ── Phase-3 enums (declared before customers/subscriptions that reference them) ─
+export const subscriptionStatusEnum = pgEnum("subscription_status", [
+  "active",
+  "paused",
+  "cancelled",
+]);
+export const b2bStatusEnum = pgEnum("b2b_status", ["pending", "approved", "rejected"]);
 
 // ── Catalog: varieties + their sale units (INV-01, INV-03, D-22 CROP-01 seam) ─
 export const varieties = pgTable("varieties", {
@@ -70,6 +77,16 @@ export const varieties = pgTable("varieties", {
   deliveryClass: deliveryClassEnum("delivery_class").notNull().default("normal"),
   storageTips: text("storage_tips"), // nullable care copy (like description)
   washingTips: text("washing_tips"), // nullable care copy
+  // Phase-3 crop-planning yield params (D-01/CROP-01). survivalPct (0–100) is the
+  // per-variety confidence haircut (D-02); shelfLifeDays drives best-before (D-05).
+  // notNull WITH a safe default — same additive idiom as deliveryClass above (0003):
+  // the default lets ADD COLUMN succeed on populated tables (prod varieties rows)
+  // and keeps existing inserts valid; the CROP-01 slice enforces real per-variety
+  // values at the route layer. survivalPct default mirrors HAIRCUT_DEFAULT_PCT (90).
+  daysToHarvest: integer("days_to_harvest").notNull().default(30),
+  survivalPct: integer("survival_pct").notNull().default(90),
+  harvestWindowDays: integer("harvest_window_days").notNull().default(1),
+  shelfLifeDays: integer("shelf_life_days").notNull().default(7),
   active: boolean("active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
@@ -113,6 +130,9 @@ export const roundStock = pgTable(
       .references(() => varieties.id),
     quotaPlants: integer("quota_plants").notNull(),
     reservedPlants: integer("reserved_plants").notNull().default(0),
+    // D-03/Pitfall 5: forecast re-publish SKIPS rows an operator hand-set, so a
+    // manual sellable-qty override is never clobbered by the auto-feed.
+    isManualOverride: boolean("is_manual_override").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => [uniqueIndex("round_stock_round_variety_idx").on(t.roundId, t.varietyId)],
@@ -164,6 +184,11 @@ export const customers = pgTable("customers", {
   name: text("name"),
   phone: text("phone"),
   lineUserId: text("line_user_id"), // reserved — Phase 2 LINE Login populates (D-04)
+  // Phase-3 B2B (D-08/D-11). b2bStatus null = ordinary B2C customer; creditTerms
+  // records agreed terms as free text (no enforced credit limit — D-11).
+  b2bStatus: b2bStatusEnum("b2b_status"), // nullable
+  creditTerms: text("credit_terms"), // nullable
+  b2bApprovedAt: timestamp("b2b_approved_at", { withTimezone: true }), // nullable
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
@@ -231,6 +256,7 @@ export const orders = pgTable("orders", {
   deliveryMethod: text("delivery_method"), // nullable
   deliveryZone: text("delivery_zone"), // nullable
   deliveryFeeSatang: integer("delivery_fee_satang"), // nullable, integer satang
+  packedAt: timestamp("packed_at", { withTimezone: true }), // nullable (D-20 pack state)
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
@@ -312,4 +338,158 @@ export const consentLogs = pgTable("consent_logs", {
   policyVersion: text("policy_version").notNull(),
   source: text("source"), // nullable — where the consent was captured
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// ══ Phase-3: crop planning, harvest lots, subscriptions, B2B, settings ════════
+// All additive (0004_phase3). New enums are declared above (before `customers`).
+// These tables are the durable backbone Wave-2/3 slices fill; the reservation
+// guard (round_stock) is NOT touched — every reservation still flows reserve().
+
+// ── Crop planning: batches + reusable mix templates (CROP-02 / CROP-06) ───────
+export const plantingBatches = pgTable("planting_batches", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  varietyId: uuid("variety_id")
+    .notNull()
+    .references(() => varieties.id),
+  plantDate: timestamp("plant_date", { withTimezone: true }).notNull(),
+  plantCount: integer("plant_count").notNull(),
+  bed: text("bed"), // nullable — physical bed/tray label
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const plantingMixTemplates = pgTable("planting_mix_templates", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: text("name").notNull(),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const plantingMixItems = pgTable("planting_mix_items", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  templateId: uuid("template_id")
+    .notNull()
+    .references(() => plantingMixTemplates.id),
+  varietyId: uuid("variety_id")
+    .notNull()
+    .references(() => varieties.id),
+  plantCount: integer("plant_count").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// ── Harvest lots: one confirmed lot per batch (CROP-05 / INV-10, D-05) ────────
+export const harvestLogs = pgTable(
+  "harvest_logs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    batchId: uuid("batch_id")
+      .notNull()
+      .references(() => plantingBatches.id),
+    harvestedAt: timestamp("harvested_at", { withTimezone: true }).notNull(),
+    actualPlants: integer("actual_plants").notNull(),
+    actualGrams: integer("actual_grams").notNull(),
+    wasteGrams: integer("waste_grams").notNull().default(0),
+    lotCode: text("lot_code").notNull(),
+    bestBefore: timestamp("best_before", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  // 1 batch = 1 lot (D-05): a batch can only ever be harvest-confirmed once.
+  (t) => [uniqueIndex("harvest_logs_batch_idx").on(t.batchId)],
+);
+
+// ── Subscriptions: recurring boxes (SALE-03) ──────────────────────────────────
+export const subscriptions = pgTable("subscriptions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  customerId: uuid("customer_id")
+    .notNull()
+    .references(() => customers.id),
+  packageCode: text("package_code").notNull(), // S / M / L
+  packageValueSatang: integer("package_value_satang").notNull(), // integer satang
+  frequency: text("frequency").notNull(), // e.g. weekly / biweekly
+  status: subscriptionStatusEnum("status").notNull().default("active"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const subscriptionSkips = pgTable(
+  "subscription_skips",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    subscriptionId: uuid("subscription_id")
+      .notNull()
+      .references(() => subscriptions.id),
+    roundId: uuid("round_id")
+      .notNull()
+      .references(() => rounds.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  // D-14: at most one skip per (subscription, round).
+  (t) => [uniqueIndex("subscription_skips_sub_round_idx").on(t.subscriptionId, t.roundId)],
+);
+
+// subscription_orders: one generated order per (subscription, round). The DB
+// UNIQUE makes a pg-boss retry a safe no-op (23505) — mirrors payments_trans_ref_idx
+// (D-13 idempotency, Pitfall 2). NEVER an in-code "already generated?" pre-check.
+export const subscriptionOrders = pgTable(
+  "subscription_orders",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    subscriptionId: uuid("subscription_id")
+      .notNull()
+      .references(() => subscriptions.id),
+    roundId: uuid("round_id")
+      .notNull()
+      .references(() => rounds.id),
+    orderId: uuid("order_id")
+      .notNull()
+      .references(() => orders.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [uniqueIndex("subscription_orders_sub_round_idx").on(t.subscriptionId, t.roundId)],
+);
+
+// ── Standing orders: recurring B2B fixed baskets (CUST-05) ────────────────────
+export const standingOrders = pgTable("standing_orders", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  customerId: uuid("customer_id")
+    .notNull()
+    .references(() => customers.id),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const standingOrderItems = pgTable("standing_order_items", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  standingId: uuid("standing_id")
+    .notNull()
+    .references(() => standingOrders.id),
+  varietyId: uuid("variety_id")
+    .notNull()
+    .references(() => varieties.id),
+  plantsPerRound: integer("plants_per_round").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// ── Quota overflow flags: B2B/subscription shortfalls, admin-resolved (D-10) ──
+// A flag row is inserted (inside the reserving tx) when reserve() reports sold
+// out — the system NEVER auto-decides; an operator resolves it.
+export const quotaOverflowFlags = pgTable("quota_overflow_flags", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  roundId: uuid("round_id")
+    .notNull()
+    .references(() => rounds.id),
+  varietyId: uuid("variety_id")
+    .notNull()
+    .references(() => varieties.id),
+  shortfall: integer("shortfall").notNull(),
+  source: text("source").notNull(), // "b2b" | "subscription"
+  resolvedAt: timestamp("resolved_at", { withTimezone: true }), // nullable — unresolved until set
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// ── Settings: hot key/value config, staff-editable (D-22) ─────────────────────
+// Secrets stay in env.ts and MUST NOT be surfaced by the settings API (Pitfall 6).
+// key is the primary key (no surrogate id) so an upsert is keyed on the config name.
+export const settings = pgTable("settings", {
+  key: text("key").primaryKey(),
+  value: jsonb("value").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

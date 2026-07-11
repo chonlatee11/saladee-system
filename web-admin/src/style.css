@@ -1,0 +1,77 @@
+/*
+ * Saladee web-admin design tokens (03-UI-SPEC). Tailwind v4 is CSS-first: the
+ * @theme block below re-uses the EXACT token values already shipped in
+ * web/src/style.css (same --color-*, --spacing-*, --font-sans — "one brand, two
+ * apps") plus the desktop/status/chart additions the back-office needs. No
+ * tailwind.config.js (v4). Text renders in the system-font stack (system-ui →
+ * Noto Sans Thai) — nothing to self-host, no font request on first paint.
+ */
+@import "tailwindcss";
+
+@theme {
+  /* Color — 60/30/10 fresh-salad palette (shared with web/, UI-SPEC Color) */
+  --color-canvas: #ffffff; /* 60% page/content background, table body, cards */
+  --color-surface: #f1f5ec; /* 30% sidebar, toolbar, table header, row hover */
+  --color-accent: #2e7d32; /* 10% single primary action / active nav / positive */
+  --color-destructive: #d32f2f; /* destructive actions + negative status + errors */
+
+  /* Supporting ink + neutrals (outside the 60/30/10 budget, shared with web/) */
+  --color-ink: #1b2a1b; /* text primary */
+  --color-muted: #5b6b5b; /* text muted, labels, helper text, neutral status */
+  --color-hairline: #e2e8dd; /* borders / dividers */
+
+  /* Status badge palette (UI-SPEC — badges/dots/inline text only, never buttons) */
+  --color-positive: #2e7d32;
+  --color-positive-surface: #f1f5ec;
+  --color-warning: #b26a00;
+  --color-warning-surface: #fff4e5;
+  --color-negative: #d32f2f;
+  --color-negative-surface: #fdecea;
+  --color-neutral: #5b6b5b;
+  --color-neutral-surface: #f1f5ec;
+
+  /* Chart categorical palette (D-24 — stable channel↔color mapping, UI-SPEC) */
+  --color-chart-1: #2e7d32; /* B2C / primary metric */
+  --color-chart-2: #1565c0; /* B2B */
+  --color-chart-3: #b26a00; /* Subscription */
+  --color-chart-4: #6a1b9a; /* 4th category */
+  --color-chart-5: #00838f; /* 5th category */
+  --color-chart-6: #c2185b; /* 6th category */
+  --color-chart-other: #9aa69a; /* "อื่น ๆ" overflow bucket */
+
+  /* Typography — Sarabun, system fallback (shared with web/, UI-SPEC Typography) */
+  --font-sans: "Sarabun", system-ui, -apple-system, "Noto Sans Thai", sans-serif;
+
+  /* Spacing — 8-point scale, all multiples of 4 (shared with web/, UI-SPEC) */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-2xl: 48px;
+  --spacing-3xl: 64px;
+
+  /* Desktop layout constants (UI-SPEC — achieve via padding, keep the 4px grid) */
+  --spacing-sidebar: 240px; /* expanded sidebar nav width */
+  --spacing-rail: 64px; /* collapsed sidebar rail width */
+}
+
+/* Global baseline: canvas background, ink text, Sarabun everywhere. */
+html,
+body {
+  margin: 0;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 16px; /* Body — never below 14px readable Thai (UI-SPEC) */
+  line-height: 1.6;
+}
+
+#app {
+  min-height: 100dvh;
+}
+
+/* Money/quantity columns render right-aligned + tabular (UI-SPEC Typography). */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
