@@ -140,7 +140,7 @@ Plans:
   4. Packing staff see a pack queue grouped by delivery route and print pack/label slips; role-based access limits owner/admin/grower/packer views.
   5. The dashboard summarizes today's/this-round sales, unpaid orders, near-sold-out items, and next-round yield; sales reports break down by period/channel/product/round; system settings are configurable; and a canned LINE chatbot answers menu/stock and takes orders.
 
-**Plans**: 12/12 plans complete
+**Plans**: 15 plans (12 complete + 3 gap closure from UAT)
 **UI hint**: yes
 
 Plans:
@@ -164,6 +164,12 @@ Plans:
 
 - [x] 03-05-PLAN.md — Forecast publish→sellable qty (admin gate + manual override) + harvest logging lot/best-before (CROP-04/05, INV-10) — deps 03-04 (wave 3)
 - [x] 03-08-PLAN.md — LIFF customer: subscription signup/manage + B2B account (pending/wholesale/standing) + substitution detail (SALE-03/CUST-02/05) — deps 03-06/03-07 (wave 3)
+
+**Gap closure** *(from 03-UAT.md — all parallel, wave 1 of the gap run)*
+
+- [ ] 03-13-PLAN.md — Gate the b2b tier price in the public catalog behind wholesaleVisible() (USER DECISION, CUST-02) (wave 1)
+- [ ] 03-14-PLAN.md — LIFF entry points: Rich Menu 6th button → /subscription + in-app links to /subscription & /b2b + selected-package visual (SALE-03/CUST-02) (wave 1)
+- [ ] 03-15-PLAN.md — Standing-order basket shows variety/customer names reactively, not UUID prefixes (CUST-05) (wave 1)
 
 ### Phase 4: Web Store, Marketing & Scale
 
