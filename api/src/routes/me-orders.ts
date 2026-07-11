@@ -158,7 +158,7 @@ export function makeMeOrdersRoutes(database: MeOrdersDb = defaultDb) {
             set.status = 404;
             return { error: "not_found" };
           }
-          const lines = await database
+          const rawLines = await database
             .select({
               id: orderLines.id,
               lineKind: orderLines.lineKind,
@@ -167,9 +167,21 @@ export function makeMeOrdersRoutes(database: MeOrdersDb = defaultDb) {
               unitLabel: orderLines.unitLabel,
               unitPriceSatang: orderLines.unitPriceSatang,
               qty: orderLines.qty,
+              boxBomJson: orderLines.boxBomJson,
             })
             .from(orderLines)
             .where(eq(orderLines.orderId, ord.id));
+
+          // Substitution notice (D-16): a generated subscription box records whether
+          // it was filled around a sold-out variety in its box_bom_json. Surface a
+          // single order-level flag so the LIFF can show the in-order detail line
+          // (the customer already got the Flex push from 03-07). Strip the raw BOM.
+          const substitution = rawLines.some(
+            (l) =>
+              l.lineKind === "box" &&
+              (l.boxBomJson as { substitution?: boolean } | null)?.substitution === true,
+          );
+          const lines = rawLines.map(({ boxBomJson: _boxBomJson, ...rest }) => rest);
 
           return {
             order: {
@@ -186,6 +198,7 @@ export function makeMeOrdersRoutes(database: MeOrdersDb = defaultDb) {
               recipientPhone: ord.recipientPhone,
               recipientAddress: ord.recipientAddress,
               holdExpiresAt: ord.holdExpiresAt,
+              substitution,
               createdAt: ord.createdAt,
             },
             lines,

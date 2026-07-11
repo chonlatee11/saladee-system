@@ -30,6 +30,8 @@ interface OrderDetail {
     deliveryMethod: string | null;
     recipientName: string | null;
     recipientAddress: string | null;
+    // Subscription box filled around a sold-out variety this round (D-16).
+    substitution?: boolean;
     createdAt: string;
   };
   lines: OrderLine[];
@@ -110,6 +112,15 @@ function baht(satang: number): string {
           {{ orderStatusLabel(detail.order.status) }}
         </span>
       </div>
+
+      <!-- Substitution detail line (D-16): pairs with the Flex push from 03-07. -->
+      <p
+        v-if="detail.order.substitution"
+        class="mb-md rounded-lg bg-[#FFF4E5] px-md py-sm text-[14px] leading-[1.55] text-[#B26A00]"
+        role="status"
+      >
+        รอบนี้มีการปรับผักในกล่องของคุณให้ครบมูลค่าแพ็กเกจ เนื่องจากบางชนิดหมด
+      </p>
 
       <ul class="flex flex-col gap-sm">
         <li

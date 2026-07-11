@@ -39,6 +39,7 @@ const routes: RouteRecordRaw[] = [
     name: "subscription-manage",
     component: () => import("./views/SubscriptionManage.vue"),
   },
+  { path: "/b2b", name: "b2b", component: () => import("./views/B2bAccount.vue") },
   // Unknown paths fall back to the catalog (the Rich Menu entry point).
   { path: "/:pathMatch(.*)*", redirect: "/" },
 ];
