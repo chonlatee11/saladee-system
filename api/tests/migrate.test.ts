@@ -28,6 +28,8 @@ const PAYMENTS_UP = "drizzle/0003_payments_delivery_consent.sql";
 const PAYMENTS_DOWN = "drizzle/0003_payments_delivery_consent.down.sql";
 const PHASE3_UP = "drizzle/0004_phase3.sql";
 const PHASE3_DOWN = "drizzle/0004_phase3.down.sql";
+const PHASE4_UP = "drizzle/0005_phase4.sql";
+const PHASE4_DOWN = "drizzle/0005_phase4.down.sql";
 
 let client: ReturnType<typeof postgres>;
 let db: ReturnType<typeof drizzle>;
@@ -65,11 +67,13 @@ async function applyAllUp(): Promise<void> {
   await client.file(PRICES_DEFAULT_UP);
   await client.file(PAYMENTS_UP);
   await client.file(PHASE3_UP);
+  await client.file(PHASE4_UP);
 }
 async function applyAllDown(): Promise<void> {
-  // Latest migration first (children before parents, enum types last). 0004's
-  // child tables FK into varieties/customers/rounds/orders, so its down MUST run
-  // before 0001's down drops those parents.
+  // Latest migration first (children before parents, enum types last). 0005's
+  // child tables FK into varieties/customers/orders/boxes, so its down MUST run
+  // before 0004/0001's down drops those parents.
+  await client.file(PHASE4_DOWN);
   await client.file(PHASE3_DOWN);
   await client.file(PAYMENTS_DOWN);
   await client.file(PRICES_DEFAULT_DOWN);
@@ -120,6 +124,19 @@ describe("migration up→down→up (Criterion 2)", () => {
     expect(await columnExists("varieties", "days_to_harvest")).toBe(true);
     expect(await columnExists("round_stock", "is_manual_override")).toBe(true);
     expect(await indexExists("subscription_orders_sub_round_idx")).toBe(true);
+    // 0005_phase4 — new tables, delivery_status enum, additive orders columns.
+    expect(await tableExists("public.coupons")).toBe(true);
+    expect(await tableExists("public.coupon_redemptions")).toBe(true);
+    expect(await tableExists("public.loyalty_ledger")).toBe(true);
+    expect(await tableExists("public.broadcasts")).toBe(true);
+    expect(await tableExists("public.customer_tags")).toBe(true);
+    expect(await tableExists("public.variety_images")).toBe(true);
+    expect(await tableExists("public.box_images")).toBe(true);
+    expect(await enumExists("delivery_status")).toBe(true);
+    expect(await columnExists("orders", "discount_satang")).toBe(true);
+    expect(await columnExists("orders", "delivery_status")).toBe(true);
+    expect(await indexExists("coupon_redemptions_coupon_customer_idx")).toBe(true);
+    expect(await indexExists("loyalty_ledger_order_earn_idx")).toBe(true);
   });
 
   test("down: identity + commerce tables and enums are all gone", async () => {
@@ -145,6 +162,11 @@ describe("migration up→down→up (Criterion 2)", () => {
     expect(await enumExists("b2b_status")).toBe(false);
     // varieties table itself is gone, so its added column is gone with it.
     expect(await columnExists("varieties", "days_to_harvest")).toBe(false);
+    // 0005 objects gone (children dropped before parents, delivery_status type last).
+    expect(await tableExists("public.coupons")).toBe(false);
+    expect(await tableExists("public.loyalty_ledger")).toBe(false);
+    expect(await tableExists("public.broadcasts")).toBe(false);
+    expect(await enumExists("delivery_status")).toBe(false);
   });
 
   test("up again: full schema is back with no residue", async () => {
@@ -157,5 +179,9 @@ describe("migration up→down→up (Criterion 2)", () => {
     // rest of the suite, which inserts varieties carrying the new columns).
     expect(await tableExists("public.planting_batches")).toBe(true);
     expect(await columnExists("varieties", "days_to_harvest")).toBe(true);
+    // 0005 back with no residue (leaves the shared DB at full schema for the suite).
+    expect(await tableExists("public.coupons")).toBe(true);
+    expect(await columnExists("orders", "discount_satang")).toBe(true);
+    expect(await enumExists("delivery_status")).toBe(true);
   });
 });

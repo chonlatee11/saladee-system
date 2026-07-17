@@ -113,6 +113,7 @@ beforeAll(async () => {
   client = postgres(TEST_URL, { prepare: false, max: 4 });
   db = drizzle(client, { schema });
   routes = makeOrdersRoutes(db);
+  await client.file("drizzle/0005_phase4.down.sql").catch(() => {});
   await client.file("drizzle/0004_phase3.down.sql").catch(() => {});
   await client.file("drizzle/0003_payments_delivery_consent.down.sql").catch(() => {});
   await client.file("drizzle/0001_commerce.down.sql").catch(() => {});
@@ -121,6 +122,7 @@ beforeAll(async () => {
   await client.file("drizzle/0001_commerce.sql");
   await client.file("drizzle/0003_payments_delivery_consent.sql");
   await client.file("drizzle/0004_phase3.sql");
+  await client.file("drizzle/0005_phase4.sql");
 
   // Override the boot notifier with one that drives our mocked line client.
   pushMessage = mock(async () => ({}));
