@@ -27,6 +27,14 @@ export const HOT_KEYS = {
   haircutDefaultPct: "haircut_default_pct",
   b2bQuotaCeilingPct: "b2b_quota_ceiling_pct",
   delivery: "delivery",
+  // ── Phase-4 loyalty economics + PDPA policy versioning (D-11 / owner-editable) ─
+  // NON-secret hot config: how many points an order earns, the baht value of a
+  // point when redeemed, and the current PDPA policy version/text the checkout
+  // consent stamps. NEVER a secret-shaped key (settings API stays secret-free).
+  loyaltyEarnRate: "loyalty_earn_rate",
+  loyaltyPointBaht: "loyalty_point_baht",
+  pdpaPolicyVersion: "pdpa_policy_version",
+  pdpaPolicyText: "pdpa_policy_text",
 } as const;
 
 /** The hot config the API exposes and the admin edits (secrets are NOT here). */
@@ -35,6 +43,10 @@ export interface HotSettings {
   haircutDefaultPct: number;
   b2bQuotaCeilingPct: number;
   delivery: DeliveryConfig;
+  loyaltyEarnRate: number; // points earned per 100 baht subtotal (D-11)
+  loyaltyPointBaht: number; // baht value of 1 point on redeem (D-11)
+  pdpaPolicyVersion: string; // current PDPA policy version the consent stamps
+  pdpaPolicyText: string; // current PDPA policy copy (owner-editable)
 }
 
 /** A partial edit — any subset of the hot fields (mirrors the route's PUT body). */
@@ -47,11 +59,21 @@ export function defaultHotSettings(): HotSettings {
     haircutDefaultPct: Number(env.HAIRCUT_DEFAULT_PCT),
     b2bQuotaCeilingPct: Number(env.B2B_QUOTA_CEILING_PCT),
     delivery: deliveryConfig,
+    // Sensible loyalty economics defaults (D-11): 1 point per 100 baht subtotal,
+    // 1 point worth 1 baht on redeem. PDPA policy seeds at "1.0" (owner edits later).
+    loyaltyEarnRate: 1,
+    loyaltyPointBaht: 1,
+    pdpaPolicyVersion: "1.0",
+    pdpaPolicyText: "",
   };
 }
 
 function asNumber(value: unknown, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+function asString(value: unknown, fallback: string): string {
+  return typeof value === "string" ? value : fallback;
 }
 
 /**
@@ -67,6 +89,10 @@ export async function getHotSettings(db: CatalogDb): Promise<HotSettings> {
     haircutDefaultPct: asNumber(map.get(HOT_KEYS.haircutDefaultPct), d.haircutDefaultPct),
     b2bQuotaCeilingPct: asNumber(map.get(HOT_KEYS.b2bQuotaCeilingPct), d.b2bQuotaCeilingPct),
     delivery: (map.get(HOT_KEYS.delivery) as DeliveryConfig | undefined) ?? d.delivery,
+    loyaltyEarnRate: asNumber(map.get(HOT_KEYS.loyaltyEarnRate), d.loyaltyEarnRate),
+    loyaltyPointBaht: asNumber(map.get(HOT_KEYS.loyaltyPointBaht), d.loyaltyPointBaht),
+    pdpaPolicyVersion: asString(map.get(HOT_KEYS.pdpaPolicyVersion), d.pdpaPolicyVersion),
+    pdpaPolicyText: asString(map.get(HOT_KEYS.pdpaPolicyText), d.pdpaPolicyText),
   };
 }
 

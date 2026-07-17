@@ -56,6 +56,11 @@ export const EnvSchema = t.Object({
   // Ceiling (% of a round's quota) that B2B + subscription reservations may take,
   // leaving headroom for B2C (D-10). 100 = no reserved ceiling.
   B2B_QUOTA_CEILING_PCT: t.String({ default: "100" }),
+  // ── Phase-4 carrier adapter selection (DEL-05) ──────────────────────────────
+  // Picks the delivery-carrier adapter (mirrors SLIP_VERIFY_PROVIDER): "manual"
+  // (default — staff hand-enters the waybill) with a "grab"/"lalamove" seam later.
+  // Env-driven, one-line swap; call sites import only the env-selected singleton.
+  CARRIER_PROVIDER: t.String({ default: "manual" }),
 });
 
 export type Env = Static<typeof EnvSchema>;

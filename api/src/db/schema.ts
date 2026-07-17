@@ -14,6 +14,7 @@ import { sql } from "drizzle-orm";
 import {
   boolean,
   date,
+  index,
   integer,
   jsonb,
   pgEnum,
@@ -63,6 +64,15 @@ export const subscriptionStatusEnum = pgEnum("subscription_status", [
   "cancelled",
 ]);
 export const b2bStatusEnum = pgEnum("b2b_status", ["pending", "approved", "rejected"]);
+// ── Phase-4 delivery tracking (DEL-05, D-22). Declared before the orders table so
+// the ADD COLUMN delivery_status references an already-created type (Pitfall 4). ─
+export const deliveryStatusEnum = pgEnum("delivery_status", [
+  "pending",
+  "handed_to_carrier",
+  "in_transit",
+  "delivered",
+  "failed",
+]);
 
 // ── Catalog: varieties + their sale units (INV-01, INV-03, D-22 CROP-01 seam) ─
 export const varieties = pgTable("varieties", {
@@ -256,6 +266,16 @@ export const orders = pgTable("orders", {
   deliveryMethod: text("delivery_method"), // nullable
   deliveryZone: text("delivery_zone"), // nullable
   deliveryFeeSatang: integer("delivery_fee_satang"), // nullable, integer satang
+  // Phase-4 net-payable discount (MKT-01/CUST-03). notNull default 0 so every
+  // existing order stays valid and the QR/expected-amount math (payments.ts) can
+  // always subtract it (Pitfall 2). Whole-baht discounts only (netSatang % 100 === 0).
+  discountSatang: integer("discount_satang").notNull().default(0),
+  // Phase-4 carrier tracking (DEL-05, D-22). All nullable — Phase-1..3 orders and
+  // self-delivery orders have no carrier/tracking.
+  carrier: text("carrier"), // nullable — selected/entered carrier name
+  trackingNumber: text("tracking_number"), // nullable — hand-entered waybill (Phase-4 manual)
+  deliveryStatus: deliveryStatusEnum("delivery_status"), // nullable until handed to carrier
+  trackingUpdatedAt: timestamp("tracking_updated_at", { withTimezone: true }), // nullable
   packedAt: timestamp("packed_at", { withTimezone: true }), // nullable (D-20 pack state)
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
@@ -492,4 +512,126 @@ export const settings = pgTable("settings", {
   key: text("key").primaryKey(),
   value: jsonb("value").notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// ══ Phase-4: coupons, loyalty, broadcasts, tags, product-image galleries ═══════
+// All additive (0005_phase4). The reservation guard (round_stock) is NOT touched.
+// Money is ALWAYS integer satang; usage caps are enforced as DB properties (guarded
+// UPDATE + partial/unique indexes) exactly like the oversell counter (NFR-02 idiom).
+
+// ── Coupons: global + per-customer usage caps enforced in-DB (MKT-01, D-13) ────
+// global_used is bumped by a guarded conditional UPDATE (mirrors reserve()); a zero
+// row-count means exhausted/expired/inactive. applicability jsonb carries the
+// segment/channel targeting (default: B2C).
+export const coupons = pgTable(
+  "coupons",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    code: text("code").notNull(),
+    discountKind: text("discount_kind").notNull(), // "percent" | "baht"
+    discountValue: integer("discount_value").notNull(),
+    minSubtotalSatang: integer("min_subtotal_satang").notNull().default(0),
+    globalLimit: integer("global_limit"), // nullable — null = unlimited
+    globalUsed: integer("global_used").notNull().default(0),
+    perCustomerLimit: integer("per_customer_limit").notNull().default(1),
+    applicability: jsonb("applicability").notNull().default({ segments: ["b2c"] }),
+    active: boolean("active").notNull().default(true),
+    expiresAt: timestamp("expires_at", { withTimezone: true }), // nullable — null = no expiry
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [uniqueIndex("coupons_code_idx").on(t.code)],
+);
+
+// ── Coupon redemptions: the per-customer cap is the UNIQUE (coupon, customer) row
+// (a 23505 IS "already used" — D-08, mirrors payments dedup). Rolls back with the
+// reserving order transaction on a conflict.
+export const couponRedemptions = pgTable(
+  "coupon_redemptions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    couponId: uuid("coupon_id")
+      .notNull()
+      .references(() => coupons.id),
+    customerId: uuid("customer_id")
+      .notNull()
+      .references(() => customers.id),
+    orderId: uuid("order_id")
+      .notNull()
+      .references(() => orders.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [uniqueIndex("coupon_redemptions_coupon_customer_idx").on(t.couponId, t.customerId)],
+);
+
+// ── Loyalty ledger: append-only points (positive earn / negative redeem). Balance
+// is the SUM of rows (never a mutable column — mirrors consent_logs). A partial
+// UNIQUE(order_id) WHERE kind='earn' makes a re-entered `paid` transition earn at
+// most once (D-12 idempotency, Pitfall 4).
+export const loyaltyLedger = pgTable(
+  "loyalty_ledger",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    customerId: uuid("customer_id")
+      .notNull()
+      .references(() => customers.id),
+    orderId: uuid("order_id").references(() => orders.id), // nullable (manual adjustments)
+    kind: text("kind").notNull(), // "earn" | "redeem"
+    points: integer("points").notNull(), // positive earn / negative redeem
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    uniqueIndex("loyalty_ledger_order_earn_idx")
+      .on(t.orderId)
+      .where(sql`${t.kind} = 'earn'`),
+  ],
+);
+
+// ── Broadcasts: LINE OA multicast campaigns, consent-filtered (MKT-03, LINE-04) ─
+// segment jsonb = predefined type + tags (D-15); message_json = Flex/image/link
+// payload (D-18). status walks draft → scheduled → sent → failed.
+export const broadcasts = pgTable("broadcasts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  title: text("title").notNull(),
+  segment: jsonb("segment"), // nullable — audience predicate (predefined type + tags)
+  messageJson: jsonb("message_json"), // nullable — Flex/image/link payload snapshot
+  status: text("status").notNull().default("draft"), // "draft"|"scheduled"|"sent"|"failed"
+  scheduledAt: timestamp("scheduled_at", { withTimezone: true }), // nullable — send-now if null
+  sentCount: integer("sent_count").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// ── Customer tags: manual segmentation labels for broadcast audiences (D-15) ────
+export const customerTags = pgTable(
+  "customer_tags",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    customerId: uuid("customer_id")
+      .notNull()
+      .references(() => customers.id),
+    tag: text("tag").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [index("customer_tags_customer_idx").on(t.customerId)],
+);
+
+// ── Product-image galleries (D-28). varieties.imageUrl / boxes.imageUrl remain the
+// cover image (backward compatible); these child rows are the extra gallery photos.
+export const varietyImages = pgTable("variety_images", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  varietyId: uuid("variety_id")
+    .notNull()
+    .references(() => varieties.id),
+  url: text("url").notNull(),
+  sort: integer("sort").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const boxImages = pgTable("box_images", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  boxId: uuid("box_id")
+    .notNull()
+    .references(() => boxes.id),
+  url: text("url").notNull(),
+  sort: integer("sort").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
