@@ -151,6 +151,14 @@ export function makeCatalogRoutes(database: CatalogDb = defaultDb) {
           return { session: null as Session | null };
         }
       })
+      // WR-01: every catalog response varies by the caller's session — b2b
+      // wholesale prices are gated per Authorization (see showB2bFor). Mark the
+      // response private + Vary so a shared cache (Caddy/Cloudflare) can never
+      // serve an approved customer's wholesale prices to an anonymous caller.
+      .onAfterHandle(({ set }) => {
+        set.headers["cache-control"] = "private, no-store";
+        set.headers.vary = "Authorization";
+      })
       // OPEN (D-03): all open rounds' sellable varieties, grouped by variety.
       .get("/catalog", async ({ session }) => {
         const today = new Date().toISOString().slice(0, 10);

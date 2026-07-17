@@ -148,6 +148,17 @@ describe("GET /catalog — availability, sold-out label, multi-mode surface (INV
     expect(modes).toEqual(["preorder", "ready"]);
   });
 
+  test("WR-01: catalog responses are private + Vary: Authorization (no shared-cache b2b leak)", async () => {
+    await arrange();
+    const list = await req("GET", "/catalog");
+    expect(list.headers.get("cache-control")).toBe("private, no-store");
+    expect(list.headers.get("vary")).toBe("Authorization");
+    const { preorderRoundId } = await arrange();
+    const one = await req("GET", `/catalog/rounds/${preorderRoundId}`);
+    expect(one.headers.get("cache-control")).toBe("private, no-store");
+    expect(one.headers.get("vary")).toBe("Authorization");
+  });
+
   test("availability = quota − reserved; the fully-reserved round is soldOut with label หมดรอบนี้ (INV-08)", async () => {
     const { varietyId, preorderRoundId, readyRoundId } = await arrange();
     const res = await req("GET", "/catalog");
