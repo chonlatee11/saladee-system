@@ -184,14 +184,14 @@ Plans:
   3. An admin sends a segmented LINE broadcast and a conversational chatbot can take orders.
   4. Delivery records carrier tracking number/status (Grab/Lalamove/general carrier), and the system recommends per-Monday planting quantities from demand history.
 
-**Plans**: 1/10 plans executed
+**Plans**: 2/10 plans executed
 **UI hint**: yes
 
 Plans:
 **Wave 1** *(backbone — schema/migration [BLOCKING] + frozen composition)*
 
 - [x] 04-01-PLAN.md — Schema + migration 0005 [BLOCKING] + register in all self-resetting tests + env + settings keys (wave 1)
-- [ ] 04-02-PLAN.md — Frozen composition: 5 stub routers in index.ts + 5 web-admin routes/stub views (wave 1)
+- [x] 04-02-PLAN.md — Frozen composition: 5 stub routers in index.ts + 5 web-admin routes/stub views (wave 1)
 
 **Wave 2** *(parallel disjoint-file slices — blocked on Wave 1)*
 
@@ -221,4 +221,4 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 | 1. Commerce Core | 5/5 | Complete   | 2026-07-02 |
 | 2. LINE Storefront, Payments & Delivery | 9/9 | Complete    | 2026-07-04 |
 | 3. Back-office, Crop Planning & B2B/Subscription | 15/15 | Complete    | 2026-07-11 |
-| 4. Web Store, Marketing & Scale | 1/10 | In Progress|  |
+| 4. Web Store, Marketing & Scale | 2/10 | In Progress|  |
