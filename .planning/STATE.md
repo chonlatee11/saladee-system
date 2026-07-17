@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 4
-current_phase_name: Web Store, Marketing & Scale
-status: "Phase 03 shipped — PR #14"
+current_phase: 04
+current_phase_name: web-store-marketing-scale
+status: executing
 stopped_at: Phase 04 UI-SPEC approved
-last_updated: "2026-07-17T15:37:51.978Z"
+last_updated: "2026-07-17T16:17:58.834Z"
 last_activity: 2026-07-17
-last_activity_desc: Phase 04 planning complete
+last_activity_desc: Phase 04 execution started
 progress:
   total_phases: 5
   completed_phases: 4
-  total_plans: 37
-  completed_plans: 37
+  total_plans: 47
+  completed_plans: 38
   percent: 80
 ---
 
@@ -24,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-28)
 
 **Core value:** ลูกค้าสั่งผักสลัดผ่าน LINE แล้วจ่ายเงินจบในที่เดียว และจำนวนที่เปิดขายตรงกับผลผลิตจริงเสมอ (ไม่ oversell, ไม่เหลือทิ้ง)
-**Current focus:** Phase 03 — back-office-crop-planning-b2b-subscription
+**Current focus:** Phase 04 — web-store-marketing-scale
 
 ## Current Position
 
-Phase: 4 — Web Store, Marketing & Scale
-Plan: Ready to execute — 10 plans / 4 waves (MVP vertical-slice)
-Status: Phase 04 planned — plan-checker VERIFICATION PASSED (1 blocker + 5 warnings fixed via 04-10)
-Last activity: 2026-07-17 — Phase 04 planning complete
+Phase: 04 (web-store-marketing-scale) — EXECUTING
+Plan: 2 of 10
+Status: Ready to execute
+Last activity: 2026-07-17 — Phase 04 execution started
 Note: Decision-coverage gate (13a) reported 21/28 — OVERRIDE (known false-negative, [[decision-coverage-gate-false-negative]]): the 7 "uncovered" decisions (D-03/05/09/10/16/22/24) ARE implemented in plan must_haves/truths as prose but not tagged with literal `D-NN:` tokens; plan-checker goal-backward confirmed D-01..D-28 all have implementing tasks. Verify-phase should re-check these are honored in code.
 
 Progress: [████████░░] 77%
@@ -82,6 +82,7 @@ Progress: [████████░░] 77%
 | Phase 03 P13 | 4min | 2 tasks | 3 files |
 | Phase 03 P15 | 3min | 1 tasks | 1 files |
 | Phase 03 P14 | 8min | 3 tasks | 5 files |
+| Phase 04 P01 | 20 | 2 tasks | 44 files |
 
 ## Accumulated Context
 
@@ -121,6 +122,7 @@ Recent decisions affecting current work:
 - [Phase 03]: Standing-orders table: display labels joined into DisplayRow row data (not accessorFn closures) because TanStack Table memoizes accessor results per row
 - [Phase 03]: 03-14: /b2b gets no Rich Menu cell (niche) — in-LIFF catalog quick-link covers CUST-02; catalog quick-links stay neutral (accent reserved for the sticky checkout CTA)
 - [Phase 03]: 03-14: selected package/frequency reuses the DeliveryMethodTiles ring-2 ring-accent + fixed-footprint check badge verbatim — one approved selected pattern, no second variant
+- [Phase ?]: 04-01: migration 0005 additive; reservation guard untouched
 
 ### Pending Todos
 
@@ -163,6 +165,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-17T14:39:00.453Z
+Last session: 2026-07-17T16:17:41.708Z
 Stopped at: Phase 04 UI-SPEC approved
 Resume file: .planning/phases/04-web-store-marketing-scale/04-UI-SPEC.md
