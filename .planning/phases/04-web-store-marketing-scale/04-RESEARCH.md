@@ -444,22 +444,26 @@ export function plantsToMeetDemand(demandPlants: number, survivalPct: number): n
 
 **These `[ASSUMED]` items should be confirmed by the planner/owner before they become locked plan decisions.**
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **How does a web-store customer earn/redeem loyalty without LINE Login?**
    - What we know: D-03 guest checkout; loyalty needs a persistent member; LINE Login lives in LIFF, not the web.
    - What's unclear: whether the web store links to LINE login, matches by phone, or simply defers loyalty to LINE-channel customers in MVP.
    - Recommendation: MVP = loyalty available to LINE-authenticated members only; web guests see the "log in to earn" hint (copy already in UI-SPEC). Confirm with owner (A7).
+   - RESOLVED: LINE-members-only MVP. Loyalty earn/redeem is gated on `line_user_id`; web guests get the "log in to earn" hint. Plans 04-03 (member-gated earn/redeem) + 04-09/04-10 (guest hint / member entry).
 
 2. **Points earn base — subtotal, net-paid (after discounts), or including delivery?**
    - What we know: D-12 says "computed on the order value."
    - Recommendation: earn on subtotal (pre-delivery, pre-discount) for predictability; confirm (A4).
+   - RESOLVED: earn on subtotal (pre-delivery, pre-discount). Plan 04-03 `earnPoints` computes points from the order subtotal.
 
 3. **Back-in-stock demand quantity for CROP-07.**
    - What we know: D-24 counts unmet demand; `back_in_stock_requests` records interest but no quantity.
    - Recommendation: count each request as a fixed small plant estimate (configurable) or as 1 pack-equivalent; confirm heuristic (A6).
+   - RESOLVED: configurable per-request plant estimate (heuristic), owner-tunable. Plan 04-07 crop-recommend aggregate counts each back-in-stock request via a configurable estimate.
 
 4. **Nuxt SSR hosting target (Cloudflare Pages edge vs VPS).** See A5 / Environment Availability.
+   - RESOLVED: deferred to a blocking `checkpoint:decision` at execution (Cloudflare Pages edge vs VPS behind Caddy). Plan 04-09 "Nuxt SSR hosting decision" checkpoint.
 
 ## Environment Availability
 
