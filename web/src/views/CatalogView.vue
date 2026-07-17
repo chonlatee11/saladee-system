@@ -11,6 +11,11 @@
 //   • no-open-round  → the "รอบขายปิดชั่วคราว" empty state
 //   • error          → "เกิดข้อผิดพลาด โปรดลองใหม่อีกครั้ง"
 // A `loader` prop is injectable so the view test can mount it with a mocked catalog.
+//
+// Member quick-links (03-14, UAT gap test 6): /subscription (SALE-03) and /b2b
+// (CUST-02) had no in-app entry point. The catalog at "/" is the LIFF root, the
+// Rich Menu default entry AND the router's wildcard fallback — links rendered here
+// (outside the state branches) are always reachable, closing the discoverability gap.
 import { RouterLink } from "vue-router";
 import { api } from "../api";
 import { useCart, type CartLine } from "../stores/cart";
@@ -46,6 +51,24 @@ function onAdd(line: CartLine): void {
 <template>
   <section class="p-md">
     <h1 class="mb-md text-[28px] font-semibold leading-[1.3] text-ink">สั่งผักรอบนี้</h1>
+
+    <!-- Member quick-links (03-14) — rendered in EVERY screen state (outside the
+         v-if chain). Neutral treatment per 02-UI-SPEC accent reservation: the
+         sticky checkout CTA owns the accent on this screen. -->
+    <nav class="mb-md flex gap-sm" aria-label="ลิงก์สมาชิก">
+      <RouterLink
+        to="/subscription"
+        class="flex min-h-[44px] flex-1 items-center justify-center rounded-lg border border-border bg-white px-md py-sm text-center text-[15px] font-medium text-ink"
+      >
+        สมาชิกกล่องผัก
+      </RouterLink>
+      <RouterLink
+        to="/b2b"
+        class="flex min-h-[44px] flex-1 items-center justify-center rounded-lg border border-border bg-white px-md py-sm text-center text-[15px] font-medium text-ink"
+      >
+        ลูกค้าขายส่ง (B2B)
+      </RouterLink>
+    </nav>
 
     <div
       v-if="errored"

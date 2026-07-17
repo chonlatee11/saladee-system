@@ -58,7 +58,12 @@ const createOrder = useCreateStandingOrder();
 const updateOrder = useUpdateStandingOrder();
 const cancelOrder = useCancelStandingOrder();
 
-const rows = computed<StandingRow[]>(() => (standing.value ?? []) as unknown as StandingRow[]);
+// Row shape fed to the table: StandingRow plus precomputed display labels.
+interface DisplayRow extends StandingRow {
+  customerLabel: string;
+  basketLabel: string;
+}
+
 const overflow = computed<OverflowFlag[]>(() => (flags.value ?? []) as unknown as OverflowFlag[]);
 const approvedCustomers = computed<CustomerRow[]>(() =>
   ((customers.value ?? []) as unknown as CustomerRow[]).filter((c) => c.b2bStatus === "approved"),
@@ -69,14 +74,27 @@ const customerName = (id: string): string =>
   ((customers.value ?? []) as unknown as CustomerRow[]).find((c) => c.id === id)?.name ?? id.slice(0, 8);
 const varietyName = (id: string): string =>
   varietyList.value.find((v) => v.id === id)?.name ?? id.slice(0, 8);
-const basketSummary = (r: StandingRow): string =>
-  r.items.map((it) => `${varietyName(it.varietyId)} ×${it.plantsPerRound}`).join(", ") || "—";
 const totalPlants = (r: StandingRow): number =>
   r.items.reduce((sum, it) => sum + it.plantsPerRound, 0);
 
-const columns: ColumnDef<StandingRow, unknown>[] = [
-  { id: "customer", header: "ลูกค้า", accessorFn: (r) => customerName(r.customerId) },
-  { id: "basket", header: "ตะกร้าประจำรอบ", accessorFn: (r) => basketSummary(r) },
+// Display labels are joined INTO the row data (not resolved in column accessorFn
+// closures): TanStack Table memoizes accessor results per row, so a lookup living
+// outside the data prop freezes the id-prefix fallback when the varieties/customers
+// queries resolve after first render. Because this computed reads varieties.value
+// and customers.value, a late-resolving query produces a NEW array → DataTable's
+// data prop changes → the per-row value cache is rebuilt with real names.
+const rows = computed<DisplayRow[]>(() =>
+  ((standing.value ?? []) as unknown as StandingRow[]).map((r) => ({
+    ...r,
+    customerLabel: customerName(r.customerId),
+    basketLabel:
+      r.items.map((it) => `${varietyName(it.varietyId)} ×${it.plantsPerRound}`).join(", ") || "—",
+  })),
+);
+
+const columns: ColumnDef<DisplayRow, unknown>[] = [
+  { id: "customer", header: "ลูกค้า", accessorKey: "customerLabel" },
+  { id: "basket", header: "ตะกร้าประจำรอบ", accessorKey: "basketLabel" },
   { id: "total", header: "รวม (ต้น/รอบ)", accessorFn: (r) => totalPlants(r), meta: { numeric: true } },
   { id: "active", header: "สถานะ", accessorKey: "active" },
 ];
@@ -85,38 +103,44 @@ const columns: ColumnDef<StandingRow, unknown>[] = [
 const showForm = ref(false);
 const editingId = ref<string | null>(null);
 const formCustomerId = ref("");
-const formItems = ref<StandingItemInput[]>([]);
+// WR-02: rows carry a stable client-side _key so Vue keys the v-for by identity,
+// not array index — splice-delete then no longer reuses the wrong row's DOM/state.
+type FormRow = StandingItemInput & { _key: number };
+let rowUid = 0;
+function newRow(varietyId = varietyList.value[0]?.id ?? "", plantsPerRound = 0): FormRow {
+  return { _key: ++rowUid, varietyId, plantsPerRound };
+}
+const formItems = ref<FormRow[]>([]);
 const formError = ref<string | null>(null);
 
 function openCreate(): void {
   editingId.value = null;
   formCustomerId.value = approvedCustomers.value[0]?.id ?? "";
-  formItems.value = [{ varietyId: varietyList.value[0]?.id ?? "", plantsPerRound: 0 }];
+  formItems.value = [newRow()];
   formError.value = null;
   showForm.value = true;
 }
 function openEdit(row: StandingRow): void {
   editingId.value = row.id;
   formCustomerId.value = row.customerId;
-  formItems.value = row.items.map((it) => ({
-    varietyId: it.varietyId,
-    plantsPerRound: it.plantsPerRound,
-  }));
+  formItems.value = row.items.map((it) => newRow(it.varietyId, it.plantsPerRound));
   if (formItems.value.length === 0) {
-    formItems.value = [{ varietyId: varietyList.value[0]?.id ?? "", plantsPerRound: 0 }];
+    formItems.value = [newRow()];
   }
   formError.value = null;
   showForm.value = true;
 }
 function addItem(): void {
-  formItems.value.push({ varietyId: varietyList.value[0]?.id ?? "", plantsPerRound: 0 });
+  formItems.value.push(newRow());
 }
 function removeItem(i: number): void {
   formItems.value.splice(i, 1);
 }
 async function submitForm(): Promise<void> {
   formError.value = null;
-  const items = formItems.value.filter((it) => it.varietyId && it.plantsPerRound > 0);
+  const items = formItems.value
+    .filter((it) => it.varietyId && it.plantsPerRound > 0)
+    .map(({ varietyId, plantsPerRound }) => ({ varietyId, plantsPerRound }));
   if (items.length === 0) {
     formError.value = "เพิ่มพันธุ์ผักและจำนวนอย่างน้อย 1 รายการ";
     return;
@@ -259,7 +283,7 @@ async function confirmCancel(): Promise<void> {
         </label>
 
         <p class="mb-sm text-[14px] font-semibold text-ink">ตะกร้าประจำรอบ</p>
-        <div v-for="(item, i) in formItems" :key="i" class="mb-sm flex items-end gap-sm">
+        <div v-for="(item, i) in formItems" :key="item._key" class="mb-sm flex items-end gap-sm">
           <label class="flex-1">
             <span class="mb-xs block text-[12px] text-muted">พันธุ์ผัก</span>
             <select

@@ -12,6 +12,7 @@ import { renderToString } from "vue/server-renderer";
 import { createMemoryHistory, createRouter } from "vue-router";
 import SubscriptionSignup from "../src/views/SubscriptionSignup.vue";
 import SubscriptionManage from "../src/views/SubscriptionManage.vue";
+import { useSubscription } from "../src/stores/subscription";
 
 function makeRouter() {
   return createRouter({
@@ -64,6 +65,28 @@ describe("SubscriptionSignup (SALE-03 / D-12)", () => {
     expect(html).toContain("กล่องกลาง (M)");
     expect(html).toContain("ยืนยันแพ็กเกจ"); // confirm CTA
     expect(html).toContain("ทุก 2 สัปดาห์"); // biweekly frequency tile
+  });
+
+  // 03-14 (UAT gap test 6): the chosen package must be unmistakable — accent ring
+  // + filled ✓ badge, replicating the approved DeliveryMethodTiles pattern. The
+  // store is a module singleton, so we preselect via the real store and clear after.
+  it("marks the selected package tile with the accent ring + ✓ badge", async () => {
+    const store = useSubscription();
+    store.selectPackage("M");
+    try {
+      const html = await render(SubscriptionSignup, "/subscription", {
+        sessionToken: "member-token",
+        loader: async () => ({ data: { subscriptions: [], nextRound: null }, error: null }),
+      });
+      expect(html).toContain("ring-accent");
+      expect(html).toContain("✓");
+      // Exactly ONE tile is pressed (only the package was selected — frequency
+      // tiles all render aria-pressed="false").
+      const pressed = html.match(/aria-pressed="true"/g) ?? [];
+      expect(pressed.length).toBe(1);
+    } finally {
+      store.clear();
+    }
   });
 
   it("routes an existing member to manage instead of re-signing up", async () => {

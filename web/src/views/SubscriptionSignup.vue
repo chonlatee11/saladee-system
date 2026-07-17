@@ -162,7 +162,10 @@ async function onConfirm(): Promise<void> {
         {{ submitError }}
       </p>
 
-      <!-- Package tiles (S/M/L, by value) -->
+      <!-- Package tiles (S/M/L, by value). Selected state replicates the approved
+           DeliveryMethodTiles pattern (02-UI-SPEC reserved accent use #2): accent
+           ring + filled ✓ badge — UAT gap test 6 (selection was too subtle). The
+           unselected badge keeps its footprint so layout never shifts on select. -->
       <h2 class="mb-sm text-[18px] font-semibold text-ink">เลือกแพ็กเกจ</h2>
       <div class="mb-lg flex flex-col gap-sm">
         <button
@@ -172,21 +175,34 @@ async function onConfirm(): Promise<void> {
           class="rounded-xl border p-md text-left transition-colors"
           :class="
             sub.packageCode.value === p.code
-              ? 'border-accent bg-accent/5'
+              ? 'border-accent ring-2 ring-accent bg-accent/5'
               : 'border-border bg-white'
           "
           :aria-pressed="sub.packageCode.value === p.code"
           @click="sub.selectPackage(p.code)"
         >
           <div class="flex items-center justify-between gap-md">
-            <span class="text-[16px] font-semibold text-ink">{{ p.label }}</span>
+            <span class="flex items-center gap-sm">
+              <span
+                class="flex h-[20px] w-[20px] shrink-0 items-center justify-center rounded-full border text-[14px]"
+                :class="
+                  sub.packageCode.value === p.code
+                    ? 'border-accent bg-accent text-white'
+                    : 'border-border bg-white text-transparent'
+                "
+                aria-hidden="true"
+                >✓</span
+              >
+              <span class="text-[16px] font-semibold text-ink">{{ p.label }}</span>
+            </span>
             <span class="text-[16px] font-semibold text-accent">{{ baht(p.valueSatang) }}/รอบ</span>
           </div>
           <p class="mt-[2px] text-[14px] leading-[1.5] text-muted">{{ p.blurb }}</p>
         </button>
       </div>
 
-      <!-- Frequency tiles -->
+      <!-- Frequency tiles — same ring treatment; no ✓ badge (the narrow pills
+           would crowd), ring + weight is the required minimum (03-14). -->
       <h2 class="mb-sm text-[18px] font-semibold text-ink">ความถี่</h2>
       <div class="mb-xl flex gap-sm">
         <button
@@ -196,7 +212,7 @@ async function onConfirm(): Promise<void> {
           class="flex-1 rounded-xl border px-md py-sm text-[16px] font-medium transition-colors"
           :class="
             sub.frequency.value === f.code
-              ? 'border-accent bg-accent/5 text-ink'
+              ? 'border-accent ring-2 ring-accent bg-accent/5 text-ink font-semibold'
               : 'border-border bg-white text-muted'
           "
           :aria-pressed="sub.frequency.value === f.code"

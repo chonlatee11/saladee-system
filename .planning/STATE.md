@@ -2,18 +2,17 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 03
-current_phase_name: back-office-crop-planning-b2b-subscription
-status: executing
+current_phase: 4
+current_phase_name: Web Store, Marketing & Scale
+status: "Phase 03 shipped — PR #14"
 stopped_at: Completed 03-08-PLAN.md (Task 3 human-verify pending)
-last_updated: "2026-07-11T01:58:07.099Z"
-last_activity: 2026-07-07
-last_activity_desc: Phase 03 execution started
+last_updated: "2026-07-17T13:30:32.860Z"
+last_activity: 2026-07-17
 progress:
   total_phases: 5
   completed_phases: 4
-  total_plans: 34
-  completed_plans: 34
+  total_plans: 37
+  completed_plans: 37
   percent: 80
 ---
 
@@ -28,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-06-28)
 
 ## Current Position
 
-Phase: 03 (back-office-crop-planning-b2b-subscription) — EXECUTING
-Plan: 12 of 12
-Status: Ready to execute
-Last activity: 2026-07-07 — Phase 03 execution started
+Phase: 4 — Web Store, Marketing & Scale
+Plan: Not started
+Status: Phase 03 shipped — PR #14
+Last activity: 2026-07-17
 Note: CR-01/CR-02 code-review test-gaps CLOSED — added regression tests api/tests/verified-slip-park.test.ts (verified slip parked as awaiting_review + 202 when order cancelled mid-verify) and api/tests/created-hold-sweep.test.ts (created-path holdExpiresAt set + swept). api bun test 187 pass / 0 fail.
 
 Progress: [████████░░] 77%
@@ -40,7 +39,7 @@ Progress: [████████░░] 77%
 
 **Velocity:**
 
-- Total plans completed: 14
+- Total plans completed: 29
 - Average duration: — min
 - Total execution time: 0.0 hours
 
@@ -50,6 +49,7 @@ Progress: [████████░░] 77%
 |-------|-------|-------|----------|
 | 01 | 5 | - | - |
 | 02 | 9 | - | - |
+| 03 | 15 | - | - |
 
 **Recent Trend:**
 
@@ -78,6 +78,9 @@ Progress: [████████░░] 77%
 | Phase 03 P12 | 20min | 2 tasks | 8 files |
 | Phase 03 P05 | ~45min | 3 tasks | 7 files |
 | Phase 03 P08 | ~40min | 3 tasks | 12 files |
+| Phase 03 P13 | 4min | 2 tasks | 3 files |
+| Phase 03 P15 | 3min | 1 tasks | 1 files |
+| Phase 03 P14 | 8min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -113,6 +116,10 @@ Recent decisions affecting current work:
 - [Phase ?]: Canned LINE chatbot: keyword/postback -> Flex + LIFF deep-link; webhook signature block unchanged (D-25/Pitfall 1)
 - [Phase ?]: publishQuota single-owns the round-open sequence: reserveStanding in the quota-write tx (atomic reserve-before-B2C) + subscription-generate once post-commit, one-shot per round — Guarantees CUST-05 reserve-before-B2C with no race window and no double-reserve on re-publish
 - [Phase 03]: 03-08 customer LIFF: package value is server authority (S/M/L code only); /me/* endpoints reuse me-orders member gate + 03-06 wholesaleVisible — Close T-03-20 money tamper + T-03-21 wholesale leak on the customer surface without new auth
+- [Phase ?]: 03-13: public catalog b2b tier gated via the ONE wholesaleVisible() rule (D-08/T-03-21) — optional-session .derive, fail-closed on invalid tokens, b2b keys nulled not removed (Eden shape unchanged)
+- [Phase 03]: Standing-orders table: display labels joined into DisplayRow row data (not accessorFn closures) because TanStack Table memoizes accessor results per row
+- [Phase 03]: 03-14: /b2b gets no Rich Menu cell (niche) — in-LIFF catalog quick-link covers CUST-02; catalog quick-links stay neutral (accent reserved for the sticky checkout CTA)
+- [Phase 03]: 03-14: selected package/frequency reuses the DeliveryMethodTiles ring-2 ring-accent + fixed-footprint check badge verbatim — one approved selected pattern, no second variant
 
 ### Pending Todos
 
@@ -149,9 +156,12 @@ Items acknowledged and carried forward from previous milestone close:
 | 2026-07-06 | Add Slip2Go slip-verification adapter (new default, replaces SlipOK) | 260706-tbn-add-slip2go-slip-verification-adapter-an | complete ✓ |
 | 2026-07-06 | Loading spinner + full-screen busy overlay across the LIFF | 260706-ut1-add-loading-spinner-full-screen-busy-ove | complete ✓ |
 | 2026-07-06 | Wire LINE member order linkage (order.customer_id + recipient snapshot) — closes Phase-2 UAT-4 | 260706-vr5-wire-line-member-order-linkage-customeri | complete ✓ |
+| 2026-07-17 | Fix WR-01: Cache-Control private + Vary Authorization on catalog (prevents shared-cache b2b wholesale leak) | 260717-wr1-catalog-cache-control-vary-authorization | complete ✓ |
+| 2026-07-17 | Fix IN-03: fail-closed showB2bFor so a DB hiccup keeps catalog open (no 500) | 260717-in3-catalog-showb2bfor-fail-closed | complete ✓ |
+| 2026-07-17 | Fix WR-02: key standing-order rows by stable _key not index (splice-delete state bug) | 260717-wr2-standing-orders-stable-row-key | complete ✓ |
 
 ## Session Continuity
 
-Last session: 2026-07-11T01:58:06.958Z
+Last session: 2026-07-11T07:15:50.024Z
 Stopped at: Completed 03-08-PLAN.md (Task 3 human-verify pending)
 Resume file: None

@@ -5,9 +5,13 @@
 //     cd api
 //     LIFF_ID=<your-liff-id> bun run scripts/provision-rich-menu.ts ./rich-menu.png
 //
-// It builds the 5-button "saladee-main" menu (2500×1686, 3-top + 2-bottom grid),
+// It builds the 6-button "saladee-main" menu (2500×1686, 3-top + 3-bottom grid),
 // deep-links each button into the LIFF routes the SPA router already registers,
 // uploads the image, and sets the menu as the default for the OA.
+//
+// NOTE (03-14): the menu grew from 5 to 6 cells (new bottom-left สมาชิกกล่องผัก →
+// /subscription, UAT gap test 6 / SALE-03). Re-running requires a NEW 6-cell
+// 2500×1686 image whose bottom row is three cells, not two.
 //
 // Idempotency: every existing menu named "saladee-main" is deleted first, so
 // re-running never accumulates duplicates. The channel access token is read ONLY
@@ -56,7 +60,10 @@ const blob = new messagingApi.MessagingApiBlobClient({
 // Deep-link targets — LIFF permanent links. Route paths match web/src/router.ts.
 const liffBase = `https://liff.line.me/${LIFF_ID}`;
 
-// 5 areas: 3 across the top row, 2 across the bottom (D-18 order + Thai labels).
+// 6 areas: 3 across the top row, 3 across the bottom (D-18 order + Thai labels;
+// 03-14 adds สมาชิกกล่องผัก → /subscription for SALE-03 discoverability).
+// /b2b intentionally gets NO Rich Menu cell — a niche audience; the in-LIFF
+// catalog quick-link (CatalogView.vue, 03-14 Task 2) covers CUST-02 instead.
 const request: messagingApi.RichMenuRequest = {
   size: { width: 2500, height: 1686 },
   selected: true,
@@ -75,14 +82,19 @@ const request: messagingApi.RichMenuRequest = {
       bounds: { x: 1667, y: 0, width: 833, height: 843 },
       action: { type: "uri", uri: `${liffBase}/orders` },
     },
-    // Bottom-left — ติดต่อร้าน
+    // Bottom-left — สมาชิกกล่องผัก
     {
-      bounds: { x: 0, y: 843, width: 1250, height: 843 },
+      bounds: { x: 0, y: 843, width: 833, height: 843 },
+      action: { type: "uri", uri: `${liffBase}/subscription` },
+    },
+    // Bottom-middle — ติดต่อร้าน
+    {
+      bounds: { x: 833, y: 843, width: 834, height: 843 },
       action: { type: "uri", uri: `${liffBase}/contact` },
     },
     // Bottom-right — ความรู้เรื่องผัก
     {
-      bounds: { x: 1250, y: 843, width: 1250, height: 843 },
+      bounds: { x: 1667, y: 843, width: 833, height: 843 },
       action: { type: "uri", uri: `${liffBase}/care` },
     },
   ],
@@ -140,7 +152,7 @@ async function main(): Promise<void> {
   await client.setDefaultRichMenu(richMenuId);
   console.log("  ✓ set as default rich menu");
 
-  console.log("\n✅ Rich Menu provisioned (LINE-01). The 5 buttons are now live.");
+  console.log("\n✅ Rich Menu provisioned (LINE-01). The 6 buttons are now live.");
 }
 
 main().catch((e) => fail(`provisioning failed: ${(e as Error).message}`));
