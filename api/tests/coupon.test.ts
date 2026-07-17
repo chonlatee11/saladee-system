@@ -10,6 +10,8 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "../src/db/schema";
 import { coupons, customers, orders } from "../src/db/schema";
+import { issueSession } from "../src/plugins/auth.plugin";
+import { makeCouponsRoutes } from "../src/routes/coupons";
 import { redeemCouponGuarded } from "../src/services/coupon";
 import { OrderError } from "../src/services/order-transition";
 import { seedRound } from "./seed";
@@ -196,5 +198,72 @@ describe("redeemCouponGuarded — money-safe coupon redemption (MKT-01)", () => 
     await expect(
       db.transaction((tx) => redeemCouponGuarded(tx, code, customerId, 20000, "b2c", o2)),
     ).rejects.toMatchObject({ code: "coupon_already_used", httpStatus: 409 });
+  });
+});
+
+describe("coupon admin routes — RBAC + CRUD (T-04-10 / V4)", () => {
+  function fire(
+    app: { handle: (r: Request) => Promise<Response> },
+    method: string,
+    path: string,
+    opts: { token?: string; body?: unknown } = {},
+  ): Promise<Response> {
+    const headers: Record<string, string> = { "content-type": "application/json" };
+    if (opts.token) headers.authorization = `Bearer ${opts.token}`;
+    return app.handle(
+      new Request(`http://localhost${path}`, {
+        method,
+        headers,
+        body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
+      }),
+    );
+  }
+
+  test("a non-admin (customer) token → 403; no token → 401", async () => {
+    const routes = makeCouponsRoutes(db);
+    const customerToken = await issueSession(crypto.randomUUID(), "customer");
+    expect((await fire(routes, "GET", "/coupons", { token: customerToken })).status).toBe(403);
+    expect((await fire(routes, "GET", "/coupons")).status).toBe(401);
+  });
+
+  test("owner|admin can create, list, and deactivate a coupon", async () => {
+    const routes = makeCouponsRoutes(db);
+    const admin = await issueSession(crypto.randomUUID(), "admin");
+    const code = `ADM-${crypto.randomUUID().slice(0, 8)}`;
+
+    const createRes = await fire(routes, "POST", "/coupons", {
+      token: admin,
+      body: { code, discountKind: "percent", discountValue: 15 },
+    });
+    expect(createRes.status).toBe(201);
+    const created = (await createRes.json()) as { id: string; active: boolean };
+    expect(created.active).toBe(true);
+
+    const listRes = await fire(routes, "GET", "/coupons", { token: admin });
+    expect(listRes.status).toBe(200);
+    const { coupons: list } = (await listRes.json()) as { coupons: { id: string }[] };
+    expect(list.some((c) => c.id === created.id)).toBe(true);
+
+    const deactRes = await fire(routes, "PATCH", `/coupons/${created.id}/deactivate`, { token: admin });
+    expect(deactRes.status).toBe(200);
+    expect(((await deactRes.json()) as { active: boolean }).active).toBe(false);
+  });
+
+  test("a percent value above 100 → 422; a duplicate code → 409", async () => {
+    const routes = makeCouponsRoutes(db);
+    const admin = await issueSession(crypto.randomUUID(), "admin");
+    expect(
+      (
+        await fire(routes, "POST", "/coupons", {
+          token: admin,
+          body: { code: `X-${crypto.randomUUID().slice(0, 8)}`, discountKind: "percent", discountValue: 150 },
+        })
+      ).status,
+    ).toBe(422);
+
+    const dupe = `DUP-${crypto.randomUUID().slice(0, 8)}`;
+    const body = { code: dupe, discountKind: "baht", discountValue: 20 };
+    expect((await fire(routes, "POST", "/coupons", { token: admin, body })).status).toBe(201);
+    expect((await fire(routes, "POST", "/coupons", { token: admin, body })).status).toBe(409);
   });
 });

@@ -33,6 +33,11 @@ const HotSettingsPatchSchema = t.Object(
     haircutDefaultPct: t.Optional(t.Integer({ minimum: 0, maximum: 100 })),
     b2bQuotaCeilingPct: t.Optional(t.Integer({ minimum: 0, maximum: 100 })),
     delivery: t.Optional(DeliveryConfigSchema),
+    // ── Phase-4 loyalty economics (04-03 / D-11, owner-editable) ────────────────
+    // NON-secret hot config: points earned per 100 baht subtotal, and the baht value
+    // of one point on redeem. Still a CLOSED schema — a secret-shaped key stays a 422.
+    loyaltyEarnRate: t.Optional(t.Number({ minimum: 0 })),
+    loyaltyPointBaht: t.Optional(t.Number({ minimum: 0 })),
   },
   { additionalProperties: false },
 );

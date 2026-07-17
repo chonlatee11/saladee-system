@@ -10,6 +10,8 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "../src/db/schema";
 import { customers, orders } from "../src/db/schema";
+import { issueSession } from "../src/plugins/auth.plugin";
+import { makeLoyaltyRoutes } from "../src/routes/loyalty";
 import { earnPoints, getBalance, redeemPointsGuarded } from "../src/services/loyalty";
 import { seedRound } from "./seed";
 
@@ -139,5 +141,35 @@ describe("redeemPointsGuarded — bounded redeem (CUST-03)", () => {
     await creditPoints(customerId, 20);
     await db.transaction((tx) => redeemPointsGuarded(tx, customerId, orderId, 15, 20000));
     expect(await getBalance(db, customerId)).toBe(55); // 50 + 20 - 15
+  });
+});
+
+describe("GET /loyalty/balance — member-gated (CUST-03 / D-19)", () => {
+  function fire(app: { handle: (r: Request) => Promise<Response> }, token?: string): Promise<Response> {
+    const headers: Record<string, string> = { "content-type": "application/json" };
+    if (token) headers.authorization = `Bearer ${token}`;
+    return app.handle(new Request("http://localhost/loyalty/balance", { method: "GET", headers }));
+  }
+
+  test("returns the member's balance; guest/staff → 403, no token → 401", async () => {
+    const routes = makeLoyaltyRoutes(db);
+
+    // A member (line_user_id present) with a credited balance.
+    const memberId = await seedCustomer(true);
+    await creditPoints(memberId, 42);
+    const memberToken = await issueSession(memberId, "customer");
+    const okRes = await fire(routes, memberToken);
+    expect(okRes.status).toBe(200);
+    expect(((await okRes.json()) as { balance: number }).balance).toBe(42);
+
+    // A guest customer session (no line_user_id) → 403.
+    const guestId = await seedCustomer(false);
+    const guestToken = await issueSession(guestId, "customer");
+    expect((await fire(routes, guestToken)).status).toBe(403);
+
+    // A staff session is not a customer → 403; no token → 401.
+    const staffToken = await issueSession(crypto.randomUUID(), "admin");
+    expect((await fire(routes, staffToken)).status).toBe(403);
+    expect((await fire(routes)).status).toBe(401);
   });
 });
