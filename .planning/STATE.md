@@ -157,6 +157,7 @@ Items acknowledged and carried forward from previous milestone close:
 | 2026-07-06 | Add Slip2Go slip-verification adapter (new default, replaces SlipOK) | 260706-tbn-add-slip2go-slip-verification-adapter-an | complete ✓ |
 | 2026-07-06 | Loading spinner + full-screen busy overlay across the LIFF | 260706-ut1-add-loading-spinner-full-screen-busy-ove | complete ✓ |
 | 2026-07-06 | Wire LINE member order linkage (order.customer_id + recipient snapshot) — closes Phase-2 UAT-4 | 260706-vr5-wire-line-member-order-linkage-customeri | complete ✓ |
+| 2026-07-17 | Fix WR-01: Cache-Control private + Vary Authorization on catalog (prevents shared-cache b2b wholesale leak) | 260717-wr1-catalog-cache-control-vary-authorization | complete ✓ |
 
 ## Session Continuity
 
