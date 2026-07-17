@@ -4,11 +4,10 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 4
 current_phase_name: Web Store, Marketing & Scale
-status: executing
+status: "Phase 03 shipped — PR #14"
 stopped_at: Completed 03-08-PLAN.md (Task 3 human-verify pending)
-last_updated: "2026-07-17T13:16:02.933Z"
+last_updated: "2026-07-17T13:30:32.860Z"
 last_activity: 2026-07-17
-last_activity_desc: Phase 03 complete, transitioned to Phase 4
 progress:
   total_phases: 5
   completed_phases: 4
@@ -30,8 +29,8 @@ See: .planning/PROJECT.md (updated 2026-06-28)
 
 Phase: 4 — Web Store, Marketing & Scale
 Plan: Not started
-Status: Ready to execute
-Last activity: 2026-07-17 — Phase 03 complete, transitioned to Phase 4
+Status: Phase 03 shipped — PR #14
+Last activity: 2026-07-17
 Note: CR-01/CR-02 code-review test-gaps CLOSED — added regression tests api/tests/verified-slip-park.test.ts (verified slip parked as awaiting_review + 202 when order cancelled mid-verify) and api/tests/created-hold-sweep.test.ts (created-path holdExpiresAt set + swept). api bun test 187 pass / 0 fail.
 
 Progress: [████████░░] 77%
