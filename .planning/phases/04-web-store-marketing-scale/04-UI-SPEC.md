@@ -1,10 +1,11 @@
 ---
 phase: 4
 slug: web-store-marketing-scale
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: 2026-07-17
+reviewed_at: 2026-07-17
 ---
 
 # Phase 4 — UI Design Contract
@@ -250,11 +251,11 @@ shared Tailwind v4 token system. Registry vetting gate: **not applicable**.
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: PASS
+- [x] Dimension 2 Visuals: PASS
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS
+- [x] Dimension 5 Spacing: PASS
+- [x] Dimension 6 Registry Safety: PASS
 
-**Approval:** pending
+**Approval:** approved
