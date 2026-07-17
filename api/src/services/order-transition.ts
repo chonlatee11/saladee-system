@@ -13,6 +13,7 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type * as schema from "../db/schema";
 import { customers, orderLines, orders } from "../db/schema";
 import { log } from "../lib/logger";
+import { earnPoints } from "./loyalty";
 import { canTransition, type OrderStatus } from "./order-status";
 import { release } from "./reservation";
 
@@ -171,6 +172,16 @@ export async function applyTransition(
         await release(tx, locked.roundId, l.varietyId, l.plants);
       }
     }
+  }
+
+  // Entering `paid` (from a non-paid state) credits loyalty points ONCE, in the SAME
+  // tx (CUST-03). This is a durable ledger write that MUST roll back with the
+  // transition — deliberately NOT the fire-and-forget notifier below. earnPoints
+  // self-gates on membership (a guest order earns nothing, Pitfall 5 / T-04-11) and
+  // is idempotent via the partial UNIQUE(order_id) WHERE kind='earn', so a re-entered
+  // `paid` transition never double-credits (Pitfall 4).
+  if (next === "paid" && current !== "paid") {
+    await earnPoints(tx, orderId);
   }
 
   await tx.update(orders).set({ status: next, updatedAt: new Date() }).where(eq(orders.id, orderId));

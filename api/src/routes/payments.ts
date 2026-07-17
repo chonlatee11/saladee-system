@@ -108,6 +108,7 @@ export function makePaymentsRoutes(database: PaymentsDb = defaultDb, deps: Payme
               holdExpiresAt: orders.holdExpiresAt,
               deliveryFeeSatang: orders.deliveryFeeSatang,
               subtotalSatang: orders.subtotalSatang,
+              discountSatang: orders.discountSatang,
             })
             .from(orders)
             .where(eq(orders.id, params.id))
@@ -128,7 +129,9 @@ export function makePaymentsRoutes(database: PaymentsDb = defaultDb, deps: Payme
           const holdSecondsRemaining = ord.holdExpiresAt
             ? Math.max(0, Math.floor((ord.holdExpiresAt.getTime() - Date.now()) / 1000))
             : null;
-          const totalSatang = ord.subtotalSatang + (ord.deliveryFeeSatang ?? 0);
+          // Net payable = subtotal + fee − Phase-4 discount (Pitfall 2): the QR was
+          // built from this same net amount at checkout, so the re-render matches.
+          const totalSatang = ord.subtotalSatang + (ord.deliveryFeeSatang ?? 0) - ord.discountSatang;
 
           return {
             id: params.id,
@@ -152,6 +155,7 @@ export function makePaymentsRoutes(database: PaymentsDb = defaultDb, deps: Payme
               status: orders.status,
               subtotalSatang: orders.subtotalSatang,
               deliveryFeeSatang: orders.deliveryFeeSatang,
+              discountSatang: orders.discountSatang,
             })
             .from(orders)
             .where(eq(orders.id, orderId))
@@ -180,7 +184,11 @@ export function makePaymentsRoutes(database: PaymentsDb = defaultDb, deps: Payme
             return { error: "too_many_slip_attempts" };
           }
 
-          const expectedAmountSatang = ord.subtotalSatang + (ord.deliveryFeeSatang ?? 0);
+          // The expected slip amount is the NET payable — subtract the Phase-4
+          // discount so a correctly-discounted payment auto-pays instead of parking
+          // in awaiting_review (Pitfall 2 / T-04-08).
+          const expectedAmountSatang =
+            ord.subtotalSatang + (ord.deliveryFeeSatang ?? 0) - ord.discountSatang;
 
           // Compress + store the image under a SERVER-ASSIGNED private key. When
           // only a QR string is supplied (no image), there is nothing to store.
