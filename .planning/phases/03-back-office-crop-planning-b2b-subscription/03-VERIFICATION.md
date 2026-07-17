@@ -1,7 +1,7 @@
 ---
 phase: 03-back-office-crop-planning-b2b-subscription
 verified: 2026-07-11T12:26:59Z
-status: human_needed
+status: passed
 score: 8/12 gap-closure must-haves verified (phase-goal 5/5 ROADMAP SCs hold — regression green)
 behavior_unverified: 4
 overrides_applied: 0
@@ -9,6 +9,7 @@ re_verification:
   previous_status: human_needed
   previous_score: 5/5
   gaps_closed:
+
     - "gap #4 (catalog b2b price leak) — GET /catalog + /catalog/rounds/:id now null the b2b tier unless approved-B2B session (03-13, behaviorally test-pinned)"
     - "gap #1 (LIFF subscription/B2B unreachable) — in-LIFF catalog quick-links to /subscription + /b2b, test-pinned (03-14 Task 2)"
     - "gap #2 (selected package too subtle) — ring-2 ring-accent + ✓ badge, test-pinned (03-14 Task 3)"
@@ -18,32 +19,40 @@ re_verification:
   regressions: []
 gaps: []
 behavior_unverified_items:
+
   - truth: "A LINE customer can reach subscription sign-up from a Rich Menu สมาชิกกล่องผัก button that deep-links {liff}/subscription"
     test: "Operator regenerates the 6-cell 2500×1686 rich-menu PNG, then runs: cd api && LIFF_ID=<id> LINE_CHANNEL_ACCESS_TOKEN=<tok> bun run scripts/provision-rich-menu.ts ./rich-menu.png; open the LINE OA and tap the new bottom-left button"
     expected: "The 6-button menu publishes idempotently; the สมาชิกกล่องผัก cell opens {liff}/subscription in the LIFF"
     why_human: "Live re-provision against LINE requires channel credentials + a new menu image; Claude updated the script (compiles, 6 bounds tile the canvas) but cannot execute it or observe the LINE client"
+
   - truth: "Standing-orders basket column shows human-readable variety names (e.g. กรีนโอ๊ค ×20) after the varieties query resolves — never a frozen UUID prefix"
     test: "Open web-admin → Standing Orders with the dev seed; watch the ตะกร้าประจำรอบ column"
     expected: "Rows show variety names (กรีนโอ๊ค ×20, เรดโอ๊ค ×10) and customer names; any transient id-prefix updates in place once the lookup queries arrive"
     why_human: "Reactive re-render on async TanStack-Query resolution; web-admin has no automated StandingOrders test — code is the correct reactive join but the resolution behavior is not test-exercised (plan defers to UAT walk)"
+
   - truth: "The standing-orders customer column shows the customer name once the customers query resolves"
     test: "Same view; watch the ลูกค้า column"
     expected: "Customer names render (not id.slice fallback) after data loads"
     why_human: "Same async-resolution reactivity, no automated test"
+
   - truth: "Name resolution is reactive: rows rendered before the lookup lists finish loading update in place when they arrive"
     test: "Reload Standing Orders on a cold cache and observe cells during the load"
     expected: "Any id-prefix placeholder is replaced by the real name in place (no frozen prefix, no manual refresh)"
     why_human: "State transition on query settle; not covered by any test"
 human_verification:
+
   - test: "Operator rich-menu re-provision + on-device check (03-14 user_setup, gap #1)"
     expected: "New 6-cell menu image produced; provision-rich-menu.ts run with real LIFF_ID + channel token; the สมาชิกกล่องผัก button appears in LINE and deep-links {liff}/subscription"
     why_human: "Uncompletable by Claude — needs LINE channel credentials, a new menu image, and observation of the live LINE client"
+
   - test: "LIFF discoverability re-walk on device (03-14 Task 2, gap #1 test 6)"
     expected: "Opening the LIFF catalog at / shows tappable quick-links to /subscription (สมาชิกกล่องผัก) and /b2b (ลูกค้าขายส่ง) in every state — reachable without a hand-built deep link"
     why_human: "Code + view-test verified (href assertions pass), but the original gap was found live on mobile; confirm on the real LINE in-app browser"
+
   - test: "Subscription selected-state obvious on mobile (03-14 Task 3, gap #2 test 6)"
     expected: "The chosen package tile shows an accent ring + filled ✓ badge and the chosen frequency an accent ring — unmistakable on a phone"
     why_human: "Mechanism is test-pinned (ring-accent + ✓ + single aria-pressed), but 'obvious on mobile' is a visual judgment the user reported live"
+
   - test: "Standing-orders readable names re-walk (03-15, gap #3 test 4)"
     expected: "web-admin Standing Orders basket + customer columns show names, not UUID prefixes, and update in place as data loads"
     why_human: "Reactive async-resolution render with no automated web-admin test"
@@ -158,11 +167,14 @@ live-UI/async-render behaviors best re-confirmed on the device UAT re-walk:
 1. **Operator rich-menu re-provision** — regenerate the 6-cell menu image, run
    `provision-rich-menu.ts` with real LIFF_ID + channel token, confirm the สมาชิกกล่องผัก
    button in the LINE client (code ready; Claude cannot run it).
+
 2. **LIFF discoverability** — on the real LINE in-app browser, confirm the catalog
    quick-links to /subscription and /b2b are visible and tappable (code + test verified;
    re-confirm live since the gap was found on mobile).
+
 3. **Subscription selected-state** — confirm the ring + ✓ makes the chosen package/frequency
    obvious on a phone (mechanism test-pinned; visual judgment).
+
 4. **Standing-orders readable names** — confirm web-admin basket/customer columns render names
    (not UUID prefixes) and update in place as data loads (no automated test).
 

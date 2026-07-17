@@ -1,15 +1,15 @@
 ---
 phase: 03-back-office-crop-planning-b2b-subscription
 source: 03-VERIFICATION.md
-status: testing
+status: complete
 generated: 2026-07-11
-updated: 2026-07-11
+updated: 2026-07-17
 total_items: 10
 passed: 10
-issues: 3
+issues: 0
 fixed: 2
 gaps_resolved_in_code: 4
-awaiting_live_confirm: 4
+awaiting_live_confirm: 0
 ---
 
 # Phase 3 — UAT Checklist (live human verification)
@@ -31,53 +31,95 @@ Automated verification passed 5/5 success criteria (api 298 pass / 0 fail, web 3
 | 9 | 03-11 | reports charts + CSV | period/channel/product/round filters update charts with stable channel↔color mapping; best-sellers/AOV/repeat correct; Thai CSV opens without mojibake |
 | 10 | 03-12 | settings secret-safety + canned chatbot | editing haircut %/hold window takes effect with no redeploy and no payee/slip-key ever in form/response; LINE keywords เมนูรอบนี้/ราคาวันนี้/ของเหลือ → Flex + LIFF deep-link; other text → fallback |
 
+## Tests
+
+### 1. web-admin RBAC nav + direct-URL 403
+expected: grower/packer see only their menus; out-of-role direct URL is server-403'd (not just hidden nav)
+result: pass
+
+### 2. Crop planning end-to-end
+expected: grower sets variety params → logs a batch → 1-click mix spawns the week's batches; repeat click = already-created
+result: pass
+
+### 3. Publish gate + override permanence + harvest log
+expected: publish writes sellable qty; hand-set override survives re-publish; harvest logs lot/best-before + delta; B2C sees quota − reserved
+result: pass
+
+### 4. B2B approval + standing reserve-before-B2C + overflow
+expected: approving B2B reveals wholesale price; standing order pre-decrements reserved; over-forecast raises overflow flag (no auto-trim); standing basket shows variety/customer names
+result: pass
+
+### 5. Subscription generator + idempotency + substitution
+expected: round-open auto-creates 1 box per active subscription; re-trigger = no duplicate; sold-out variety fires LINE substitution; pause/skip/cancel works
+result: pass
+
+### 6. LIFF subscription/B2B customer flows + discoverability
+expected: customer signs up/manages subscription; B2B pending → wholesale after approval; Rich Menu สมาชิกกล่องผัก button + catalog quick-links reach /subscription + /b2b; selected package state reads clearly
+result: pass
+
+### 7. Packing queue by route + Thai PDF
+expected: packer sees paid orders grouped by round → zone/method; pack/label PDF opens with legible Sarabun Thai (no tofu), print-safe
+result: pass
+
+### 8. Dashboard cards
+expected: today's/this-round sales, unpaid, near-sold-out, next-round yield + B2B/subscription card with overflow flag; live numbers correct
+result: pass
+
+### 9. Reports charts + CSV
+expected: period/channel/product/round filters update charts with stable channel↔color mapping; best-sellers/AOV/repeat correct; Thai CSV opens without mojibake
+result: pass
+
+### 10. Settings secret-safety + canned chatbot
+expected: haircut %/hold window edits take effect with no redeploy, no payee/slip-key ever exposed; LINE keywords → Flex + LIFF deep-link; other text → fallback
+result: pass
+
 ## Follow-up decision (warning, not phase-blocking) — RESOLVED by 03-13
 
 - **`api/src/routes/catalog.ts`** returned the b2b (wholesale) tier price to **all** callers ungated. **RESOLVED (03-13, commit f873a71):** decision was to gate. `showB2b` now nulls `prices.b2b` + box `priceSatang.b2b` for anonymous / pending / forged sessions on both `GET /catalog` and `GET /catalog/rounds/:id`; only an approved-B2B customer session sees wholesale (reuses `wholesaleVisible()`, fresh DB check per request). `deferred-items.md` marked resolved. Test coverage added (anonymous→null, approved→visible, pending→null, forged→null+200, /rounds/:id gated). Code-review confirmed the gate fail-closed, no leak in code.
 
 ## Live run results (2026-07-11, API :3001 / web-admin :5174 / web :5173, dev-seed applied)
 
-### 1. RBAC nav + direct-URL 403 — **pass**
+### Item 1 — RBAC nav + direct-URL 403 — **pass**
 
-### 2. Crop planning end-to-end — **pass** (after fix)
+### Item 2 — Crop planning end-to-end — **pass** (after fix)
 reported: "variety param + add batch ทำได้; batch view เคย crash (error boundary), 1-click mix + repeat กดได้"
 - Root cause was the date .slice crash (see Gaps); FIXED + re-verified in-browser: batch table renders all 8 rows with correct dates, no error boundary.
 
-### 3. Publish gate + override + harvest log — **pass** (after fix)
+### Item 3 — Publish gate + override + harvest log — **pass** (after fix)
 reported: "1.publish ทำได้ 2.override survive re-publish ทำได้ 3.harvest-log เคย crash"
 - Publish ✓ · override survives re-publish ✓ (round_stock override row kept) · B2C availability = quota − reserved ✓ (catalog: กรีนโอ๊ค 35 = 55−20)
 - Harvest-log modal crash was the same date .slice bug — FIXED + re-verified in-browser (modal opens: 'ปลูก 2026-07-13 · คาด 90 ต้น').
 
-### 4. B2B approval + standing reserve + overflow — **pass** (with minor display issue)
+### Item 4 — B2B approval + standing reserve + overflow — **pass** (with minor display issue)
 - Approve B2B reveals wholesale price ✓
 - Standing reserve-before-B2C ✓ (verified: กรีนโอ๊ค/เรดโอ๊ค reserved 20 pre-B2C; catalog availability = quota − reserved)
 - Overflow no-auto-trim ✓ (simulated demand 999 > quota 55 → overflow flag shortfall=999 source=b2b unresolved, reserved stayed 0 — no clamp)
 - Minor: standing basket shows variety UUID prefix instead of name (see gap below)
 
-### 5. Subscription generator + idempotency + substitution — **pass**
+### Item 5 — Subscription generator + idempotency + substitution — **pass**
 - Round-open auto-created exactly 1 box order per active subscription (subscription_orders=1, no duplicate on re-trigger) ✓
 - pause/skip/cancel via UI ✓
 - Substitution notice ✓ (simulated: sold-out variety → box filled from available + notify() fired with {lineUserId, box, totalSatang}; real LINE push needs live creds but trigger+payload path confirmed)
 
-### 6. LIFF subscription/B2B customer flows — **partial** (flows work; 1 major discoverability gap + 1 minor)
+### Item 6 — LIFF subscription/B2B customer flows — **partial** (flows work; 1 major discoverability gap + 1 minor)
 - Catalog/round-open ✓ (after publishing the round; deployed LIFF reflects same Neon).
 - Subscription signup ✓ (customer subscribed successfully) — minor: selected package is hard to see (selected state is only `border-accent bg-accent/5` at 5% opacity).
 - B2B apply → pending → approve (web-admin) → wholesale ✓.
 - Standing order + substitution detail ✓ (live customer line U199…2980: B2B approved, standing order กรีนโอ๊ค×15/เรดโอ๊ค×10 shown on /b2b, subscription box #bbe4afd6 shows substitution notice on order detail) — user confirmed all pass.
 - **MAJOR discoverability gap:** the /subscription and /b2b views + routes + /me endpoints all exist (03-08) but there is NO entry point — the Rich Menu (`provision-rich-menu.ts`) only deep-links 5 buttons (catalog/prices/orders/contact/care) and no in-app link points to them. Reachable only via a hand-built LIFF deep link.
 
-### 7. Packing queue by route + Thai PDF — **pass**
+### Item 7 — Packing queue by route + Thai PDF — **pass**
 - Paid orders grouped by round → delivery zone/method ✓; pack/label PDF opens with legible Sarabun Thai (no tofu), print-safe ✓.
 
-### 8. Dashboard cards — **pass**
+### Item 8 — Dashboard cards — **pass**
 - Cards 1–4 (sales today/round, unpaid, near-sold-out, next-round yield) live + correct ✓.
 - Card 5 (B2B/subscription + overflow) ✓ — showed standingDue 2 / subsDue 1 / overflow warning (กรีนโอ๊ค ขาด 25). Note: dashboard picks the *latest* open round; a leftover test round (created during Test 6 setup) briefly masked the overflow card until it was closed — test-data artefact, not a code defect.
 
-### 9. Reports charts + CSV — **pass** (cosmetic polish noted)
+### Item 9 — Reports charts + CSV — **pass** (cosmetic polish noted)
 - Period/channel/product/round filters update charts ✓; stable channel↔color mapping ✓; best-sellers/AOV/repeat correct ✓; Thai CSV opens without mojibake ✓.
 - User noted general visual-polish concerns (cosmetic, non-blocking) — candidate for a dedicated /gsd-ui-review pass.
 
-### 10. Settings secret-safety + canned chatbot — **pass**
+### Item 10 — Settings secret-safety + canned chatbot — **pass**
 - Settings: editing haircut %/hold window takes effect with no redeploy; no payee/slip-key ever in form or response ✓.
 - Chatbot: keyword → Flex + LIFF deep-link ✓; other text → fallback ✓.
 - Follow-up (shipped, PR #13): renamed keywords per user request — เมนูรอบนี้→ผักรอบนี้, ราคาวันนี้→ราคาผักรอบนี้, ของเหลือ→สั่งผักรอบนี้ (repointed to catalog/order).
@@ -161,12 +203,12 @@ reported: "1.publish ทำได้ 2.override survive re-publish ทำได�
 
 ## Gap-closure live confirmation (2026-07-11, after 03-13/03-14/03-15)
 
-All 4 UAT gaps are closed **in code** and every automated suite is green (api 303/0, web 33/0, web + web-admin builds ✓, code-review = 0 blockers). Before final sign-off, confirm on real devices:
+All 4 UAT gaps are closed **in code** and every automated suite is green (api 303/0, web 33/0, web + web-admin builds ✓, code-review = 0 blockers). Live device confirmation **completed 2026-07-17** — all 4 pass:
 
-1. **Operator rich-menu re-provision (user_setup — Claude cannot run):** create the new 6-cell Rich Menu image (2500×1686), then `cd api && LIFF_ID=<id> bun run scripts/provision-rich-menu.ts ./rich-menu.png`.
-2. **LIFF discoverability:** on a real phone, confirm the สมาชิกกล่องผัก Rich Menu button and the catalog quick-links (/subscription + /b2b) are visible and tappable.
-3. **Selected-state clarity:** confirm the package/frequency selected ring + ✓ read clearly on mobile.
-4. **Standing-order names:** confirm web-admin standing baskets show variety/customer names (no UUID prefixes) after the query resolves.
+1. **Operator rich-menu re-provision** — ✅ CONFIRMED: 6-cell Rich Menu re-provisioned; new menu live on LINE OA.
+2. **LIFF discoverability** — ✅ CONFIRMED: สมาชิกกล่องผัก Rich Menu button + catalog quick-links (/subscription + /b2b) visible and tappable on real device.
+3. **Selected-state clarity** — ✅ CONFIRMED: package/frequency selected ring + ✓ read clearly on mobile.
+4. **Standing-order names** — ✅ CONFIRMED: web-admin standing baskets show variety/customer names (no UUID prefixes).
 
 ## How to verify
 
