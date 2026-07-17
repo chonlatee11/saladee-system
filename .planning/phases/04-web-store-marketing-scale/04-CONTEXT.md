@@ -76,6 +76,18 @@ upload+display basics stays minimal.
 - **D-06:** **Full SEO** — SSR-rendered product pages + sitemap + meta/OG tags +
   product structured data (JSON-LD). Leverages the SSR chosen in D-01. A real
   domain (replacing `sslip.io`) is a prerequisite — see Deferred/prereqs.
+- **D-29 (RESOLVED 2026-07-17, owner):** **Nuxt SSR host = Cloudflare Pages**
+  (nitro `cloudflare-pages` preset). $0 per NFR-08; keeps the Hetzner VPS lean for
+  the stateful API + pg-boss; unifies with the existing web/ → Pages deploy job.
+  Edge→VPS-API SSR latency is neutralized by ISR/SWR `routeRules` on the public
+  catalog/product pages (checkout is CSR). Applied in Plans 08 (preset+route rules)
+  and 09 (host checkpoint resolved). VPS-behind-Caddy was rejected (SSR would compete
+  for VPS CPU + HTML travels EU→TH ~250ms/request).
+- **D-30 (RESOLVED 2026-07-17, owner):** **Domain = Cloudflare Registrar, a `.com`**
+  (at-cost ~$10/yr), DNS on Cloudflare. Subdomain map: apex/`www` → web store;
+  `api.` → API (replaces `api.saladee.example` in Caddyfile on the VPS); LIFF stays
+  on its Pages subdomain (or `line.`). Real-domain provisioning remains the deferred
+  SEO go-live prereq (D-06).
 
 ### Promotions/coupons + loyalty (MKT-01, CUST-03)
 - **D-07:** **One coupon per order — no coupon stacking.** Simplest to reason
