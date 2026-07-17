@@ -131,11 +131,14 @@ export function makeCatalogRoutes(database: CatalogDb = defaultDb) {
    *  Staff tokens and anonymous callers get false (staff read wholesale via the
    *  staff /prices routes, not the public catalog). Fail-closed. */
   async function showB2bFor(session: Session | null): Promise<boolean> {
-    return (
-      session !== null &&
-      session.role === "customer" &&
-      (await wholesaleVisible(database, session.sub))
-    );
+    if (session === null || session.role !== "customer") return false;
+    // IN-03: a DB hiccup here must not 500 the catalog — it stays OPEN (D-03).
+    // Fail closed on wholesale visibility: hide b2b prices, keep the catalog up.
+    try {
+      return await wholesaleVisible(database, session.sub);
+    } catch {
+      return false;
+    }
   }
 
   return (
