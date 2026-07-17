@@ -158,6 +158,8 @@ Items acknowledged and carried forward from previous milestone close:
 | 2026-07-06 | Loading spinner + full-screen busy overlay across the LIFF | 260706-ut1-add-loading-spinner-full-screen-busy-ove | complete ✓ |
 | 2026-07-06 | Wire LINE member order linkage (order.customer_id + recipient snapshot) — closes Phase-2 UAT-4 | 260706-vr5-wire-line-member-order-linkage-customeri | complete ✓ |
 | 2026-07-17 | Fix WR-01: Cache-Control private + Vary Authorization on catalog (prevents shared-cache b2b wholesale leak) | 260717-wr1-catalog-cache-control-vary-authorization | complete ✓ |
+| 2026-07-17 | Fix IN-03: fail-closed showB2bFor so a DB hiccup keeps catalog open (no 500) | 260717-in3-catalog-showb2bfor-fail-closed | complete ✓ |
+| 2026-07-17 | Fix WR-02: key standing-order rows by stable _key not index (splice-delete state bug) | 260717-wr2-standing-orders-stable-row-key | complete ✓ |
 
 ## Session Continuity
 
