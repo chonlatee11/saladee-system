@@ -5,9 +5,10 @@ milestone_name: milestone
 current_phase: 4
 current_phase_name: Web Store, Marketing & Scale
 status: "Phase 03 shipped — PR #14"
-stopped_at: Phase 4 context gathered
-last_updated: "2026-07-17T14:30:50.051Z"
+stopped_at: Phase 04 UI-SPEC approved
+last_updated: "2026-07-17T15:37:51.978Z"
 last_activity: 2026-07-17
+last_activity_desc: Phase 04 planning complete
 progress:
   total_phases: 5
   completed_phases: 4
@@ -28,10 +29,10 @@ See: .planning/PROJECT.md (updated 2026-06-28)
 ## Current Position
 
 Phase: 4 — Web Store, Marketing & Scale
-Plan: Not started
-Status: Phase 03 shipped — PR #14
-Last activity: 2026-07-17
-Note: CR-01/CR-02 code-review test-gaps CLOSED — added regression tests api/tests/verified-slip-park.test.ts (verified slip parked as awaiting_review + 202 when order cancelled mid-verify) and api/tests/created-hold-sweep.test.ts (created-path holdExpiresAt set + swept). api bun test 187 pass / 0 fail.
+Plan: Ready to execute — 10 plans / 4 waves (MVP vertical-slice)
+Status: Phase 04 planned — plan-checker VERIFICATION PASSED (1 blocker + 5 warnings fixed via 04-10)
+Last activity: 2026-07-17 — Phase 04 planning complete
+Note: Decision-coverage gate (13a) reported 21/28 — OVERRIDE (known false-negative, [[decision-coverage-gate-false-negative]]): the 7 "uncovered" decisions (D-03/05/09/10/16/22/24) ARE implemented in plan must_haves/truths as prose but not tagged with literal `D-NN:` tokens; plan-checker goal-backward confirmed D-01..D-28 all have implementing tasks. Verify-phase should re-check these are honored in code.
 
 Progress: [████████░░] 77%
 
@@ -162,6 +163,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-17T14:30:50.042Z
-Stopped at: Phase 4 context gathered
-Resume file: .planning/phases/04-web-store-marketing-scale/04-CONTEXT.md
+Last session: 2026-07-17T14:39:00.453Z
+Stopped at: Phase 04 UI-SPEC approved
+Resume file: .planning/phases/04-web-store-marketing-scale/04-UI-SPEC.md
