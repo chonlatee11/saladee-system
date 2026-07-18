@@ -20,6 +20,13 @@ export const EnvSchema = t.Object({
   R2_ACCESS_KEY_ID: t.String({ minLength: 1 }),
   R2_SECRET_ACCESS_KEY: t.String({ minLength: 1 }),
   R2_BUCKET: t.String({ minLength: 1 }),
+  // Public base URL for PRODUCT-IMAGE marketing assets (D-26). Unlike slips (which
+  // stay on the private signed-URL path), product photos are public: the upload
+  // stores a stable public URL of the form `${R2_PUBLIC_BASE_URL}/${key}` in the DB
+  // so the store/LIFF/Flex render them directly. Env-driven (the R2 public bucket
+  // domain / custom domain is provisioned per-shop); the default keeps boot working
+  // and — when empty — the stored URL is the key path alone (dev/test).
+  R2_PUBLIC_BASE_URL: t.String({ default: "" }),
   // Comma-separated CORS allowlist for cross-origin browser reads (e.g. the
   // Cloudflare Pages web/ origin). Env-driven, NOT hardcoded in the composition:
   // to change the deployed web origin, override this env var — do not edit code.
