@@ -120,11 +120,125 @@ export interface MulticastClient {
   multicast(req: { to: string[]; messages: messagingApi.Message[] }): Promise<unknown>;
 }
 
-/** Normalize a stored message_json snapshot into a LINE message array. */
-function normalizeMessages(messageJson: unknown): messagingApi.Message[] {
-  if (Array.isArray(messageJson)) return messageJson as messagingApi.Message[];
-  if (messageJson && typeof messageJson === "object") return [messageJson as messagingApi.Message];
-  return [{ type: "text", text: "มีข่าวสารใหม่จากสวนสลัด 🥬" }];
+// The default marketing copy used both as the plain-text fallback message and as the
+// injected altText when a stored Flex message is missing one (LINE rejects Flex w/o it).
+const DEFAULT_MARKETING_TEXT = "มีข่าวสารใหม่จากสวนสลัด 🥬";
+
+// LINE's altText hard cap. buildBroadcastFlex trims the headline-derived altText to this.
+const ALT_TEXT_MAX = 400;
+
+/** The Flex fields a marketing card is composed from (mirrors BroadcastComposer.vue). */
+export interface BroadcastFlexFields {
+  heroImageUrl?: string;
+  headline?: string;
+  body?: string;
+  ctaLabel?: string;
+  ctaUrl?: string;
+}
+
+/**
+ * CANONICAL marketing Flex bubble — the web-admin composer
+ * (web-admin/src/views/BroadcastComposer.vue) MUST mirror this exact structure so the
+ * client-built messageJson and this server builder never drift (the composer cannot
+ * import this across packages, so the shape is duplicated and this comment is the guard).
+ *
+ * Builds a bubble with an optional cover hero image (only when heroImageUrl is set), a
+ * vertical body carrying a bold headline + a smaller body text, and a footer primary uri
+ * button (only when ctaUrl is set — so no empty-uri node is ever emitted, T-04-12-03).
+ * altText is derived from the headline (trimmed, capped to LINE's limit) and always
+ * non-empty — falls back to the default marketing string when headline is empty.
+ * Mirrors the Flex idiom in notify.ts buildOrderFlex (same FlexMessage typing).
+ */
+export function buildBroadcastFlex(fields: BroadcastFlexFields): messagingApi.FlexMessage {
+  const heroImageUrl = (fields.heroImageUrl ?? "").trim();
+  const headline = (fields.headline ?? "").trim();
+  const body = (fields.body ?? "").trim();
+  const ctaLabel = (fields.ctaLabel ?? "").trim();
+  const ctaUrl = (fields.ctaUrl ?? "").trim();
+
+  const altText = (headline || DEFAULT_MARKETING_TEXT).slice(0, ALT_TEXT_MAX);
+
+  const bodyContents: messagingApi.FlexComponent[] = [];
+  if (headline) {
+    bodyContents.push({
+      type: "text",
+      text: headline,
+      weight: "bold",
+      size: "lg",
+      color: "#3a7d20",
+      wrap: true,
+    });
+  }
+  if (body) {
+    bodyContents.push({ type: "text", text: body, size: "sm", color: "#555555", wrap: true });
+  }
+  // A bubble body must have at least one element — fall back to the default copy.
+  if (bodyContents.length === 0) {
+    bodyContents.push({
+      type: "text",
+      text: DEFAULT_MARKETING_TEXT,
+      size: "sm",
+      color: "#555555",
+      wrap: true,
+    });
+  }
+
+  const bubble: messagingApi.FlexBubble = {
+    type: "bubble",
+    body: { type: "box", layout: "vertical", spacing: "md", contents: bodyContents },
+  };
+  if (heroImageUrl) {
+    bubble.hero = {
+      type: "image",
+      url: heroImageUrl,
+      size: "full",
+      aspectRatio: "20:13",
+      aspectMode: "cover",
+    };
+  }
+  if (ctaUrl) {
+    bubble.footer = {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        {
+          type: "button",
+          style: "primary",
+          color: "#3a7d20",
+          action: { type: "uri", label: ctaLabel || "ดูเพิ่มเติม", uri: ctaUrl },
+        },
+      ],
+    };
+  }
+
+  return { type: "flex", altText, contents: bubble };
+}
+
+/**
+ * Guarantee a stored message carries a non-empty altText when it is a Flex message —
+ * LINE rejects a Flex without altText (T-04-12-03). Plain-text and other messages pass
+ * through untouched.
+ */
+function ensureAltText(msg: unknown): messagingApi.Message {
+  if (msg && typeof msg === "object") {
+    const m = msg as Record<string, unknown>;
+    if (m.type === "flex" && (typeof m.altText !== "string" || m.altText.trim().length === 0)) {
+      return { ...m, altText: DEFAULT_MARKETING_TEXT } as unknown as messagingApi.Message;
+    }
+  }
+  return msg as messagingApi.Message;
+}
+
+/**
+ * Normalize a stored message_json snapshot into a LINE message array. Exported so
+ * broadcast-flex.test.ts can assert the altText guarantee directly. An array passes
+ * through (altText-guarded per element), a plain object becomes a single-element array
+ * (altText-guarded), and undefined/other returns the plain-text fallback.
+ */
+export function normalizeMessages(messageJson: unknown): messagingApi.Message[] {
+  if (Array.isArray(messageJson)) return messageJson.map(ensureAltText);
+  if (messageJson && typeof messageJson === "object") return [ensureAltText(messageJson)];
+  return [{ type: "text", text: DEFAULT_MARKETING_TEXT }];
 }
 
 /**
