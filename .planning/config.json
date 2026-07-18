@@ -34,8 +34,9 @@
     "ai_integration_phase": true,
     "tdd_mode": false,
     "ui_review": true,
-    "use_worktrees": true,
-    "_auto_chain_active": false
+    "use_worktrees": false,
+    "_auto_chain_active": false,
+    "security_enforcement": true
   },
   "ship": {
     "pr_body_sections": [
