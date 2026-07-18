@@ -123,6 +123,98 @@ export function buildCannedFlex(key: CannedKey): messagingApi.FlexMessage {
   };
 }
 
+// ── Guided order bot (LINE-04 / D-19) ────────────────────────────────────────
+// A RULE-BASED (no NLU, no LLM) postback state machine. The step is encoded ENTIRELY
+// in the postback `data` (stateless-per-message), so the bot never stores server-side
+// conversation state. Each non-terminal step replies with a Flex bubble whose footer
+// button carries a POSTBACK advancing to the next step; the terminal step replies with
+// a URI button that deep-links into LIFF to pay (D-20). The bot NEVER emits a price or
+// amount — money is handled entirely by the existing LIFF checkout.
+type BotStep = "start" | "browse" | "confirm";
+
+// Postback data → step. `order_start` enters the flow (e.g. a rich-menu / quick-reply
+// button); the intermediate steps are advanced by the previous step's footer button.
+const POSTBACK_TO_STEP: Record<string, BotStep> = {
+  order_start: "start",
+  "order_step=browse": "browse",
+  "order_step=confirm": "confirm",
+};
+
+// Per-step copy. `next` (postback data) advances the flow; a terminal step sets
+// `path` (the LIFF checkout deep-link) instead. NO amounts anywhere (D-20).
+const BOT_STEP_COPY: Record<
+  BotStep,
+  { title: string; body: string; cta: string; next?: string; path?: string }
+> = {
+  start: {
+    title: "สั่งผักรอบนี้ 🛒",
+    body: "เริ่มสั่งผักสลัดรอบนี้กันเลย! กดถัดไปเพื่อเลือกผักที่ต้องการ",
+    cta: "เลือกผัก",
+    next: "order_step=browse",
+  },
+  browse: {
+    title: "เลือกผักของคุณ 🥬",
+    body: "เลือกผักสลัดที่ต้องการใส่ตะกร้า แล้วไปหน้าถัดไปเพื่อเปิดแอปสั่งซื้อ",
+    cta: "ไปหน้าสั่งซื้อ",
+    next: "order_step=confirm",
+  },
+  confirm: {
+    title: "เปิดแอปเพื่อสั่งซื้อ 📱",
+    body: "แตะปุ่มด้านล่างเพื่อเปิดแอป เลือกจำนวน และสั่งซื้อให้เสร็จในที่เดียว",
+    cta: "เปิดแอปสั่งซื้อ",
+    path: "", // terminal: deep-link to the LIFF catalog/checkout (no money here)
+  },
+};
+
+/**
+ * Build a bot-step Flex bubble. A non-terminal step's footer button is a POSTBACK
+ * advancing the flow; the terminal step's button is a URI deep-link into LIFF (D-20).
+ */
+export function buildBotFlex(step: BotStep): messagingApi.FlexMessage {
+  const copy = BOT_STEP_COPY[step];
+  const action: messagingApi.Action =
+    copy.next != null
+      ? { type: "postback", label: copy.cta, data: copy.next, displayText: copy.cta }
+      : { type: "uri", label: copy.cta, uri: `https://liff.line.me/${LIFF_ID}/${copy.path ?? ""}` };
+  return {
+    type: "flex",
+    altText: copy.title,
+    contents: {
+      type: "bubble",
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "md",
+        contents: [
+          {
+            type: "text",
+            text: copy.title,
+            weight: "bold",
+            size: "lg",
+            color: "#3a7d20",
+            wrap: true,
+          },
+          { type: "text", text: copy.body, size: "sm", color: "#555555", wrap: true },
+        ],
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        contents: [{ type: "button", style: "primary", color: "#3a7d20", action }],
+      },
+    },
+  };
+}
+
+/** Resolve an order-intent postback to its bot-step reply, or null if not in the flow. */
+function resolveBotStep(event: LineEvent): messagingApi.Message[] | null {
+  if (event.type === "postback" && event.postback?.data) {
+    const step = POSTBACK_TO_STEP[event.postback.data];
+    if (step) return [buildBotFlex(step)];
+  }
+  return null;
+}
+
 /** Resolve a webhook event to its canned card key, or null for unmatched input. */
 function resolveCanned(event: LineEvent): CannedKey | null {
   if (event.type === "message" && event.message?.type === "text" && event.message.text) {
@@ -161,10 +253,14 @@ export const webhookRoutes = new Elysia()
       if (event.type !== "message" && event.type !== "postback") continue;
       if (event.type === "message" && event.message?.type !== "text") continue;
 
-      const key = resolveCanned(event);
-      const messages = key
-        ? [buildCannedFlex(key)]
-        : [{ type: "text" as const, text: FALLBACK_TEXT }];
+      // Order-intent postbacks drive the guided bot state machine (LINE-04 / D-19),
+      // which takes priority; anything else falls through to the canned card (D-25) or
+      // the fallback text. The bot deep-links to LIFF to pay and never handles money.
+      const botMessages = resolveBotStep(event);
+      const key = botMessages ? null : resolveCanned(event);
+      const messages =
+        botMessages ??
+        (key ? [buildCannedFlex(key)] : [{ type: "text" as const, text: FALLBACK_TEXT }]);
       await line.client.replyMessage({ replyToken: event.replyToken, messages });
     }
 
