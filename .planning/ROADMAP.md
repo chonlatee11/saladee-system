@@ -210,6 +210,11 @@ Plans:
 
 - [x] 04-09-PLAN.md — Web checkout: guest cart → POST /orders → PromptPay → slip + coupon/points fields (ORD-05) (wave 4)
 
+**Gap closure** *(from 04-UAT: test 2 image gap + test 3 Flex enhancement)*
+
+- [ ] 04-11-PLAN.md — Web-store catalog images: catalog coverUrl + card fallback/placeholder + R2_PUBLIC_BASE_URL config (ORD-05) (gap, wave 1)
+- [ ] 04-12-PLAN.md — LINE broadcast as styled Flex Message: builder + altText-hardened multicast + composer Flex fields (MKT-03, LINE-04) (gap, wave 2, depends 04-11)
+
 ## Progress
 
 **Execution Order:**
