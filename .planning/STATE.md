@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-06-28)
 Phase: 04 (web-store-marketing-scale) — EXECUTING
 Plan: 3 of 12
 Status: Ready to execute
-Last activity: 2026-07-18 — Phase 04 execution started
+Last activity: 2026-07-18 — Completed quick task 260718-vue: guard b2b tier on POST /orders (v1.0 audit BLOCKER-01)
 Note: Decision-coverage gate (13a) reported 21/28 — OVERRIDE (known false-negative, [[decision-coverage-gate-false-negative]]): the 7 "uncovered" decisions (D-03/05/09/10/16/22/24) ARE implemented in plan must_haves/truths as prose but not tagged with literal `D-NN:` tokens; plan-checker goal-backward confirmed D-01..D-28 all have implementing tasks. Verify-phase should re-check these are honored in code.
 
 Progress: [████████░░] 77%
@@ -183,6 +183,7 @@ Items acknowledged and carried forward from previous milestone close:
 | 2026-07-17 | Fix WR-01: Cache-Control private + Vary Authorization on catalog (prevents shared-cache b2b wholesale leak) | 260717-wr1-catalog-cache-control-vary-authorization | complete ✓ |
 | 2026-07-17 | Fix IN-03: fail-closed showB2bFor so a DB hiccup keeps catalog open (no 500) | 260717-in3-catalog-showb2bfor-fail-closed | complete ✓ |
 | 2026-07-17 | Fix WR-02: key standing-order rows by stable _key not index (splice-delete state bug) | 260717-wr2-standing-orders-stable-row-key | complete ✓ |
+| 2026-07-18 | Fix BLOCKER-01 (v1.0 audit): guard b2b tier on POST /orders via wholesaleVisible() — closes the wholesale-price WRITE hole | 260718-vue-guard-b2b-tier-on-post-orders-require-ap | complete ✓ |
 
 ## Session Continuity
 
