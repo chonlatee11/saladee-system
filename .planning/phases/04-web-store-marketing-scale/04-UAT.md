@@ -52,3 +52,19 @@ blocked: 0
   missing:
     - "StoreVarietyCard cover fallback: use variety.imageUrl ?? gallery[0] (mirror pages/p/[id].vue cover logic)"
     - "Set R2_PUBLIC_BASE_URL in the local/dev .env (and verify the R2 objects exist) so gallery URLs are absolute + loadable for UAT"
+
+- truth: "LINE broadcast is delivered as a styled Flex Message, not plain text"
+  status: enhancement
+  reason: "User requested (ส่งได้ แต่อยากให้สวยๆแบบ flex message): the broadcast currently sends a plain-text message + optional promo link; the user wants a visually formatted LINE Flex Message."
+  severity: minor
+  test: 3
+  root_cause: "By-design current behavior, not a defect. api/src/services/broadcast.ts normalizeMessages() builds a plain {type:'text'} message; web-admin BroadcastComposer.vue collects only a message string + optional promoLink (messagePayload concatenates them). No Flex bubble is constructed anywhere."
+  artifacts:
+    - path: "api/src/services/broadcast.ts"
+      issue: "normalizeMessages/messageJson snapshot is plain text only — no Flex bubble builder"
+    - path: "web-admin/src/views/BroadcastComposer.vue"
+      issue: "composer captures plain message + promoLink; no Flex fields (image/title/CTA button)"
+  missing:
+    - "Design a LINE Flex Message bubble for marketing broadcasts (hero image, headline, body, CTA button linking to store/promo)"
+    - "web-admin composer: capture the Flex fields (or a template) and store as messageJson (Flex contents)"
+    - "api broadcast: send the Flex messageJson via multicast (LINE Flex altText required); keep plain-text fallback"
