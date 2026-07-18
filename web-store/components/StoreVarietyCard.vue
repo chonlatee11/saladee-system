@@ -23,6 +23,7 @@ export interface VarietyCardModel {
   name: string;
   imageUrl: string | null;
   gallery?: string[];
+  coverUrl?: string | null;
   rounds: Round[];
 }
 
@@ -30,6 +31,15 @@ const props = defineProps<{ variety: VarietyCardModel; soldOutLabel: string }>()
 const emit = defineEmits<{
   (e: "add", line: { roundId: string; varietyId: string; saleUnitId: string; qty: number }): void;
 }>();
+
+// Single cover source (04-11): prefer the server-derived coverUrl, then the legacy
+// imageUrl, then the first gallery image — mirrors pages/p/[id].vue so the card,
+// product page, LIFF and Flex never disagree about which photo is the cover.
+const cover = computed<string | null>(
+  () => props.variety.coverUrl ?? props.variety.imageUrl ?? props.variety.gallery?.[0] ?? null,
+);
+// First glyph of the name for the coverless placeholder (never a blank slot).
+const initial = computed(() => props.variety.name.trim().charAt(0) || "🥬");
 
 // The catalog returns only open rounds; the customer buys the first (current) round.
 const round = computed<Round | null>(() => props.variety.rounds[0] ?? null);
@@ -54,11 +64,20 @@ function add(): void {
   <article class="rounded-xl bg-surface p-md">
     <NuxtLink :to="`/p/${variety.id}`" class="flex items-center gap-md">
       <img
-        v-if="variety.imageUrl"
-        :src="variety.imageUrl"
+        v-if="cover"
+        :src="cover"
         :alt="variety.name"
         class="h-16 w-16 shrink-0 rounded-lg object-cover"
       />
+      <!-- Coverless product (04-11): graceful placeholder in the same 64×64 slot so
+           the layout never collapses and there is never a blank/broken image. -->
+      <div
+        v-else
+        aria-hidden="true"
+        class="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-hairline text-[24px] font-semibold text-muted"
+      >
+        {{ initial }}
+      </div>
       <div class="min-w-0 flex-1">
         <h3 class="truncate text-[20px] font-semibold leading-[1.35] text-ink">
           {{ variety.name }}

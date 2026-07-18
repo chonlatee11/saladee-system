@@ -36,7 +36,9 @@ const gallery = computed<string[]>(() => v.gallery ?? (v.imageUrl ? [v.imageUrl]
 const pack = computed(() => v.rounds[0]?.prices.b2c?.packs[0] ?? null);
 const baht = computed(() => (pack.value ? Math.round(pack.value.unitPriceSatang / 100) : null));
 const soldOut = computed(() => v.rounds[0]?.soldOut ?? true);
-const cover = computed(() => v.imageUrl ?? gallery.value[0] ?? undefined);
+// Prefer the server-derived coverUrl (04-11) so this page agrees with the card,
+// LIFF and Flex on the single cover source; fall back to imageUrl then gallery[0].
+const cover = computed(() => v.coverUrl ?? v.imageUrl ?? gallery.value[0] ?? undefined);
 
 // Meta / OG (D-06) — real product imagery, not a generated OG image.
 useSeoMeta({
