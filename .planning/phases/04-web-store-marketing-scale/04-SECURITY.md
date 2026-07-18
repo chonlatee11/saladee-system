@@ -86,7 +86,7 @@ Implementation files were not modified by this audit.
 | ID | Category | Sev | Disp | Evidence |
 |----|----------|-----|------|----------|
 | T-04-23 | Tampering (SQLi) | high | mitigate | `api/src/routes/reports.ts` — 13 parameterized `sql\`\`` fragments; **zero** `sql.raw` / string concat matches. |
-| T-04-24 | EoP | medium | mitigate | `reports.ts:86` `requireRole("owner","admin")`. Note: plan text said `owner\|admin\|grower`; shipped code is **stricter**, so the threat (non-staff read) is fully mitigated. Divergence is functional, not security. |
+| T-04-24 | EoP | medium | mitigate | `crop.ts:77` `const grower = requireRole("owner","admin","grower")` applied at `crop.ts:382` to `GET /crop/planting-recommendation` (the CROP-07 demand-analytics endpoint). Matches the plan exactly; 401/403 covered by tests (04-07-SUMMARY.md:76). |
 | T-04-25 | Tampering | low | mitigate | Recommendation card prefills only; admin edits + confirms before save (D-25). |
 
 ## Plan 08 (web store shell + SEO)
@@ -156,5 +156,8 @@ This is evidence of absence, not merely absent evidence.
 
 - `threats_open: 0` — nothing at severity ≥ `high` is open. Phase 04 is clear to ship
   on security grounds.
-- One benign plan/code divergence recorded (T-04-24): shipped RBAC is stricter than
-  planned. Flagged for the functional backlog, not a security gap.
+- No plan/code divergences. (An earlier draft of this audit mis-attributed T-04-24 to
+  `reports.ts:86` and reported a grower lockout; that was an auditor error. T-04-24's
+  endpoint is `GET /crop/planting-recommendation` in `crop.ts`, correctly guarded by
+  `requireRole("owner","admin","grower")`. `reports.ts` is Phase-03 code whose
+  owner/admin-only guard is the intentional T-03-28 decision — it must NOT be loosened.)
