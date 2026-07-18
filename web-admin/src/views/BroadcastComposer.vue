@@ -74,11 +74,20 @@ const SEGMENTS: { value: SegmentType; label: string; hint: string }[] = [
   { value: "inactive", label: "ไม่ได้สั่งนาน", hint: "ไม่มีคำสั่งซื้อใน 60 วัน" },
 ];
 
+type MessageType = "text" | "flex";
+
 const form = ref({
   title: "",
   segmentType: "all" as SegmentType,
   tag: "",
+  messageType: "text" as MessageType,
+  // Plain-text body (also reused as the Flex body copy).
   message: "",
+  // Flex-only fields.
+  heroImageUrl: "",
+  headline: "",
+  ctaLabel: "",
+  // CTA / promo link — shared: plain mode appends it, Flex mode uses it as the button uri.
   promoLink: "",
   scheduledAt: "",
 });
@@ -107,12 +116,92 @@ function messagePayload() {
   return [{ type: "text", text }];
 }
 
+// Default marketing copy — kept identical to broadcast.ts DEFAULT_MARKETING_TEXT so the
+// client-built altText/fallback matches the server guarantee.
+const DEFAULT_MARKETING_TEXT = "มีข่าวสารใหม่จากสวนสลัด 🥬";
+const ALT_TEXT_MAX = 400;
+
+// CANONICAL SHAPE MIRROR — this MUST match api/src/services/broadcast.ts `buildBroadcastFlex`
+// field-for-field (type "flex", altText, bubble hero/body/footer). Cross-package import is
+// not available between web-admin and api, so the shape is duplicated; if buildBroadcastFlex
+// changes, update this builder in the same PR. Runtime delivery sends THIS object via
+// normalizeMessages, so keeping it identical is what prevents the two shapes diverging.
+function flexPayload(): Record<string, unknown> {
+  const heroImageUrl = form.value.heroImageUrl.trim();
+  const headline = form.value.headline.trim();
+  const body = form.value.message.trim();
+  const ctaLabel = form.value.ctaLabel.trim();
+  const ctaUrl = form.value.promoLink.trim();
+
+  const altText = (headline || DEFAULT_MARKETING_TEXT).slice(0, ALT_TEXT_MAX);
+
+  const bodyContents: Record<string, unknown>[] = [];
+  if (headline)
+    bodyContents.push({
+      type: "text",
+      text: headline,
+      weight: "bold",
+      size: "lg",
+      color: "#3a7d20",
+      wrap: true,
+    });
+  if (body)
+    bodyContents.push({ type: "text", text: body, size: "sm", color: "#555555", wrap: true });
+  if (bodyContents.length === 0)
+    bodyContents.push({
+      type: "text",
+      text: DEFAULT_MARKETING_TEXT,
+      size: "sm",
+      color: "#555555",
+      wrap: true,
+    });
+
+  const bubble: Record<string, unknown> = {
+    type: "bubble",
+    body: { type: "box", layout: "vertical", spacing: "md", contents: bodyContents },
+  };
+  if (heroImageUrl)
+    bubble.hero = {
+      type: "image",
+      url: heroImageUrl,
+      size: "full",
+      aspectRatio: "20:13",
+      aspectMode: "cover",
+    };
+  if (ctaUrl)
+    bubble.footer = {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        {
+          type: "button",
+          style: "primary",
+          color: "#3a7d20",
+          action: { type: "uri", label: ctaLabel || "ดูเพิ่มเติม", uri: ctaUrl },
+        },
+      ],
+    };
+
+  return { type: "flex", altText, contents: bubble };
+}
+
 function validate(): boolean {
   formError.value = null;
   const f = form.value;
   if (!f.title.trim()) {
     formError.value = "กรุณากรอกหัวข้อบรอดแคสต์";
     return false;
+  }
+  if (f.messageType === "flex") {
+    if (!f.headline.trim()) {
+      formError.value = "กรุณากรอกพาดหัวการ์ด Flex";
+      return false;
+    }
+    if (!f.message.trim()) {
+      formError.value = "กรุณากรอกข้อความในการ์ด Flex";
+      return false;
+    }
+    return true;
   }
   if (!f.message.trim()) {
     formError.value = "กรุณากรอกข้อความ";
@@ -132,7 +221,7 @@ const saveDraft = useMutation({
     } = {
       title: form.value.title.trim(),
       segment: segmentPayload(),
-      messageJson: messagePayload(),
+      messageJson: form.value.messageType === "flex" ? flexPayload() : messagePayload(),
     };
     if (form.value.scheduledAt) body.scheduledAt = new Date(form.value.scheduledAt).toISOString();
     const { data, error } = await api.broadcasts.post(body, { headers: authHeaders() });
@@ -175,6 +264,9 @@ const send = useMutation({
     resetPreview();
     form.value.title = "";
     form.value.message = "";
+    form.value.heroImageUrl = "";
+    form.value.headline = "";
+    form.value.ctaLabel = "";
     form.value.promoLink = "";
     form.value.scheduledAt = "";
     qc.invalidateQueries({ queryKey: ["broadcasts"] });
@@ -269,6 +361,54 @@ async function confirmCancel(): Promise<void> {
         />
       </label>
 
+      <!-- Message-type toggle: plain text (fallback) vs styled Flex card -->
+      <div>
+        <span class="mb-xs block text-[14px] text-muted">รูปแบบข้อความ</span>
+        <div class="grid grid-cols-2 gap-sm">
+          <button
+            type="button"
+            class="rounded-md border border-hairline px-sm py-xs text-[15px] font-semibold text-ink"
+            :class="form.messageType === 'text' ? 'ring-2 ring-accent border-accent' : ''"
+            @click="((form.messageType = 'text'), resetPreview())"
+          >
+            ข้อความธรรมดา
+          </button>
+          <button
+            type="button"
+            class="rounded-md border border-hairline px-sm py-xs text-[15px] font-semibold text-ink"
+            :class="form.messageType === 'flex' ? 'ring-2 ring-accent border-accent' : ''"
+            @click="((form.messageType = 'flex'), resetPreview())"
+          >
+            การ์ด Flex
+          </button>
+        </div>
+      </div>
+
+      <!-- Flex-only fields: hero image + headline (body reuses ข้อความ below) -->
+      <template v-if="form.messageType === 'flex'">
+        <label class="block">
+          <span class="mb-xs block text-[14px] text-muted">รูปหน้าปก (URL รูปสินค้า, เว้นว่างได้)</span>
+          <input
+            v-model="form.heroImageUrl"
+            type="url"
+            placeholder="วางลิงก์รูปสินค้า (เช่น รูปหน้าปกจากแคตตาล็อก)"
+            class="h-10 w-full rounded-md border border-hairline px-sm text-[16px] outline-none focus:border-accent"
+            @input="resetPreview"
+          />
+        </label>
+        <label class="block">
+          <span class="mb-xs block text-[14px] text-muted">พาดหัว</span>
+          <input
+            v-model="form.headline"
+            type="text"
+            maxlength="120"
+            placeholder="เช่น ผักสลัดรอบใหม่มาแล้ว!"
+            class="h-10 w-full rounded-md border border-hairline px-sm text-[16px] outline-none focus:border-accent"
+            @input="resetPreview"
+          />
+        </label>
+      </template>
+
       <label class="block">
         <span class="mb-xs block text-[14px] text-muted">ข้อความ</span>
         <textarea
@@ -281,14 +421,29 @@ async function confirmCancel(): Promise<void> {
         />
       </label>
 
+      <label v-if="form.messageType === 'flex'" class="block">
+        <span class="mb-xs block text-[14px] text-muted">ข้อความบนปุ่ม (เว้นว่างได้)</span>
+        <input
+          v-model="form.ctaLabel"
+          type="text"
+          maxlength="40"
+          placeholder="เช่น สั่งเลย"
+          class="h-10 w-full rounded-md border border-hairline px-sm text-[16px] outline-none focus:border-accent"
+          @input="resetPreview"
+        />
+      </label>
+
       <div class="grid grid-cols-2 gap-md">
         <label class="block">
-          <span class="mb-xs block text-[14px] text-muted">ลิงก์โปรโมชัน (เว้นว่างได้)</span>
+          <span class="mb-xs block text-[14px] text-muted">
+            {{ form.messageType === "flex" ? "ลิงก์ปุ่ม (เว้นว่างได้)" : "ลิงก์โปรโมชัน (เว้นว่างได้)" }}
+          </span>
           <input
             v-model="form.promoLink"
             type="url"
             placeholder="https://…"
             class="h-10 w-full rounded-md border border-hairline px-sm text-[16px] outline-none focus:border-accent"
+            @input="resetPreview"
           />
         </label>
         <label class="block">
