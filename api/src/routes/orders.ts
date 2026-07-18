@@ -34,6 +34,7 @@ import { env } from "../env";
 import { boss } from "../jobs/boss";
 import { log } from "../lib/logger";
 import { requireRole } from "../plugins/auth.plugin";
+import { wholesaleVisible } from "../services/b2b";
 import { logConsent } from "../services/consent";
 import {
   allowedMethodsForCart,
@@ -217,6 +218,37 @@ export function makeOrdersRoutes(
         "/orders",
         async ({ body, set }) => {
           const tier = body.tier as Tier;
+
+          // ── B2B write-path gate (BLOCKER-01, v1.0 milestone audit) ───────────
+          // The wholesale tier was gated on every READ surface (catalog, /b2b/:id/
+          // prices, /me/b2b/prices — D-08 / T-03-21) but on NO write surface, so any
+          // caller could transact at wholesale by POSTing {"tier":"b2b"}. This
+          // extends the SAME single rule — wholesaleVisible() in services/b2b.ts —
+          // from those READ surfaces to this WRITE surface, so the approval check
+          // can never disagree across endpoints.
+          //
+          // Only the b2b branch is gated: POST /orders stays OPEN for guest b2c
+          // checkout (D-03). It sits above BOTH price-resolution loops (single lines
+          // and box components) so no wholesale price is ever computed for an
+          // unapproved caller. A guest body carries no customerId → reject rather
+          // than silently downgrading to b2c (that would charge a price the caller
+          // did not ask for); both cases return the same code so the response
+          // discloses neither whether a customerId exists nor its b2b_status.
+          //
+          // Unlike catalog.ts's fail-OPEN gate (IN-03: a DB hiccup must not 500 the
+          // open catalog), this fails CLOSED — no try/catch, a DB error throws, the
+          // request 500s and no order is created.
+          if (tier === "b2b") {
+            if (!("customerId" in body.customer)) {
+              set.status = 403;
+              return { error: "not_b2b_approved" };
+            }
+            if (!(await wholesaleVisible(database, body.customer.customerId))) {
+              set.status = 403;
+              return { error: "not_b2b_approved" };
+            }
+          }
+
           const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
 
           // 1. Resolve every line server-side (catalog + price + pack maths). These
