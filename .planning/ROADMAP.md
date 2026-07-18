@@ -184,7 +184,7 @@ Plans:
   3. An admin sends a segmented LINE broadcast and a conversational chatbot can take orders.
   4. Delivery records carrier tracking number/status (Grab/Lalamove/general carrier), and the system recommends per-Monday planting quantities from demand history.
 
-**Plans**: 8/10 plans executed
+**Plans**: 9/10 plans executed
 **UI hint**: yes
 
 Plans:
@@ -204,7 +204,7 @@ Plans:
 **Wave 3** *(blocked on Wave 2)*
 
 - [x] 04-08-PLAN.md — Nuxt web storefront: SSR catalog + product pages + SEO (ORD-05) (wave 3)
-- [ ] 04-10-PLAN.md — LIFF checkout coupon/points + segment auto-apply + marketing opt-out + PDPA re-consent (MKT-01, CUST-03, MKT-03, D-14/D-17) (wave 3)
+- [x] 04-10-PLAN.md — LIFF checkout coupon/points + segment auto-apply + marketing opt-out + PDPA re-consent (MKT-01, CUST-03, MKT-03, D-14/D-17) (wave 3)
 
 **Wave 4** *(blocked on Wave 3)*
 
@@ -221,4 +221,4 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 | 1. Commerce Core | 5/5 | Complete   | 2026-07-02 |
 | 2. LINE Storefront, Payments & Delivery | 9/9 | Complete    | 2026-07-04 |
 | 3. Back-office, Crop Planning & B2B/Subscription | 15/15 | Complete    | 2026-07-11 |
-| 4. Web Store, Marketing & Scale | 8/10 | In Progress|  |
+| 4. Web Store, Marketing & Scale | 9/10 | In Progress|  |
