@@ -14,6 +14,7 @@ import * as schema from "../db/schema";
 import { orders, payments } from "../db/schema";
 import { env } from "../env";
 import { log } from "../lib/logger";
+import { runBroadcast } from "../services/broadcast";
 import { notifySubstitution } from "../services/notify";
 import { applyTransition } from "../services/order-transition";
 import { generateForRound } from "../services/subscription";
@@ -92,7 +93,10 @@ export async function expireHold(database: WorkerDb, orderId: string): Promise<b
  *
  * @returns the number of orders actually cancelled by the sweep.
  */
-export async function sweepExpiredHolds(database: WorkerDb, now: Date = new Date()): Promise<number> {
+export async function sweepExpiredHolds(
+  database: WorkerDb,
+  now: Date = new Date(),
+): Promise<number> {
   const stranded = await database
     .select({ id: orders.id })
     .from(orders)
@@ -156,8 +160,20 @@ export async function startJobs(): Promise<void> {
     }
   });
 
+  // Segmented marketing broadcast (MKT-03 / LINE-04). The route enqueues send-now or
+  // scheduled (startAfter) campaigns; the worker resolves the consent-filtered audience
+  // and multicasts in ≤500 chunks. Runs on the SAME direct worker db (Pitfall 6) — no
+  // new pool. Idempotency: runBroadcast marks the row `sent`, so a redelivery re-sends
+  // to the (now consent-current) audience; the route blocks re-send of a `sent` row.
+  await boss.createQueue("broadcast-send");
+  await boss.work("broadcast-send", async (jobs) => {
+    for (const job of jobs) {
+      await runBroadcast(db, (job.data as { broadcastId: string }).broadcastId);
+    }
+  });
+
   log.info("jobs started", {
-    queues: ["hold-expiry", "hold-sweep", "subscription-generate"],
+    queues: ["hold-expiry", "hold-sweep", "subscription-generate", "broadcast-send"],
   });
 }
 
