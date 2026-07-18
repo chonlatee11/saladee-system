@@ -44,7 +44,7 @@
 - [ ] **ORD-02**: หน้าจัดการออเดอร์รวมทุกช่องทาง พร้อม pipeline สถานะ (รอชำระ → ชำระแล้ว → กำลังแพ็ก → จัดส่ง → สำเร็จ/ยกเลิก) (FR-14)
 - [x] **ORD-03**: พนักงานเห็นคิวงานแพ็กจัดกลุ่มตามรอบส่ง/เส้นทาง และพิมพ์ใบแพ็ก/ใบปะหน้าได้ (FR-15)
 - [x] **ORD-04**: ระบบแจ้งเตือนลูกค้าอัตโนมัติเมื่อสถานะเปลี่ยน ผ่าน LINE (FR-16)
-- [ ] **ORD-05**: ลูกค้าสั่งซื้อผ่านเว็บได้ (ตะกร้า → checkout) (FR-12)
+- [x] **ORD-05**: ลูกค้าสั่งซื้อผ่านเว็บได้ (ตะกร้า → checkout) (FR-12)
 
 ### PAY — ชำระเงิน
 
@@ -157,7 +157,7 @@ Explicitly excluded (anti-features จาก research — ป้องกัน 
 | ORD-02 | Phase 1 | Pending |
 | ORD-03 | Phase 3 | Complete |
 | ORD-04 | Phase 2 | Complete |
-| ORD-05 | Phase 4 | Pending |
+| ORD-05 | Phase 4 | Complete |
 | PAY-01 | Phase 2 | Complete |
 | PAY-02 | Phase 2 | Complete |
 | PAY-03 | Phase 2 | Complete |
