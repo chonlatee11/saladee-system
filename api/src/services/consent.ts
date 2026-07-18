@@ -7,9 +7,13 @@
 //
 // Runs INSIDE the order transaction so consent is recorded atomically with the
 // order, before any personal data is trusted (D-25). Pure DB write, no HTTP.
+import { and, desc, eq } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type * as schema from "../db/schema";
 import { consentLogs } from "../db/schema";
+import { getHotSettings } from "./settings";
+
+type ConsentDb = PostgresJsDatabase<typeof schema>;
 
 // The transaction handle passed by `database.transaction(async (tx) => …)`
 // (mirrors services/order-transition.ts).
@@ -50,4 +54,63 @@ export async function logConsent(tx: Tx, input: LogConsentInput): Promise<void> 
       source: input.source,
     },
   ]);
+}
+
+// ── Marketing opt-out + version-aware consent status (D-17 / PDPA, 04-10) ───────
+
+export interface OptOutMarketingInput {
+  customerId: string;
+  /** The current pdpaPolicyVersion the withdrawal is stamped with (settings). */
+  policyVersion: string;
+  /** Where the withdrawal was captured (e.g. "opt_out"). */
+  source: string;
+}
+
+/**
+ * Withdraw marketing consent by APPENDING one marketing consent_logs row with
+ * granted=false (D-17). This NEVER updates an existing row and NEVER touches the
+ * usage grant — the broadcast audience filter (04-06) reads the latest marketing
+ * row per customer, so a fresh granted=false row is enough to exclude them.
+ */
+export async function optOutMarketing(tx: Tx, input: OptOutMarketingInput): Promise<void> {
+  await tx.insert(consentLogs).values({
+    customerId: input.customerId,
+    orderId: null,
+    consentType: "marketing",
+    granted: false,
+    policyVersion: input.policyVersion,
+    source: input.source,
+  });
+}
+
+export interface ConsentStatus {
+  /** The current PDPA policy version (settings, owner-editable). */
+  currentPolicyVersion: string;
+  /** The member's LATEST marketing grant value (false if never / withdrawn). */
+  latestMarketingGranted: boolean;
+  /** True when the member has no marketing row at the current policy version —
+   *  the checkout must re-collect consent before the next order proceeds. */
+  needsReconsent: boolean;
+}
+
+/**
+ * Report the member's marketing consent posture against the CURRENT policy version.
+ * Reads pdpaPolicyVersion from settings and the member's latest marketing row; when
+ * that row's policy_version is not the current one (or there is no row), the member
+ * must re-consent on their next order (PDPA versioning).
+ */
+export async function getConsentStatus(
+  db: ConsentDb,
+  customerId: string,
+): Promise<ConsentStatus> {
+  const { pdpaPolicyVersion } = await getHotSettings(db);
+  const [latest] = await db
+    .select({ granted: consentLogs.granted, policyVersion: consentLogs.policyVersion })
+    .from(consentLogs)
+    .where(and(eq(consentLogs.customerId, customerId), eq(consentLogs.consentType, "marketing")))
+    .orderBy(desc(consentLogs.createdAt))
+    .limit(1);
+  const latestMarketingGranted = latest?.granted ?? false;
+  const needsReconsent = !(latest !== undefined && latest.policyVersion === pdpaPolicyVersion);
+  return { currentPolicyVersion: pdpaPolicyVersion, latestMarketingGranted, needsReconsent };
 }
