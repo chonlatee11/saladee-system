@@ -22,11 +22,13 @@
 import { computed, reactive, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import { api } from "../api";
-import { getCustomerId } from "../liff";
+import { getCustomerId, getSessionToken } from "../liff";
 import { useCart } from "../stores/cart";
 import BusyOverlay from "../components/BusyOverlay.vue";
 import DeliveryMethodTiles from "../components/DeliveryMethodTiles.vue";
 import ConsentCheckboxes from "../components/ConsentCheckboxes.vue";
+import CouponField from "../components/CouponField.vue";
+import PointsRedeem from "../components/PointsRedeem.vue";
 import WizardStepIndicator from "../components/WizardStepIndicator.vue";
 import QtyStepper from "../components/QtyStepper.vue";
 import EmptyState from "../components/EmptyState.vue";
@@ -35,10 +37,30 @@ import {
   type DeliveryMethod,
   type DeliveryQuote,
   DELIVERY_ZONES,
+  POLICY_VERSION,
   baht,
   buildOrderBody,
   consentSatisfied,
 } from "../lib/checkout";
+
+/** Read a segment/coupon code carried in the LIFF launch link (D-14). LINE opens the
+ *  LIFF with `?code=…` directly or wrapped in the `liff.state` param; try both. */
+function readLaunchCode(): string {
+  if (typeof window === "undefined") return "";
+  const sp = new URLSearchParams(window.location.search);
+  const direct = sp.get("code");
+  if (direct) return direct.trim();
+  const state = sp.get("liff.state");
+  if (state) {
+    try {
+      const inner = new URLSearchParams(state.startsWith("?") ? state.slice(1) : state);
+      return (inner.get("code") ?? "").trim();
+    } catch {
+      return "";
+    }
+  }
+  return "";
+}
 
 // ── Catalog shapes (subset we resolve for display) ───────────────────────────
 interface Pack {
@@ -206,6 +228,56 @@ const customer = reactive({ name: "", phone: "", address: "" });
 const consent = ref<CheckoutConsent>({ usage: false, marketing: false });
 const fieldErrors = reactive({ name: "", phone: "", address: "", method: "" });
 
+// ── Phase-4 discount inputs + PDPA consent status (04-10 / D-14 · D-17) ─────────
+// A member (a logged-in LINE identity) may apply a coupon + redeem points and is
+// version-checked for re-consent; a guest sends neither (Pitfall 5). Money is NEVER
+// sent — only the coupon CODE + a bounded points COUNT (server resolves it, 04-03).
+const memberId = getCustomerId();
+const isMember = memberId !== null;
+const authHeaders = (): Record<string, string> => ({
+  authorization: `Bearer ${getSessionToken() ?? ""}`,
+});
+
+const couponCode = ref("");
+const redeemPoints = ref(0);
+const pointsBalance = ref(0);
+// Sourced from GET /me/consent-status at load; guests keep the POLICY_VERSION fallback
+// and never need re-consent. A version bump flips needsReconsent → re-consent gate.
+const policyVersion = ref(POLICY_VERSION);
+const needsReconsent = ref(false);
+// A launch-link segment code prefills + auto-applies the coupon (D-14).
+const launchCode = ref(readLaunchCode());
+if (launchCode.value) couponCode.value = launchCode.value;
+
+// Load the member's points balance + consent status (best-effort; failure degrades
+// to no-points / no-reconsent so checkout still proceeds).
+if (isMember) {
+  const balRes = (await (
+    api.loyalty.balance.get({ headers: authHeaders() }) as unknown as Promise<{
+      data: { balance: number } | null;
+      error: unknown;
+    }>
+  ).catch(() => ({ data: null, error: { network: true } }))) as {
+    data: { balance: number } | null;
+    error: unknown;
+  };
+  if (!balRes.error && balRes.data) pointsBalance.value = balRes.data.balance;
+
+  const csRes = (await (
+    api.me["consent-status"].get({ headers: authHeaders() }) as unknown as Promise<{
+      data: { currentPolicyVersion: string; needsReconsent: boolean } | null;
+      error: unknown;
+    }>
+  ).catch(() => ({ data: null, error: { network: true } }))) as {
+    data: { currentPolicyVersion: string; needsReconsent: boolean } | null;
+    error: unknown;
+  };
+  if (!csRes.error && csRes.data) {
+    policyVersion.value = csRes.data.currentPolicyVersion;
+    needsReconsent.value = csRes.data.needsReconsent;
+  }
+}
+
 function validateStep2(): boolean {
   fieldErrors.name = customer.name.trim() ? "" : "โปรดกรอกชื่อผู้รับ";
   fieldErrors.phone = customer.phone.trim() ? "" : "โปรดกรอกเบอร์โทร";
@@ -239,8 +311,14 @@ function back(): void {
 const placing = ref(false);
 const submitError = ref("");
 
+// The pay CTA is blocked while placing, and — when a policy-version bump requires a
+// fresh grant — until the member re-ticks the required usage consent (PDPA, D-17).
+const canPay = computed(
+  () => !placing.value && (!needsReconsent.value || consentSatisfied(consent.value)),
+);
+
 async function confirm(): Promise<void> {
-  if (placing.value || !method.value) return;
+  if (placing.value || !method.value || !canPay.value) return;
   placing.value = true;
   submitError.value = "";
   const body = buildOrderBody({
@@ -252,7 +330,12 @@ async function confirm(): Promise<void> {
     consent: consent.value,
     // A logged-in member binds the order to their LINE identity (history/detail/push,
     // UAT-4); a guest sends the byte-identical guest body (getCustomerId() === null).
-    customerId: getCustomerId() ?? undefined,
+    customerId: memberId ?? undefined,
+    // Phase-4 discount inputs — members only; server resolves the money (04-03, D-14).
+    couponCode: isMember ? couponCode.value : undefined,
+    redeemPoints: isMember ? redeemPoints.value : undefined,
+    // The current PDPA version so a bump writes a fresh grant (D-17 re-consent).
+    policyVersion: policyVersion.value,
   });
   const res = await placeOrder(body).catch(
     () => ({ data: null, error: { network: true } }) as Loaded<{ id: string }>,
@@ -455,6 +538,22 @@ async function confirm(): Promise<void> {
         </li>
       </ul>
 
+      <!-- Coupon + points (members only) — CODE/COUNT only; server resolves the
+           discount + QR (04-03 / D-14). The discount shows on the pay screen. -->
+      <div v-if="isMember" class="flex flex-col gap-md border-t border-hairline pt-md">
+        <CouponField v-model="couponCode" :auto-apply="Boolean(launchCode)" />
+        <PointsRedeem v-model="redeemPoints" :balance="pointsBalance" />
+      </div>
+
+      <!-- Re-consent gate (D-17): a policy-version bump forces a fresh usage consent
+           before this order proceeds; the body then stamps the current version. -->
+      <div v-if="needsReconsent" class="flex flex-col gap-sm border-t border-hairline pt-md">
+        <p class="text-[14px] font-semibold text-ink">
+          นโยบายความเป็นส่วนตัวมีการอัปเดต โปรดยืนยันความยินยอมอีกครั้งก่อนสั่งซื้อ
+        </p>
+        <ConsentCheckboxes v-model="consent" />
+      </div>
+
       <div class="flex flex-col gap-sm border-t border-hairline pt-md text-[16px]">
         <div class="flex items-center justify-between text-muted">
           <span>ยอดรวมสินค้า</span><span>฿{{ baht(subtotalSatang) }}</span>
@@ -482,7 +581,7 @@ async function confirm(): Promise<void> {
         <button
           type="button"
           class="flex h-[48px] flex-[2] items-center justify-center rounded-lg bg-accent text-[16px] font-semibold text-white disabled:opacity-40"
-          :disabled="placing"
+          :disabled="!canPay"
           @click="confirm"
         >
           ยืนยันและชำระเงิน

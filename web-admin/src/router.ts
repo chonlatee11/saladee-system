@@ -1,7 +1,10 @@
-// web-admin back-office router (03-03). EVERY Phase-3 route is registered here up
-// front and frozen — later slice plans (Wave 2/3) only create/replace the view
-// SFCs, never edit this file (prevents router.ts merge conflicts between parallel
-// slices). Views are lazily imported so each screen ships as its own chunk.
+// web-admin back-office router (03-03; extended + re-frozen in 04-02). EVERY route
+// is registered here up front and frozen — later slice plans (Wave 2/3) only
+// create/replace the view SFCs, never edit this file (prevents router.ts merge
+// conflicts between parallel slices). The frozen list now ALSO includes the five
+// Phase-4 routes added in 04-02: /coupons, /loyalty, /broadcasts (การตลาด),
+// /tracking (จัดส่ง), /product-images (สินค้า). Views are lazily imported so each
+// screen ships as its own chunk.
 //
 // RBAC (D-19): each route carries `meta.roles` (the staff roles that may SEE it)
 // plus nav metadata (title/icon/group) the AppShell reads to build the sidebar.
@@ -168,6 +171,64 @@ const routes: RouteRecordRaw[] = [
       title: "ตั้งค่าระบบ",
       icon: "Settings",
       group: "ตั้งค่า",
+    } satisfies AdminRouteMeta,
+  },
+  // ── Phase-4 routes (04-02 freeze). Stub views today; Wave-2 slices replace the
+  // SFC only. RBAC: OWNER_ADMIN nav-gate here is cosmetic — the server requireRole
+  // is the authority (T-04-04). ──────────────────────────────────────────────────
+  {
+    path: "/coupons",
+    name: "coupons",
+    component: () => import("./views/CouponComposer.vue"),
+    meta: {
+      roles: OWNER_ADMIN,
+      title: "คูปอง",
+      icon: "Ticket",
+      group: "การตลาด",
+    } satisfies AdminRouteMeta,
+  },
+  {
+    path: "/loyalty",
+    name: "loyalty",
+    component: () => import("./views/LoyaltySettings.vue"),
+    meta: {
+      roles: OWNER_ADMIN,
+      title: "สะสมแต้ม",
+      icon: "Gift",
+      group: "การตลาด",
+    } satisfies AdminRouteMeta,
+  },
+  {
+    path: "/broadcasts",
+    name: "broadcasts",
+    component: () => import("./views/BroadcastComposer.vue"),
+    meta: {
+      roles: OWNER_ADMIN,
+      title: "บรอดแคสต์",
+      icon: "Megaphone",
+      group: "การตลาด",
+    } satisfies AdminRouteMeta,
+  },
+  {
+    path: "/tracking",
+    name: "tracking",
+    component: () => import("./views/CarrierTrackingForm.vue"),
+    meta: {
+      roles: OWNER_ADMIN,
+      title: "ติดตามพัสดุ",
+      icon: "Truck",
+      group: "จัดส่ง",
+    } satisfies AdminRouteMeta,
+  },
+  {
+    path: "/product-images",
+    name: "product-images",
+    component: () => import("./views/ProductImages.vue"),
+    meta: {
+      roles: OWNER_ADMIN,
+      title: "รูปสินค้า",
+      icon: "Image",
+      group: "สินค้า",
     } satisfies AdminRouteMeta,
   },
   // Unknown paths fall back to the dashboard (the guard re-routes by role/session).

@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Commerce Core** - Oversell-safe harvest-bound reservation engine, catalog, pricing, rounds, mixed box (completed 2026-07-02)
 - [x] **Phase 2: LINE Storefront, Payments & Delivery** - LIFF + Rich Menu ordering, PromptPay + verified slips, hold-expiry, delivery, PDPA (completed 2026-07-04)
 - [x] **Phase 3: Back-office, Crop Planning & B2B/Subscription** - Crop forecast auto-feeds stock, B2B quota, subscriptions, packing, dashboards, reports (completed 2026-07-11)
-- [ ] **Phase 4: Web Store, Marketing & Scale** - Web storefront, promotions/loyalty, broadcast, multi-carrier delivery, demand-driven planting
+- [x] **Phase 4: Web Store, Marketing & Scale** - Web storefront, promotions/loyalty, broadcast, multi-carrier delivery, demand-driven planting (completed 2026-07-18)
 
 ## Phase Details
 
@@ -184,12 +184,36 @@ Plans:
   3. An admin sends a segmented LINE broadcast and a conversational chatbot can take orders.
   4. Delivery records carrier tracking number/status (Grab/Lalamove/general carrier), and the system recommends per-Monday planting quantities from demand history.
 
-**Plans**: TBD
+**Plans**: 12/12 plans complete
 **UI hint**: yes
 
 Plans:
+**Wave 1** *(backbone — schema/migration [BLOCKING] + frozen composition)*
 
-- [ ] 04-01: TBD (derived during plan-phase)
+- [x] 04-01-PLAN.md — Schema + migration 0005 [BLOCKING] + register in all self-resetting tests + env + settings keys (wave 1)
+- [x] 04-02-PLAN.md — Frozen composition: 5 stub routers in index.ts + 5 web-admin routes/stub views (wave 1)
+
+**Wave 2** *(parallel disjoint-file slices — blocked on Wave 1)*
+
+- [x] 04-03-PLAN.md — Coupon + loyalty money path: guarded redeem + ledger earn/redeem + discount→QR invariant + admin (MKT-01, CUST-03) (wave 2)
+- [x] 04-04-PLAN.md — Product images: sharp+R2 upload + catalog gallery + admin uploader (ORD-05, D-26/27/28) (wave 2)
+- [x] 04-05-PLAN.md — Multi-carrier tracking: adapter seam + status enum + LINE push + admin form (DEL-05) (wave 2)
+- [x] 04-06-PLAN.md — Segmented broadcast (consent-filtered multicast + scheduler) + rule-based order bot (MKT-03, LINE-04) (wave 2)
+- [x] 04-07-PLAN.md — Demand-driven planting recommendation: inverse-forecast kernel + trailing demand + prefill card (CROP-07) (wave 2)
+
+**Wave 3** *(blocked on Wave 2)*
+
+- [x] 04-08-PLAN.md — Nuxt web storefront: SSR catalog + product pages + SEO (ORD-05) (wave 3)
+- [x] 04-10-PLAN.md — LIFF checkout coupon/points + segment auto-apply + marketing opt-out + PDPA re-consent (MKT-01, CUST-03, MKT-03, D-14/D-17) (wave 3)
+
+**Wave 4** *(blocked on Wave 3)*
+
+- [x] 04-09-PLAN.md — Web checkout: guest cart → POST /orders → PromptPay → slip + coupon/points fields (ORD-05) (wave 4)
+
+**Gap closure** *(from 04-UAT: test 2 image gap + test 3 Flex enhancement)*
+
+- [x] 04-11-PLAN.md — Web-store catalog images: catalog coverUrl + card fallback/placeholder + R2_PUBLIC_BASE_URL config (ORD-05) (gap, wave 1)
+- [x] 04-12-PLAN.md — LINE broadcast as styled Flex Message: builder + altText-hardened multicast + composer Flex fields (MKT-03, LINE-04) (gap, wave 2, depends 04-11)
 
 ## Progress
 
@@ -202,4 +226,4 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 | 1. Commerce Core | 5/5 | Complete   | 2026-07-02 |
 | 2. LINE Storefront, Payments & Delivery | 9/9 | Complete    | 2026-07-04 |
 | 3. Back-office, Crop Planning & B2B/Subscription | 15/15 | Complete    | 2026-07-11 |
-| 4. Web Store, Marketing & Scale | 0/TBD | Not started | - |
+| 4. Web Store, Marketing & Scale | 12/12 | Complete   | 2026-07-18 |

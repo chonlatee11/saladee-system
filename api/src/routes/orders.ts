@@ -42,6 +42,8 @@ import {
   type DeliveryMethod,
 } from "../services/delivery";
 import type { OrderStatus } from "../services/order-status";
+import { redeemCouponGuarded } from "../services/coupon";
+import { redeemPointsGuarded } from "../services/loyalty";
 import { applyTransition, OrderError } from "../services/order-transition";
 import { deriveUnitPriceSatang } from "../services/pricing";
 import { buildPromptPayPayload, renderQrDataUrl } from "../services/promptpay";
@@ -145,6 +147,13 @@ const CreateOrderBody = t.Object({
       policyVersion: t.String({ minLength: 1 }),
     }),
   ),
+  // ── Phase-4 discount inputs (04-03, MKT-01 / CUST-03) ───────────────────────
+  // The client sends ONLY a coupon CODE (string) and a bounded points INTEGER —
+  // NEVER a price/discount/points *value* (T-04-07). The server resolves every
+  // satang inside the order tx, applies it BEFORE building the PromptPay QR, and
+  // keeps the net a whole-baht amount (Pitfall 1). Applied only on the checkout path.
+  couponCode: t.Optional(t.String({ minLength: 1, maxLength: 64 })),
+  redeemPoints: t.Optional(t.Integer({ minimum: 1, maximum: 1_000_000 })),
 });
 
 const StatusBody = t.Object({
@@ -409,9 +418,13 @@ export function makeOrdersRoutes(
                 recipientPhone: string;
                 recipientAddress: string;
               };
+          // isMember gates loyalty earn/redeem (Pitfall 5 / T-04-11): only a real
+          // member (a customer row flagged isMember) may redeem points; a guest's
+          // throwaway customer row never does. Resolved here before the tx.
+          let isMember = false;
           if ("customerId" in cust) {
             const [existing] = await database
-              .select({ id: customers.id })
+              .select({ id: customers.id, isMember: customers.isMember })
               .from(customers)
               .where(eq(customers.id, cust.customerId))
               .limit(1);
@@ -419,6 +432,7 @@ export function makeOrdersRoutes(
               set.status = 400;
               return { error: "customer_not_found" };
             }
+            isMember = existing.isMember;
           }
 
           const subtotalSatang =
@@ -447,6 +461,9 @@ export function makeOrdersRoutes(
           const holdWindowSeconds = Number(env.HOLD_WINDOW_SECONDS);
           const holdExpiresAt: Date | null = new Date(Date.now() + holdWindowSeconds * 1000);
           let qrPayload: string | null = null;
+          // Phase-4 net-payable discount (04-03). Resolved server-side inside the tx
+          // (coupon + points), persisted on the order, and subtracted by payments.ts.
+          let discountSatang = 0;
           if (isCheckout) {
             const method = body.deliveryMethod as DeliveryMethod;
             const zone = body.deliveryZone as string;
@@ -470,9 +487,10 @@ export function makeOrdersRoutes(
               return { error: "method_not_available_in_zone" };
             }
             totalSatang = subtotalSatang + deliveryFeeSatang;
-            // QR amount = full total in baht (/100). Whole-baht prices + whole-baht
-            // fees guarantee X.00. CRC-16 is produced by the library, never here.
-            qrPayload = buildPromptPayPayload(env.PROMPTPAY_PAYEE_ID, totalSatang / 100);
+            // The PromptPay QR is built INSIDE the tx AFTER discounts are applied
+            // (04-03) so the encoded amount is the NET whole-baht payable, and the
+            // expected-amount math in payments.ts subtracts the same discount
+            // (Pitfall 2). CRC-16 is produced by the library, never here.
           }
 
           // 2c. PDPA usage consent (D-25): when a consent block is supplied, usage
@@ -599,6 +617,58 @@ export function makeOrdersRoutes(
                 .returning({ id: orders.id, status: orders.status });
               if (!ord) throw new Error("order insert returned no row");
 
+              // ── Phase-4 discount composition (04-03, MKT-01 / CUST-03) ──────────
+              // AFTER reserve() + the order insert (so a redemption row can reference
+              // orderId) and BEFORE the QR is built. The client sent only a coupon
+              // code + a bounded points integer; the server resolves every satang here
+              // (T-04-07). A coupon shortfall / over-redeem throws OrderError → the
+              // WHOLE order tx (including reserve) rolls back — no second reservation
+              // path (Pitfall 3). Only the checkout path carries a QR + payment.
+              if (isCheckout) {
+                if (body.couponCode) {
+                  discountSatang += await redeemCouponGuarded(
+                    tx,
+                    body.couponCode,
+                    customerId,
+                    subtotalSatang,
+                    tier,
+                    ord.id,
+                  );
+                }
+                if (body.redeemPoints && isMember) {
+                  // Points cap at the amount still payable after any coupon.
+                  const payableAfterCoupon = Math.max(
+                    0,
+                    subtotalSatang + (deliveryFeeSatang ?? 0) - discountSatang,
+                  );
+                  discountSatang += await redeemPointsGuarded(
+                    tx,
+                    customerId,
+                    ord.id,
+                    body.redeemPoints,
+                    payableAfterCoupon,
+                  );
+                }
+                const netSatang = Math.max(
+                  0,
+                  subtotalSatang + (deliveryFeeSatang ?? 0) - discountSatang,
+                );
+                // Invariant (Pitfall 1 / T-04-09): discounts are whole baht, so the QR
+                // amount is always X.00. A fractional net would corrupt the PromptPay
+                // amount — refuse rather than encode a bad QR.
+                if (netSatang % 100 !== 0) {
+                  throw new OrderError("discount_not_whole_baht", 500);
+                }
+                qrPayload = buildPromptPayPayload(env.PROMPTPAY_PAYEE_ID, netSatang / 100);
+                totalSatang = netSatang;
+                // Persist the net QR + discount so the GET /orders/:id/qr re-render and
+                // the slip expected-amount both reflect the discount (Pitfall 2).
+                await tx
+                  .update(orders)
+                  .set({ qrPayload, discountSatang })
+                  .where(eq(orders.id, ord.id));
+              }
+
               if (resolved.length > 0) {
                 await tx.insert(orderLines).values(
                   resolved.map((r) => ({
@@ -662,7 +732,10 @@ export function makeOrdersRoutes(
                 status: ord.status,
                 subtotalSatang,
                 deliveryFeeSatang,
+                // totalSatang is the NET payable (subtotal + fee − discount) on the
+                // checkout path; equal to subtotal + fee when no discount applies.
                 totalSatang,
+                discountSatang,
               };
             });
 

@@ -37,8 +37,10 @@ import {
   saleUnits,
 } from "../db/schema";
 import { type Session, verifySession } from "../plugins/auth.plugin";
+import { getConsentStatus, optOutMarketing } from "../services/consent";
 import { applyTransition, OrderError } from "../services/order-transition";
 import { deriveUnitPriceSatang } from "../services/pricing";
+import { getHotSettings } from "../services/settings";
 
 type MeOrdersDb = PostgresJsDatabase<typeof schema>;
 type Tier = "b2c" | "b2b";
@@ -434,6 +436,48 @@ export function makeMeOrdersRoutes(database: MeOrdersDb = defaultDb) {
           };
         },
         { params: IdParams, beforeHandle: memberGuard },
+      )
+      // ── Marketing opt-out: append a granted=false marketing row (D-17 / PDPA) ──
+      // The withdrawal is APPEND-ONLY — a new consent_logs marketing row stamped
+      // with the current pdpaPolicyVersion — so the broadcast audience filter
+      // (04-06, latest-row-per-customer) then excludes this member. Never touches
+      // the usage grant or any existing row. Member-gated (guest → 403, no token →
+      // 401) exactly like the order routes above.
+      .post(
+        "/me/marketing-opt-out",
+        async ({ session, set }) => {
+          if (!session) {
+            set.status = 401;
+            return { error: "unauthorized" };
+          }
+          const customerId = session.sub;
+          const { pdpaPolicyVersion } = await getHotSettings(database);
+          await database.transaction(async (tx) => {
+            await optOutMarketing(tx, {
+              customerId,
+              policyVersion: pdpaPolicyVersion,
+              source: "opt_out",
+            });
+          });
+          set.status = 200;
+          return { ok: true };
+        },
+        { beforeHandle: memberGuard },
+      )
+      // ── Consent status: current PDPA version + whether re-consent is needed ────
+      // The LIFF reads this at wizard load: needsReconsent gates the pay CTA behind
+      // a fresh consent grant after the owner bumps the policy version, and the
+      // opt-out surface reflects latestMarketingGranted.
+      .get(
+        "/me/consent-status",
+        async ({ session, set }) => {
+          if (!session) {
+            set.status = 401;
+            return { error: "unauthorized" };
+          }
+          return getConsentStatus(database, session.sub);
+        },
+        { beforeHandle: memberGuard },
       )
   );
 }

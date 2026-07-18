@@ -11,10 +11,11 @@
 //     session receives the resolved wholesale payload
 //   - NO customer/order PII appears anywhere in a catalog response (T-01-15)
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "../src/db/schema";
-import { customers, roundStock, rounds } from "../src/db/schema";
+import { customers, roundStock, rounds, varieties, varietyImages } from "../src/db/schema";
 import { issueSession } from "../src/plugins/auth.plugin";
 import { makeCatalogRoutes } from "../src/routes/catalog";
 import { deriveUnitPriceSatang } from "../src/services/pricing";
@@ -73,6 +74,9 @@ interface RoundEntryResp {
 interface VarietyResp {
   id: string;
   name: string;
+  imageUrl: string | null;
+  gallery: string[];
+  coverUrl: string | null;
   saleUnits: { id: string; gramsPerUnit: number }[];
   rounds: RoundEntryResp[];
 }
@@ -122,6 +126,7 @@ beforeAll(async () => {
   client = postgres(TEST_URL, { prepare: false, max: 4 });
   db = drizzle(client, { schema });
   routes = makeCatalogRoutes(db);
+  await client.file("drizzle/0005_phase4.down.sql").catch(() => {});
   await client.file("drizzle/0004_phase3.down.sql").catch(() => {});
   await client.file("drizzle/0003_payments_delivery_consent.down.sql").catch(() => {});
   await client.file("drizzle/0001_commerce.down.sql").catch(() => {});
@@ -130,6 +135,7 @@ beforeAll(async () => {
   await client.file("drizzle/0001_commerce.sql");
   await client.file("drizzle/0003_payments_delivery_consent.sql");
   await client.file("drizzle/0004_phase3.sql");
+  await client.file("drizzle/0005_phase4.sql");
 });
 
 afterAll(async () => {
@@ -293,5 +299,76 @@ describe("GET /catalog/rounds/:id — single round view", () => {
   test("unknown round id → 404", async () => {
     const res = await req("GET", `/catalog/rounds/${crypto.randomUUID()}`);
     expect(res.status).toBe(404);
+  });
+});
+
+describe("product-image gallery in the catalog payload (04-04, D-27/28)", () => {
+  test("a variety with a cover but no extra images → gallery is [cover]; imageUrl unchanged", async () => {
+    const { varietyId } = await arrange();
+    const cover = "https://cdn.test/cover.jpg";
+    await db.update(varieties).set({ imageUrl: cover }).where(eq(varieties.id, varietyId));
+
+    const res = await req("GET", "/catalog");
+    const body = (await res.json()) as CatalogResp;
+    const v = body.varieties.find((x) => x.id === varietyId);
+    expect(v?.imageUrl).toBe(cover); // cover backward compatible (unchanged)
+    expect(v?.gallery).toEqual([cover]); // gallery = cover only (no extras)
+  });
+
+  test("a variety with uploaded gallery rows → gallery is cover-first then rows by sort", async () => {
+    const { varietyId } = await arrange();
+    const cover = "https://cdn.test/cover2.jpg";
+    await db.update(varieties).set({ imageUrl: cover }).where(eq(varieties.id, varietyId));
+    // Insert out of order to prove the sort ordering is applied.
+    await db.insert(varietyImages).values({ varietyId, url: "https://cdn.test/g2.jpg", sort: 2 });
+    await db.insert(varietyImages).values({ varietyId, url: "https://cdn.test/g1.jpg", sort: 1 });
+
+    const res = await req("GET", "/catalog");
+    const body = (await res.json()) as CatalogResp;
+    const v = body.varieties.find((x) => x.id === varietyId);
+    expect(v?.gallery).toEqual([cover, "https://cdn.test/g1.jpg", "https://cdn.test/g2.jpg"]);
+  });
+
+  test("coverUrl = gallery[0] for a web-admin uploaded photo (imageUrl null, gallery row present)", async () => {
+    const { varietyId } = await arrange();
+    // Web-admin upload path (04-04): variety_images row written, imageUrl stays null.
+    const uploaded = "https://cdn.test/uploaded-cover.jpg";
+    await db.update(varieties).set({ imageUrl: null }).where(eq(varieties.id, varietyId));
+    await db.insert(varietyImages).values({ varietyId, url: uploaded, sort: 0 });
+
+    const res = await req("GET", "/catalog");
+    const body = (await res.json()) as CatalogResp;
+    const v = body.varieties.find((x) => x.id === varietyId);
+    expect(v?.imageUrl).toBeNull(); // gallery-first model unchanged (D-27/28)
+    expect(v?.coverUrl).toBe(uploaded); // derived cover surfaces the uploaded photo
+    expect(v?.gallery[0]).toBe(v?.coverUrl); // cover and gallery can never disagree
+  });
+
+  test("coverUrl = imageUrl when a legacy cover is set (cover-first, unchanged)", async () => {
+    const { varietyId } = await arrange();
+    const cover = "https://cdn.test/legacy-cover.jpg";
+    await db.update(varieties).set({ imageUrl: cover }).where(eq(varieties.id, varietyId));
+
+    const res = await req("GET", "/catalog");
+    const body = (await res.json()) as CatalogResp;
+    const v = body.varieties.find((x) => x.id === varietyId);
+    expect(v?.coverUrl).toBe(cover);
+  });
+
+  test("coverUrl = null when a product is truly coverless (no imageUrl, no gallery)", async () => {
+    const { varietyId } = await arrange();
+    await db.update(varieties).set({ imageUrl: null }).where(eq(varieties.id, varietyId));
+
+    const res = await req("GET", "/catalog");
+    const body = (await res.json()) as CatalogResp;
+    const v = body.varieties.find((x) => x.id === varietyId);
+    expect(v?.coverUrl).toBeNull();
+  });
+
+  test("WR-01 cache headers stay intact with the gallery payload", async () => {
+    await arrange();
+    const res = await req("GET", "/catalog");
+    expect(res.headers.get("cache-control")).toBe("private, no-store");
+    expect(res.headers.get("vary")).toBe("Authorization");
   });
 });

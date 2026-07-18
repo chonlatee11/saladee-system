@@ -11,12 +11,17 @@ import {
   CalendarDays,
   ClipboardCheck,
   FlaskConical,
+  Gift,
+  Image as ImageIcon,
   LayoutDashboard,
   LogOut,
+  Megaphone,
   PackageCheck,
   Repeat,
   Settings as SettingsIcon,
   Sprout,
+  Ticket,
+  Truck,
   UserCheck,
 } from "lucide-vue-next";
 import { computed, type Component } from "vue";
@@ -43,6 +48,12 @@ const ICONS: Record<string, Component> = {
   PackageCheck,
   BarChart3,
   Settings: SettingsIcon,
+  // Phase-4 (04-02) nav icons for the five new routes.
+  Ticket,
+  Gift,
+  Megaphone,
+  Truck,
+  Image: ImageIcon,
 };
 
 interface NavItem {

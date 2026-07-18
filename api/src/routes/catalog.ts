@@ -30,11 +30,13 @@ import type * as schema from "../db/schema";
 import {
   boxComponents,
   boxes,
+  boxImages,
   prices,
   roundStock,
   rounds,
   saleUnits,
   varieties,
+  varietyImages,
 } from "../db/schema";
 import { type Session, verifySession } from "../plugins/auth.plugin";
 import { wholesaleVisible } from "../services/b2b";
@@ -77,6 +79,14 @@ function resolveTierPrice(rows: PriceRow[], tier: Tier, today: string): PriceRow
     candidates.find((r) => r.effectiveDate === null) ??
     null
   );
+}
+
+/** Product image gallery (D-27/28): the cover (legacy imageUrl) first, then the
+ *  additional uploaded gallery images ordered by sort. The cover stays backward
+ *  compatible; a product with no extra images yields just [cover] (or [] if none). */
+function galleryFor(cover: string | null, extra: { url: string }[]): string[] {
+  const urls = extra.map((e) => e.url);
+  return cover ? [cover, ...urls] : urls;
 }
 
 /** Shape a resolved tier price + its derived whole-baht pack prices (INV-04). */
@@ -190,6 +200,12 @@ export function makeCatalogRoutes(database: CatalogDb = defaultDb) {
           .select()
           .from(saleUnits)
           .where(and(inArray(saleUnits.varietyId, varietyIds), eq(saleUnits.active, true)));
+        // Gallery images (04-04, D-27/28): additional product photos per variety.
+        const varietyImageRows = await database
+          .select()
+          .from(varietyImages)
+          .where(inArray(varietyImages.varietyId, varietyIds))
+          .orderBy(varietyImages.sort, varietyImages.createdAt);
         const priceRows = await database
           .select()
           .from(prices)
@@ -215,12 +231,20 @@ export function makeCatalogRoutes(database: CatalogDb = defaultDb) {
                 showB2b,
               ),
             );
+          // Cover-first gallery (D-27/28); coverUrl is its first element so cover
+          // and gallery can never disagree (single source of cover truth, 04-11).
+          const gallery = galleryFor(
+            v.imageUrl,
+            varietyImageRows.filter((r) => r.varietyId === v.id),
+          );
           return {
             id: v.id,
             name: v.name,
             category: v.category,
             description: v.description,
             imageUrl: v.imageUrl,
+            gallery,
+            coverUrl: gallery[0] ?? null,
             avgGramsPerPlant: v.avgGramsPerPlant,
             deliveryClass: v.deliveryClass, // D-13/D-24 care surface
             storageTips: v.storageTips, // D-24 (nullable)
@@ -251,6 +275,19 @@ export function makeCatalogRoutes(database: CatalogDb = defaultDb) {
                   boxRows.map((b) => b.id),
                 ),
               )
+          : [];
+        // Gallery images (04-04, D-27/28): additional product photos per box.
+        const boxImageRows = boxRows.length
+          ? await database
+              .select()
+              .from(boxImages)
+              .where(
+                inArray(
+                  boxImages.boxId,
+                  boxRows.map((b) => b.id),
+                ),
+              )
+              .orderBy(boxImages.sort, boxImages.createdAt)
           : [];
         // roundId → (varietyId → stock counter), for the box availability lookup.
         const stockByRoundVariety = new Map<string, Map<string, (typeof stock)[number]>>();
@@ -322,11 +359,18 @@ export function makeCatalogRoutes(database: CatalogDb = defaultDb) {
                   },
                 };
               });
+            // Cover-first gallery (D-27/28); coverUrl = its first element (04-11).
+            const boxGallery = galleryFor(
+              b.imageUrl,
+              boxImageRows.filter((r) => r.boxId === b.id),
+            );
             return {
               id: b.id,
               name: b.name,
               description: b.description,
               imageUrl: b.imageUrl,
+              gallery: boxGallery,
+              coverUrl: boxGallery[0] ?? null,
               fixedPriceSatang: b.fixedPriceSatang,
               components: bomComponents,
               rounds: roundsOut,
@@ -390,6 +434,15 @@ export function makeCatalogRoutes(database: CatalogDb = defaultDb) {
                     ),
                   )
               : [];
+          // Gallery images (04-04, D-27/28): additional product photos per variety.
+          const varietyImageRows =
+            varietyIds.length > 0
+              ? await database
+                  .select()
+                  .from(varietyImages)
+                  .where(inArray(varietyImages.varietyId, varietyIds))
+                  .orderBy(varietyImages.sort, varietyImages.createdAt)
+              : [];
 
           const varietiesOut = stock
             .filter((s) => activeIds.has(s.varietyId))
@@ -397,12 +450,19 @@ export function makeCatalogRoutes(database: CatalogDb = defaultDb) {
               const v = vById.get(s.varietyId) as typeof varieties.$inferSelect;
               const vUnits = units.filter((u) => u.varietyId === v.id);
               const entry = roundEntry(s, round, vUnits, priceRows, today, showB2b);
+              // Cover-first gallery (D-27/28); coverUrl = its first element (04-11).
+              const gallery = galleryFor(
+                v.imageUrl,
+                varietyImageRows.filter((r) => r.varietyId === v.id),
+              );
               return {
                 id: v.id,
                 name: v.name,
                 category: v.category,
                 description: v.description,
                 imageUrl: v.imageUrl,
+                gallery,
+                coverUrl: gallery[0] ?? null,
                 avgGramsPerPlant: v.avgGramsPerPlant,
                 deliveryClass: v.deliveryClass, // D-13/D-24 care surface
                 storageTips: v.storageTips, // D-24 (nullable)

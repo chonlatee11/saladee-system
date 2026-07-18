@@ -2,18 +2,19 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 4
-current_phase_name: Web Store, Marketing & Scale
-status: "Phase 03 shipped — PR #14"
-stopped_at: Completed 03-08-PLAN.md (Task 3 human-verify pending)
-last_updated: "2026-07-17T13:30:32.860Z"
-last_activity: 2026-07-17
+current_phase: 04
+current_phase_name: web-store-marketing-scale
+status: executing
+stopped_at: Completed 04-12-PLAN.md
+last_updated: "2026-07-18T14:06:10.063Z"
+last_activity: 2026-07-18
+last_activity_desc: Phase 04 execution started
 progress:
   total_phases: 5
-  completed_phases: 4
-  total_plans: 37
-  completed_plans: 37
-  percent: 80
+  completed_phases: 5
+  total_plans: 49
+  completed_plans: 49
+  percent: 100
 ---
 
 # Project State
@@ -23,15 +24,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-28)
 
 **Core value:** ลูกค้าสั่งผักสลัดผ่าน LINE แล้วจ่ายเงินจบในที่เดียว และจำนวนที่เปิดขายตรงกับผลผลิตจริงเสมอ (ไม่ oversell, ไม่เหลือทิ้ง)
-**Current focus:** Phase 03 — back-office-crop-planning-b2b-subscription
+**Current focus:** Phase 04 — web-store-marketing-scale
 
 ## Current Position
 
-Phase: 4 — Web Store, Marketing & Scale
-Plan: Not started
-Status: Phase 03 shipped — PR #14
-Last activity: 2026-07-17
-Note: CR-01/CR-02 code-review test-gaps CLOSED — added regression tests api/tests/verified-slip-park.test.ts (verified slip parked as awaiting_review + 202 when order cancelled mid-verify) and api/tests/created-hold-sweep.test.ts (created-path holdExpiresAt set + swept). api bun test 187 pass / 0 fail.
+Phase: 04 (web-store-marketing-scale) — EXECUTING
+Plan: 3 of 12
+Status: Ready to execute
+Last activity: 2026-07-18 — Phase 04 execution started
+Note: Decision-coverage gate (13a) reported 21/28 — OVERRIDE (known false-negative, [[decision-coverage-gate-false-negative]]): the 7 "uncovered" decisions (D-03/05/09/10/16/22/24) ARE implemented in plan must_haves/truths as prose but not tagged with literal `D-NN:` tokens; plan-checker goal-backward confirmed D-01..D-28 all have implementing tasks. Verify-phase should re-check these are honored in code.
 
 Progress: [████████░░] 77%
 
@@ -81,6 +82,18 @@ Progress: [████████░░] 77%
 | Phase 03 P13 | 4min | 2 tasks | 3 files |
 | Phase 03 P15 | 3min | 1 tasks | 1 files |
 | Phase 03 P14 | 8min | 3 tasks | 5 files |
+| Phase 04 P01 | 20 | 2 tasks | 44 files |
+| Phase 04 P02 | 10 | 2 tasks | 13 files |
+| Phase 04 P03 | 23 | 3 tasks | 14 files |
+| Phase 04 P04 | 30 | 2 tasks | 7 files |
+| Phase 04 P05 | 18min | 2 tasks | 7 files |
+| Phase 04 P06 | 30 | 3 tasks | 8 files |
+| Phase 04 P07 | 5 | 2 tasks | 5 files |
+| Phase 04 P08 | 35m | 2 tasks | 12 files |
+| Phase 04 P10 | 9min | 3 tasks | 9 files |
+| Phase 04 P09 | 30 | 2 tasks | 9 files |
+| Phase 04 P12 | 20 min | 3 tasks | 3 files |
+| Phase 04 P11 | 25min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -120,6 +133,17 @@ Recent decisions affecting current work:
 - [Phase 03]: Standing-orders table: display labels joined into DisplayRow row data (not accessorFn closures) because TanStack Table memoizes accessor results per row
 - [Phase 03]: 03-14: /b2b gets no Rich Menu cell (niche) — in-LIFF catalog quick-link covers CUST-02; catalog quick-links stay neutral (accent reserved for the sticky checkout CTA)
 - [Phase 03]: 03-14: selected package/frequency reuses the DeliveryMethodTiles ring-2 ring-accent + fixed-footprint check badge verbatim — one approved selected pattern, no second variant
+- [Phase ?]: 04-01: migration 0005 additive; reservation guard untouched
+- [Phase ?]: [04-02] Phase-4 composition surface frozen — five inert 501 stub routers appended after settingsRoutes (fixed order) + five OWNER_ADMIN admin routes frozen in router.ts; Wave-2 slices edit only their own module.
+- [Phase ?]: [04-03] Coupon global-limit = guarded conditional UPDATE (mirrors reserve()); per-customer cap = UNIQUE(coupon,customer) 23505 arbiter; loyalty balance = SUM(append-only ledger), earn idempotent via partial UNIQUE(order_id) WHERE kind=earn
+- [Phase ?]: [04-03] Discount composes INSIDE POST /orders tx (after reserve, after order insert, before net PromptPay QR); net whole-baht; payments.ts expected-amount subtracts discount so discounted orders auto-pay — no second reservation path
+- [Phase ?]: [04-03] settings PUT closed schema extended with loyaltyEarnRate/loyaltyPointBaht so LoyaltySettings can save; schema stays closed (secret-shaped key still 422)
+- [Phase ?]: [04-05] Carrier tracking behind env-selected adapter seam (makeCarrierAdapter, mirrors slip-verify); ManualCarrierAdapter passes staff values through + re-validates enum; delivery-status push reuses notify.pushOrderUpdate (handed/in_transit->shipping, delivered->done; pending/failed no push); guest skipped by existing guard
+- [Phase ?]: [04-07] CROP-07 recommendation reuses the inverse of forecast.ts (plantsToMeetDemand=ceil) — not a new yield formula; trailing demand = realised sales (SOLD_STATUSES) + back-in-stock unmet, parameterized sql only; prefills a new mix recipe editor with admin override (D-25)
+- [Phase ?]: 04-10: LIFF coupon applied state is optimistic (code only; discount resolved server-side at pay) — no client-side money (T-04-32)
+- [Phase ?]: 04-10: PDPA needsReconsent = latest marketing consent_logs row vs current pdpaPolicyVersion; opt-out append-only granted=false row also clears re-consent
+- [Phase ?]: 04-09: web-store guest checkout reuses the SAME POST /orders guest path + GET qr + POST slip — no second reservation path (T-04-28); cart identifiers-only, coupon CODE only, points guest-hidden (T-04-29/31)
+- [Phase ?]: 04-09: /checkout is CSR (ssr:false); store deploys to Cloudflare Pages via a mirrored deploy job (D-29/D-30 resolved)
 
 ### Pending Todos
 
@@ -162,6 +186,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-11T07:15:50.024Z
-Stopped at: Completed 03-08-PLAN.md (Task 3 human-verify pending)
+Last session: 2026-07-18T14:06:10.052Z
+Stopped at: Completed 04-12-PLAN.md
 Resume file: None

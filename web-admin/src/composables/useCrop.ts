@@ -56,6 +56,41 @@ export function usePlantingBatches() {
   });
 }
 
+/** One per-variety line of the demand-driven planting recommendation (CROP-07). */
+export interface RecommendationItem {
+  varietyId: string;
+  varietyName: string;
+  survivalPct: number;
+  demandPlants: number;
+  recommendedPlants: number;
+}
+
+/** The demand recommendation payload (CROP-07). `noData` drives the empty state. */
+export interface PlantingRecommendation {
+  noData: boolean;
+  nRounds: number;
+  roundsConsidered: number;
+  items: RecommendationItem[];
+}
+
+/**
+ * Demand-driven per-variety planting recommendation (CROP-07). On-demand compute:
+ * trailing realised sales + unmet demand run through the survival-haircut inverse.
+ * The admin applies it as a PREFILL of the mix editor (D-25 — never auto-committed).
+ */
+export function usePlantingRecommendation() {
+  return useQuery({
+    queryKey: ["crop", "planting-recommendation"],
+    queryFn: async () => {
+      const { data, error } = await api.crop["planting-recommendation"].get({
+        headers: authHeaders(),
+      });
+      if (error) throw error;
+      return data as PlantingRecommendation;
+    },
+  });
+}
+
 /** Planting-mix templates with their recipe items. */
 export function useMixTemplates() {
   return useQuery({

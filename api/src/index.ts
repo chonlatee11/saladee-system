@@ -16,23 +16,28 @@ import { storagePlugin } from "./plugins/storage.plugin";
 import { authRoutes } from "./routes/auth";
 import { b2bRoutes } from "./routes/b2b";
 import { boxesRoutes } from "./routes/boxes";
+import { broadcastsRoutes } from "./routes/broadcasts";
 import { catalogRoutes } from "./routes/catalog";
+import { couponsRoutes } from "./routes/coupons";
 import { cropRoutes } from "./routes/crop";
 import { dashboardRoutes } from "./routes/dashboard";
 import { deliveryRoutes } from "./routes/delivery";
 import { filesRoutes } from "./routes/files";
 import { harvestRoutes } from "./routes/harvest";
 import { healthRoutes } from "./routes/health";
+import { loyaltyRoutes } from "./routes/loyalty";
 import { meOrdersRoutes } from "./routes/me-orders";
 import { ordersRoutes } from "./routes/orders";
 import { packingRoutes } from "./routes/packing";
 import { paymentsRoutes } from "./routes/payments";
 import { pricesRoutes } from "./routes/prices";
+import { productImagesRoutes } from "./routes/product-images";
 import { reportsRoutes } from "./routes/reports";
 import { roundsRoutes } from "./routes/rounds";
 import { settingsRoutes } from "./routes/settings";
 import { stockRoutes } from "./routes/stock";
 import { subscriptionsRoutes } from "./routes/subscriptions";
+import { trackingRoutes } from "./routes/tracking";
 import { varietiesRoutes } from "./routes/varieties";
 import { webhookRoutes } from "./routes/webhook";
 
@@ -78,7 +83,17 @@ export const app = new Elysia()
   .use(packingRoutes)
   .use(reportsRoutes)
   .use(dashboardRoutes)
-  .use(settingsRoutes);
+  .use(settingsRoutes)
+  // Phase-4 back-office stub routers — APPENDED at the END (fixed-order invariant,
+  // 00-01/03-01 seam idiom). Each is an inert 501 stub composed NOW to freeze the
+  // seam; Wave-2 slices fill each router's OWN file only, never editing this chain:
+  //   couponsRoutes→04-03, loyaltyRoutes→04-03, broadcastsRoutes→04-06,
+  //   trackingRoutes→04-05, productImagesRoutes→04-04.
+  .use(couponsRoutes)
+  .use(loyaltyRoutes)
+  .use(broadcastsRoutes)
+  .use(trackingRoutes)
+  .use(productImagesRoutes);
 
 // Eden Treaty contract consumed by web/ (compile-time-safe API calls).
 export type App = typeof app;

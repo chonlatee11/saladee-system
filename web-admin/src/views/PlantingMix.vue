@@ -7,9 +7,11 @@
 import { computed, ref } from "vue";
 import {
   type MixItemInput,
+  type RecommendationItem,
   useCreateBatchesFromMix,
   useCreateMixTemplate,
   useMixTemplates,
+  usePlantingRecommendation,
   useUpdateMixTemplate,
   useVarieties,
 } from "../composables/useCrop";
@@ -28,13 +30,17 @@ interface MixTemplate {
 
 const { data: templates, isLoading, isError } = useMixTemplates();
 const { data: varieties } = useVarieties();
+const {
+  data: recommendation,
+  isLoading: recLoading,
+  isError: recError,
+} = usePlantingRecommendation();
 const createTemplate = useCreateMixTemplate();
 const updateTemplate = useUpdateMixTemplate();
 const spawn = useCreateBatchesFromMix();
 
 const list = computed<MixTemplate[]>(() => (templates.value ?? []) as MixTemplate[]);
-const varietyName = (id: string) =>
-  (varieties.value ?? []).find((v) => v.id === id)?.name ?? id;
+const varietyName = (id: string) => (varieties.value ?? []).find((v) => v.id === id)?.name ?? id;
 
 // ── Create / edit recipe modal ───────────────────────────────────────────────
 const editorOpen = ref(false);
@@ -53,7 +59,10 @@ function openCreate(): void {
 function openEdit(tpl: MixTemplate): void {
   editingId.value = tpl.id;
   nameInput.value = tpl.name;
-  itemsInput.value = tpl.items.map((it) => ({ varietyId: it.varietyId, plantCount: it.plantCount }));
+  itemsInput.value = tpl.items.map((it) => ({
+    varietyId: it.varietyId,
+    plantCount: it.plantCount,
+  }));
   editorError.value = null;
   editorOpen.value = true;
 }
@@ -90,6 +99,29 @@ async function submitEditor(): Promise<void> {
   } catch {
     editorError.value = "บันทึกสูตรปลูกไม่สำเร็จ โปรดลองใหม่อีกครั้ง";
   }
+}
+
+// ── Demand-driven planting recommendation (CROP-07 / D-23/24/25) ─────────────
+const recNoData = computed<boolean>(() => recommendation.value?.noData !== false);
+const recRounds = computed<number>(() => recommendation.value?.nRounds ?? 0);
+const recItems = computed<RecommendationItem[]>(() =>
+  recommendation.value && !recommendation.value.noData ? recommendation.value.items : [],
+);
+
+/**
+ * Apply the recommendation as a PREFILL of the recipe editor (D-25 — the mix is
+ * never silently overwritten; the admin edits + confirms before save). Opens the
+ * same create-recipe form the manual flow uses, seeded with the recommended counts.
+ */
+function applyRecommendation(): void {
+  editingId.value = null; // prefill a NEW recipe (never mutate an existing one)
+  nameInput.value = `สูตรจากดีมานด์ ${new Date().toISOString().slice(0, 10)}`;
+  itemsInput.value = recItems.value.map((it) => ({
+    varietyId: it.varietyId,
+    plantCount: it.recommendedPlants,
+  }));
+  editorError.value = null;
+  editorOpen.value = true;
 }
 
 // ── One-click create-batches (D-06) ──────────────────────────────────────────
@@ -138,6 +170,53 @@ async function submitSpawn(): Promise<void> {
       >
         เพิ่มสูตรปลูก
       </button>
+    </div>
+
+    <!-- CROP-07 demand-driven planting recommendation (prefills the mix, D-25) -->
+    <div class="mb-lg rounded-lg border border-hairline bg-canvas p-lg">
+      <h2 class="text-[20px] font-semibold text-ink">
+        คำแนะนำปริมาณปลูก (จากดีมานด์ย้อนหลัง)
+      </h2>
+
+      <!-- loading -->
+      <div v-if="recLoading" class="mt-md h-16 animate-pulse rounded-md bg-surface" />
+
+      <!-- error -->
+      <p v-else-if="recError" class="mt-md text-[14px] text-destructive">
+        โหลดคำแนะนำไม่สำเร็จ โปรดลองใหม่อีกครั้ง
+      </p>
+
+      <!-- no-data (insufficient history) -->
+      <div v-else-if="recNoData" class="mt-md">
+        <p class="text-[16px] font-semibold text-ink">ข้อมูลดีมานด์ยังไม่พอ</p>
+        <p class="mt-xs text-[14px] text-muted">
+          ต้องมีประวัติการขายอย่างน้อย {{ recRounds }} รอบจึงจะแนะนำได้
+        </p>
+      </div>
+
+      <!-- recommendation + apply CTA -->
+      <div v-else class="mt-md">
+        <ul class="mb-md space-y-xs text-[14px] text-ink">
+          <li
+            v-for="it in recItems"
+            :key="it.varietyId"
+            class="flex items-center justify-between"
+          >
+            <span>{{ it.varietyName }}</span>
+            <span class="tabular text-muted">
+              แนะนำ {{ it.recommendedPlants }} ต้น
+              <span class="text-[12px]">(ดีมานด์ {{ it.demandPlants }} · รอด {{ it.survivalPct }}%)</span>
+            </span>
+          </li>
+        </ul>
+        <button
+          type="button"
+          class="h-10 rounded-md bg-accent px-lg text-[16px] font-semibold text-white"
+          @click="applyRecommendation"
+        >
+          ใช้ค่านี้เติมในแผนปลูก
+        </button>
+      </div>
     </div>
 
     <p v-if="isError" class="mb-md text-[14px] text-destructive">

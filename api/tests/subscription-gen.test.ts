@@ -80,6 +80,7 @@ beforeAll(async () => {
   db = drizzle(client, { schema });
   // Self-resetting-test invariant (03-01): down all, up all so sibling tests still
   // find the Phase-3 tables/columns after this file runs.
+  await client.file("drizzle/0005_phase4.down.sql").catch(() => {});
   await client.file("drizzle/0004_phase3.down.sql").catch(() => {});
   await client.file("drizzle/0003_payments_delivery_consent.down.sql").catch(() => {});
   await client.file("drizzle/0001_commerce.down.sql").catch(() => {});
@@ -88,6 +89,7 @@ beforeAll(async () => {
   await client.file("drizzle/0001_commerce.sql");
   await client.file("drizzle/0003_payments_delivery_consent.sql");
   await client.file("drizzle/0004_phase3.sql");
+  await client.file("drizzle/0005_phase4.sql");
 });
 
 afterAll(async () => {

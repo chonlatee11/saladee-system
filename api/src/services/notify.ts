@@ -232,6 +232,11 @@ const client = new messagingApi.MessagingApiClient({
   channelAccessToken: env.LINE_CHANNEL_ACCESS_TOKEN,
 });
 
+// The runtime push seam other routes reuse (04-05 tracking, D-22) — the SAME env
+// client + guest guard as the milestone notifier, so callers never build a second
+// LINE client. Tests inject a mock LinePush instead of this default.
+export const defaultLinePush: LinePush = { client };
+
 // Register the single milestone notifier at boot. Guarded off the live LINE API
 // under NODE_ENV=test so importing this module in the test suite never makes a
 // real push (LINE creds are harness-locked); pushOrderUpdate stays fully testable
