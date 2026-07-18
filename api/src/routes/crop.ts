@@ -13,14 +13,10 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { Elysia, t } from "elysia";
 import { db as defaultDb } from "../db/client";
 import type * as schema from "../db/schema";
-import {
-  plantingBatches,
-  plantingMixItems,
-  plantingMixTemplates,
-  varieties,
-} from "../db/schema";
+import { plantingBatches, plantingMixItems, plantingMixTemplates, varieties } from "../db/schema";
 import { requireRole } from "../plugins/auth.plugin";
 import { createBatchesFromMix } from "../services/crop";
+import { computeDemandRecommendation } from "../services/crop-recommend";
 import { forecastPlants, projectedHarvestDate } from "../services/forecast";
 
 type CatalogDb = PostgresJsDatabase<typeof schema>;
@@ -64,6 +60,12 @@ const MixTemplatePatchBody = t.Object({
   items: t.Optional(t.Array(MixItemBody, { minItems: 1 })),
 });
 const CreateBatchesBody = t.Object({ plantDate: t.String({ minLength: 1 }) });
+
+// Demand-recommendation query (CROP-07 / D-23). nRounds = trailing window; optional
+// so the endpoint falls back to the service default when omitted. Bounded 1–52.
+const RecommendationQuery = t.Object({
+  nRounds: t.Optional(t.Integer({ minimum: 1, maximum: 52 })),
+});
 
 /** Parse an ISO date string → Date; returns null on an invalid/NaN date (→ 422). */
 function parseDate(raw: string): Date | null {
@@ -297,9 +299,7 @@ export function makeCropRoutes(database: CatalogDb = defaultDb) {
             if (!tpl) return null;
             // Replace the recipe wholesale when items are supplied (edit recipe).
             if (body.items !== undefined) {
-              await tx
-                .delete(plantingMixItems)
-                .where(eq(plantingMixItems.templateId, tpl.id));
+              await tx.delete(plantingMixItems).where(eq(plantingMixItems.templateId, tpl.id));
               await tx.insert(plantingMixItems).values(
                 body.items.map((it) => ({
                   templateId: tpl!.id,
@@ -369,6 +369,17 @@ export function makeCropRoutes(database: CatalogDb = defaultDb) {
           return result;
         },
         { params: IdParams, body: CreateBatchesBody, beforeHandle: grower },
+      )
+
+      // ── Demand-driven planting recommendation (CROP-07 / D-23/24/25) ────────
+      // On-demand compute (A2/NFR-08): trailing demand → per-variety plant counts
+      // via the inverse of forecast.ts. Staff-gated (T-04-24) and read-only —
+      // returns a no-data flag below the N-round history threshold so the card can
+      // show "ข้อมูลดีมานด์ยังไม่พอ". The admin applies it as a prefill (D-25).
+      .get(
+        "/crop/planting-recommendation",
+        async ({ query }) => computeDemandRecommendation(database, { nRounds: query.nRounds }),
+        { query: RecommendationQuery, beforeHandle: grower },
       )
   );
 }

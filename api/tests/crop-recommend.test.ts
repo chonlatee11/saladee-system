@@ -14,19 +14,15 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "../src/db/schema";
+import { backInStockRequests, customers, orderLines, orders, varieties } from "../src/db/schema";
+import { issueSession } from "../src/plugins/auth.plugin";
+import { makeCropRoutes } from "../src/routes/crop";
 import {
-  backInStockRequests,
-  customers,
-  orderLines,
-  orders,
-  varieties,
-} from "../src/db/schema";
-import { forecastPlants } from "../src/services/forecast";
-import {
-  DEFAULT_PLANTS_PER_REQUEST,
   computeDemandRecommendation,
+  DEFAULT_PLANTS_PER_REQUEST,
   plantsToMeetDemand,
 } from "../src/services/crop-recommend";
+import { forecastPlants } from "../src/services/forecast";
 import { seedRound, seedVariety } from "./seed";
 
 const TEST_URL =
@@ -174,5 +170,33 @@ describe("computeDemandRecommendation — trailing sales + unmet demand, surviva
   test("below the N-round history threshold → no-data flag", async () => {
     const rec = await computeDemandRecommendation(db, { nRounds: 9999 });
     expect(rec.noData).toBe(true);
+  });
+});
+
+describe("GET /crop/planting-recommendation — RBAC + endpoint shape (T-04-24)", () => {
+  function fire(
+    app: { handle: (r: Request) => Promise<Response> },
+    path: string,
+    token?: string,
+  ): Promise<Response> {
+    const headers: Record<string, string> = { "content-type": "application/json" };
+    if (token) headers.authorization = `Bearer ${token}`;
+    return app.handle(new Request(`http://localhost${path}`, { method: "GET", headers }));
+  }
+
+  test("no token → 401; customer → 403; grower → 200 with a no-data flag", async () => {
+    const crop = makeCropRoutes(db);
+    const grower = await issueSession(crypto.randomUUID(), "grower");
+    const customer = await issueSession(crypto.randomUUID(), "customer");
+
+    expect((await fire(crop, "/crop/planting-recommendation")).status).toBe(401);
+    expect((await fire(crop, "/crop/planting-recommendation", customer)).status).toBe(403);
+
+    // nRounds=52 (the query max) exceeds this file's seeded rounds → no-data.
+    const ok = await fire(crop, "/crop/planting-recommendation?nRounds=52", grower);
+    expect(ok.status).toBe(200);
+    const body = (await ok.json()) as { noData: boolean; items: unknown[] };
+    expect(body.noData).toBe(true);
+    expect(Array.isArray(body.items)).toBe(true);
   });
 });
