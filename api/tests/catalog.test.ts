@@ -76,6 +76,7 @@ interface VarietyResp {
   name: string;
   imageUrl: string | null;
   gallery: string[];
+  coverUrl: string | null;
   saleUnits: { id: string; gramsPerUnit: number }[];
   rounds: RoundEntryResp[];
 }
@@ -326,6 +327,42 @@ describe("product-image gallery in the catalog payload (04-04, D-27/28)", () => 
     const body = (await res.json()) as CatalogResp;
     const v = body.varieties.find((x) => x.id === varietyId);
     expect(v?.gallery).toEqual([cover, "https://cdn.test/g1.jpg", "https://cdn.test/g2.jpg"]);
+  });
+
+  test("coverUrl = gallery[0] for a web-admin uploaded photo (imageUrl null, gallery row present)", async () => {
+    const { varietyId } = await arrange();
+    // Web-admin upload path (04-04): variety_images row written, imageUrl stays null.
+    const uploaded = "https://cdn.test/uploaded-cover.jpg";
+    await db.update(varieties).set({ imageUrl: null }).where(eq(varieties.id, varietyId));
+    await db.insert(varietyImages).values({ varietyId, url: uploaded, sort: 0 });
+
+    const res = await req("GET", "/catalog");
+    const body = (await res.json()) as CatalogResp;
+    const v = body.varieties.find((x) => x.id === varietyId);
+    expect(v?.imageUrl).toBeNull(); // gallery-first model unchanged (D-27/28)
+    expect(v?.coverUrl).toBe(uploaded); // derived cover surfaces the uploaded photo
+    expect(v?.gallery[0]).toBe(v?.coverUrl); // cover and gallery can never disagree
+  });
+
+  test("coverUrl = imageUrl when a legacy cover is set (cover-first, unchanged)", async () => {
+    const { varietyId } = await arrange();
+    const cover = "https://cdn.test/legacy-cover.jpg";
+    await db.update(varieties).set({ imageUrl: cover }).where(eq(varieties.id, varietyId));
+
+    const res = await req("GET", "/catalog");
+    const body = (await res.json()) as CatalogResp;
+    const v = body.varieties.find((x) => x.id === varietyId);
+    expect(v?.coverUrl).toBe(cover);
+  });
+
+  test("coverUrl = null when a product is truly coverless (no imageUrl, no gallery)", async () => {
+    const { varietyId } = await arrange();
+    await db.update(varieties).set({ imageUrl: null }).where(eq(varieties.id, varietyId));
+
+    const res = await req("GET", "/catalog");
+    const body = (await res.json()) as CatalogResp;
+    const v = body.varieties.find((x) => x.id === varietyId);
+    expect(v?.coverUrl).toBeNull();
   });
 
   test("WR-01 cache headers stay intact with the gallery payload", async () => {
