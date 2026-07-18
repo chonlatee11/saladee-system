@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Commerce Core** - Oversell-safe harvest-bound reservation engine, catalog, pricing, rounds, mixed box (completed 2026-07-02)
 - [x] **Phase 2: LINE Storefront, Payments & Delivery** - LIFF + Rich Menu ordering, PromptPay + verified slips, hold-expiry, delivery, PDPA (completed 2026-07-04)
 - [x] **Phase 3: Back-office, Crop Planning & B2B/Subscription** - Crop forecast auto-feeds stock, B2B quota, subscriptions, packing, dashboards, reports (completed 2026-07-11)
-- [ ] **Phase 4: Web Store, Marketing & Scale** - Web storefront, promotions/loyalty, broadcast, multi-carrier delivery, demand-driven planting
+- [x] **Phase 4: Web Store, Marketing & Scale** - Web storefront, promotions/loyalty, broadcast, multi-carrier delivery, demand-driven planting (completed 2026-07-18)
 
 ## Phase Details
 
@@ -184,7 +184,7 @@ Plans:
   3. An admin sends a segmented LINE broadcast and a conversational chatbot can take orders.
   4. Delivery records carrier tracking number/status (Grab/Lalamove/general carrier), and the system recommends per-Monday planting quantities from demand history.
 
-**Plans**: 9/10 plans executed
+**Plans**: 10/10 plans complete
 **UI hint**: yes
 
 Plans:
@@ -208,7 +208,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3)*
 
-- [ ] 04-09-PLAN.md — Web checkout: guest cart → POST /orders → PromptPay → slip + coupon/points fields (ORD-05) (wave 4)
+- [x] 04-09-PLAN.md — Web checkout: guest cart → POST /orders → PromptPay → slip + coupon/points fields (ORD-05) (wave 4)
 
 ## Progress
 
@@ -221,4 +221,4 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 | 1. Commerce Core | 5/5 | Complete   | 2026-07-02 |
 | 2. LINE Storefront, Payments & Delivery | 9/9 | Complete    | 2026-07-04 |
 | 3. Back-office, Crop Planning & B2B/Subscription | 15/15 | Complete    | 2026-07-11 |
-| 4. Web Store, Marketing & Scale | 9/10 | In Progress|  |
+| 4. Web Store, Marketing & Scale | 10/10 | Complete   | 2026-07-18 |
