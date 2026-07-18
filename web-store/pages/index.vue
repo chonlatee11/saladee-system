@@ -6,6 +6,7 @@
 // values (StoreVarietyCard); browse only — cart/checkout land in Plan 09.
 import StoreVarietyCard, { type VarietyCardModel } from "~/components/StoreVarietyCard.vue";
 import EmptyState from "~/components/EmptyState.vue";
+import { useCart, type CartLine } from "~/stores/cart";
 
 const SOLD_OUT_LABEL = "หมดรอบนี้"; // INV-08 sold-out copy (mirrors the api label)
 
@@ -35,8 +36,11 @@ useSeoMeta({
   ogType: "website",
 });
 
-function onAdd(): void {
-  // Cart wiring lands in Plan 09; browse-only here.
+// Cart wiring (04-09): add the emitted line (ids + qty only, T-04-29) to the shared
+// cart store. The store persists to sessionStorage so /checkout sees the same lines.
+const cart = useCart();
+function onAdd(line: CartLine): void {
+  cart.add(line);
 }
 </script>
 

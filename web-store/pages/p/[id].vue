@@ -5,6 +5,7 @@
 // page is crawlable and rich-result eligible. 404s when the id is not in the open
 // round. Add-to-cart intent is surfaced only (cart lands in Plan 09).
 import StoreVarietyCard, { type VarietyCardModel } from "~/components/StoreVarietyCard.vue";
+import { useCart, type CartLine } from "~/stores/cart";
 
 interface CatalogPayload {
   varieties: VarietyCardModel[];
@@ -46,6 +47,12 @@ useSeoMeta({
   ogType: "product" as never,
   ogImage: () => cover.value,
 });
+
+// Cart wiring (04-09): add the emitted line (ids + qty only, T-04-29) to the shared cart.
+const cart = useCart();
+function onAdd(line: CartLine): void {
+  cart.add(line);
+}
 
 // Product JSON-LD (D-06) via nuxt-schema-org — rich-result eligible structured data.
 useSchemaOrg([
@@ -99,7 +106,7 @@ useSchemaOrg([
         <p class="text-[16px] leading-[1.6] text-muted">
           ผักสลัดสดจากรอบเก็บเกี่ยวปัจจุบัน จำนวนตรงกับผลผลิตจริง ส่งตรงจากฟาร์ม
         </p>
-        <StoreVarietyCard :variety="v" sold-out-label="หมดรอบนี้" />
+        <StoreVarietyCard :variety="v" sold-out-label="หมดรอบนี้" @add="onAdd" />
       </div>
     </div>
   </div>

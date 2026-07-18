@@ -44,6 +44,10 @@ export default defineNuxtConfig({
   routeRules: {
     "/": { swr: 600 },
     "/p/**": { swr: 600 },
+    // Checkout is CSR (04-09): the cart is client sessionStorage state and the page
+    // does live order/payment API round-trips — SSR gains nothing and would render an
+    // empty cart. ssr:false renders it client-side only (D-29 CSR cart/checkout note).
+    "/checkout": { ssr: false },
   },
 
   // A public site URL is needed for canonical/sitemap absolute URLs. The real
