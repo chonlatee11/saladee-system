@@ -40,6 +40,8 @@ const routes: RouteRecordRaw[] = [
     component: () => import("./views/SubscriptionManage.vue"),
   },
   { path: "/b2b", name: "b2b", component: () => import("./views/B2bAccount.vue") },
+  // Phase-4 LIFF customer addition (04-10): marketing opt-out / consent management.
+  { path: "/consent", name: "consent", component: () => import("./views/ConsentSettings.vue") },
   // Unknown paths fall back to the catalog (the Rich Menu entry point).
   { path: "/:pathMatch(.*)*", redirect: "/" },
 ];
