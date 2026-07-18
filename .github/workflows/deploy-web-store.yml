@@ -1,0 +1,55 @@
+# Build the Nuxt SSR web store and deploy to Cloudflare Pages (D-29/D-30 hosting
+# decision, 04-09). Mirrors deploy-web.yml but for the SSR storefront: the nitro
+# cloudflare-pages preset (nuxt.config) emits web-store/dist (static + _worker.js).
+# Path-filtered to web-store changes. No secrets touch the repo — the Cloudflare
+# token/account id come from GitHub Secrets.
+name: Deploy Web Store
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [develop]
+    paths:
+      - "web-store/**"
+      - ".github/workflows/deploy-web-store.yml"
+
+concurrency:
+  group: deploy-web-store
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build SSR store
+        run: bun run --cwd web-store build
+        env:
+          # The live API base URL for the Eden Treaty client (SSR + CSR). Set the repo
+          # Actions variable NUXT_PUBLIC_API_URL to the API origin (e.g. https://api.…).
+          NUXT_PUBLIC_API_URL: ${{ vars.NUXT_PUBLIC_API_URL }}
+          # Public site URL for canonical/sitemap absolute URLs (D-06). Set to the real
+          # .com once provisioned; the Pages preview URL works until then.
+          NUXT_PUBLIC_SITE_URL: ${{ vars.NUXT_PUBLIC_SITE_URL }}
+
+      # Create the Pages project on first run (idempotent — ignore "already exists").
+      - name: Ensure Cloudflare Pages project exists
+        run: bunx wrangler@3.90.0 pages project create saladee-web-store --production-branch=develop || true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy web-store/dist --project-name=saladee-web-store --branch=develop
