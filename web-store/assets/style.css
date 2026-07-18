@@ -1,0 +1,53 @@
+/*
+ * Saladee web-store design tokens (04-UI-SPEC). Tailwind v4 CSS-first: the @theme
+ * block below is copied VERBATIM from web/src/style.css (02-UI-SPEC) — "one brand,
+ * N apps" inheritance rule (04-UI-SPEC binding). The store adds only the desktop
+ * `store-max` 1200px layout constant on top of the shared tokens; it introduces no
+ * new colour/typography/spacing token and no component registry (no shadcn).
+ */
+@import "tailwindcss";
+
+@theme {
+  /* Color — 60/30/10 fresh-salad palette (UI-SPEC Color) */
+  --color-canvas: #ffffff; /* 60% page/content background */
+  --color-surface: #f1f5ec; /* 30% cards, tiles, sticky footer */
+  --color-accent: #2e7d32; /* 10% single primary action / go-paid */
+  --color-destructive: #d32f2f; /* cancel / rejected / errors only */
+
+  /* Supporting ink + status neutrals (outside the 60/30/10 budget) */
+  --color-ink: #1b2a1b; /* text primary */
+  --color-muted: #5b6b5b; /* text muted, labels, helper text */
+  --color-hairline: #e2e8dd; /* borders / dividers */
+  --color-warning: #b26a00; /* awaiting-review status text */
+  --color-warning-surface: #fff4e5; /* awaiting-review badge surface */
+
+  /* Typography — Sarabun, system fallback (UI-SPEC Typography) */
+  --font-sans: "Sarabun", system-ui, -apple-system, "Noto Sans Thai", sans-serif;
+
+  /* Spacing — 8-point scale, all multiples of 4 (UI-SPEC Spacing) */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-2xl: 48px;
+  --spacing-3xl: 64px;
+}
+
+/* Global baseline: canvas background, ink text, Sarabun everywhere. */
+html,
+body {
+  margin: 0;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 16px; /* Body — never below 14px readable Thai (UI-SPEC) */
+  line-height: 1.6;
+}
+
+/* store-max (04-UI-SPEC Spacing) — desktop content max-width, centered, so the
+ * storefront is a real multi-column grid, not a stretched mobile column (D-05). */
+.store-max {
+  max-width: 1200px;
+  margin-inline: auto;
+}
