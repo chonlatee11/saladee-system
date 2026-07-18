@@ -88,7 +88,12 @@ export interface MemberOrderCustomer {
   recipientAddress: string;
 }
 
-/** The POST /orders body — ids + qty + delivery choice + consent only (no money). */
+/**
+ * The POST /orders body — ids + qty + delivery choice + consent only (no money).
+ * The Phase-4 discount inputs are a coupon CODE + a bounded points INTEGER only —
+ * NEVER a price/discount/points VALUE; POST /orders resolves every satang and drives
+ * the PromptPay QR (04-03, T-04-07). Both are optional so the legacy body is unchanged.
+ */
 export interface OrderBody {
   tier: "b2c";
   lines?: CartLine[];
@@ -97,6 +102,8 @@ export interface OrderBody {
   deliveryMethod: DeliveryMethod;
   deliveryZone: string;
   consent: { usage: boolean; marketing: boolean; policyVersion: string };
+  couponCode?: string;
+  redeemPoints?: number;
 }
 
 /**
@@ -116,8 +123,27 @@ export function buildOrderBody(opts: {
   // it links to the LINE identity; when absent, the byte-identical guest body is
   // emitted (LINE-02 / D-19). Never a money field.
   customerId?: string;
+  // Phase-4 discount inputs (04-10): a coupon CODE + a bounded points count only —
+  // the server resolves the discount + QR (04-03). Never a price/discount value.
+  couponCode?: string;
+  redeemPoints?: number;
+  // The PDPA policy version the consent is stamped with. Sourced from GET
+  // /me/consent-status at wizard load (falls back to POLICY_VERSION for guests) so a
+  // policy-version bump writes a fresh grant (PDPA versioning).
+  policyVersion?: string;
 }): OrderBody {
-  const { lines, boxLines, deliveryMethod, deliveryZone, customer, consent, customerId } = opts;
+  const {
+    lines,
+    boxLines,
+    deliveryMethod,
+    deliveryZone,
+    customer,
+    consent,
+    customerId,
+    couponCode,
+    redeemPoints,
+    policyVersion,
+  } = opts;
   // The recipient columns are identical for both paths — the single collected
   // name/phone/address maps to the recipient (buyer == recipient for the MVP).
   const orderCustomer: GuestOrderCustomer | MemberOrderCustomer = customerId
@@ -139,9 +165,19 @@ export function buildOrderBody(opts: {
     customer: orderCustomer,
     deliveryMethod,
     deliveryZone,
-    consent: { usage: consent.usage, marketing: consent.marketing, policyVersion: POLICY_VERSION },
+    consent: {
+      usage: consent.usage,
+      marketing: consent.marketing,
+      // The server-sourced current version wins; POLICY_VERSION is only the guest /
+      // offline fallback so a version bump always writes a fresh consent grant.
+      policyVersion: policyVersion ?? POLICY_VERSION,
+    },
   };
   if (lines.length > 0) body.lines = lines.map((l) => ({ ...l }));
   if (boxLines.length > 0) body.boxLines = boxLines.map((l) => ({ ...l }));
+  // Send ONLY the coupon code + bounded points count — never a money value (04-03).
+  const code = couponCode?.trim();
+  if (code) body.couponCode = code;
+  if (typeof redeemPoints === "number" && redeemPoints > 0) body.redeemPoints = redeemPoints;
   return body;
 }
