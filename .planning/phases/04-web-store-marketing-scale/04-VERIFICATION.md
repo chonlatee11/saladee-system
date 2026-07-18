@@ -1,37 +1,48 @@
 ---
 phase: 04-web-store-marketing-scale
-verified: 2026-07-18T02:05:00Z
-status: human_needed
+verified: 2026-07-18T14:30:00Z
+status: passed
 score: 4/4 must-haves verified
 behavior_unverified: 0
 overrides_applied: 0
 mode: mvp
+re_verification:
+  previous_status: human_needed
+  previous_score: 4/4
+  gaps_closed:
+    - "Web-store catalog cards show the product photo when images were uploaded via web-admin (UAT gap 1 / ORD-05) — closed by 04-11"
+    - "LINE broadcast delivered as a styled Flex Message, not plain text (UAT gap 2 / MKT-03, LINE-04) — closed by 04-12"
+    - "Web-store guest checkout PromptPay QR live scan — UAT test 1 pass"
+    - "Segmented LINE broadcast live delivery, opt-out excluded — UAT test 3 pass"
+    - "Web-store responsive render mobile + desktop — UAT test 2 re-verified after image fix (04-11 human-verify)"
+  gaps_remaining: []
+  regressions: []
 deferred:
-  - truth: "SEO go-live (canonical/sitemap/OG absolute URLs) served on a real production domain"
+  - truth: "SEO go-live (canonical/sitemap/OG absolute URLs) served on a real production .com domain"
     addressed_in: "Deferred prereq D-06 — production .com domain"
-    evidence: "04-08 artifacts (sitemap + JSON-LD + useSeoMeta + robots) are present and build-verified; only the live domain swap is outstanding. Store builds/tests without it (nuxt.config site.url placeholder)."
+    evidence: "04-08 SEO artifacts (sitemap + JSON-LD + useSeoMeta + robots) present and build-verified; only the live domain swap is outstanding. Store builds/tests without it."
   - truth: "web-admin strict vue-tsc typecheck is fully clean"
     addressed_in: "Follow-up type-tightening (deferred-items.md)"
-    evidence: "Pre-existing CouponComposer.vue:86 Eden body typing; the real build gate `vite build` passes (exit 0). Logged in deferred-items.md, not a functional gap."
-human_verification:
-  - test: "Web-store guest checkout PromptPay QR end-to-end scan with a real bank app"
-    expected: "The rendered NET (post-discount) whole-baht QR scans in a real banking app and shows the exact discounted amount; slip upload completes the order"
-    why_human: "Requires a real mobile banking app scanning a live QR — cannot be automated. Owner-deferred per phase note."
-  - test: "Load the public web store on desktop AND mobile viewport"
-    expected: "Current round's catalog is server-rendered, product page opens with real gallery imagery, layout is correct mobile-first (NFR-07) and at store-max 1200px desktop"
-    why_human: "Visual/responsive rendering quality is not observable via grep; MVP-mode user-flow confirmation."
-  - test: "Admin sends a segmented LINE broadcast to a real consented test audience"
-    expected: "Only marketing-consented customers with a line_user_id receive the multicast; a customer who opted out does not"
-    why_human: "Real LINE multicast delivery to real accounts requires a live OA + test users (audience filter is unit-tested, but end-to-end delivery is external)."
+    evidence: "Pre-existing CouponComposer.vue:86 Eden body typing (shipped in 04-03, confirmed not caused by 04-11/04-12). Real build gate `vite build` passes (exit 0). Non-functional."
 ---
 
-# Phase 4: Web Store, Marketing & Scale — Verification Report
+# Phase 4: Web Store, Marketing & Scale — Verification Report (Re-verification)
 
 **Phase Goal:** The store expands beyond LINE — a public web storefront, promotions and loyalty, segmented broadcasts, full multi-carrier delivery, and demand-driven planting close the omnichannel loop on the proven order core.
-**Verified:** 2026-07-18T02:05:00Z
-**Status:** human_needed
-**Re-verification:** No — initial verification
-**Mode:** mvp (goal is a compound omnichannel outcome, verified against the 4 ROADMAP Success Criteria)
+**Verified:** 2026-07-18T14:30:00Z
+**Status:** passed
+**Re-verification:** Yes — after UAT gap closure (plans 04-11 + 04-12). Previous status `human_needed`; the three human items are now resolved via completed UAT and the two gap-closure plans' human-verify checkpoints.
+**Mode:** mvp (compound omnichannel outcome, verified against the 4 ROADMAP Success Criteria)
+
+## Re-verification Delta
+
+The prior report (2026-07-18T02:05) verified all 4 success criteria but sat at `human_needed` for three real-world confirmations. Those are now closed:
+
+- **UAT test 1 (PromptPay QR live scan)** → pass.
+- **UAT test 2 (web-store responsive + product imagery)** → was `issue` ("ไม่เห็นรูปภาพแสดงเลย"). Root cause: `StoreVarietyCard.vue` gated `<img>` on `imageUrl` only, but web-admin uploads write `variety_images` gallery rows and never set `varieties.imageUrl`. **Closed by 04-11** — catalog now derives `coverUrl = gallery[0] ?? null`; card falls back `coverUrl → imageUrl → gallery[0] → placeholder`. Human-verified on mobile + desktop.
+- **UAT test 3 (segmented broadcast)** → pass; opt-out correctly excluded. Requested Flex enhancement **closed by 04-12** — `buildBroadcastFlex` + delivery-seam `altText` guarantee + composer text|Flex toggle. Device-verified.
+
+No regressions: full API suite 383 pass / 0 fail (was 369; +14 new catalog/flex tests).
 
 ## Goal Achievement
 
@@ -39,95 +50,68 @@ human_verification:
 
 | # | Truth (Success Criterion) | Status | Evidence |
 |---|---------------------------|--------|----------|
-| 1 | Customer browses + checks out through a public web storefront (cart → checkout) reusing the same order/reservation core | ✓ VERIFIED | `web-store/` Nuxt SSR: `pages/index.vue` (SSR catalog), `pages/p/[id].vue` (product + JSON-LD), `pages/checkout.vue` POSTs `api.orders.post` → `GET /orders/:id/qr` → `POST /orders/:id/slip`. `stores/cart.ts` stores only `{roundId,varietyId,saleUnitId,qty}` — no money. Server re-resolves price + `reserve()` (no second oversell path). `web-store` build passes (cloudflare-pages). |
-| 2 | Admin creates promotions/coupons (percent/baht, min, expiry, usage limit, segment codes) and customers earn+redeem loyalty points | ✓ VERIFIED | `coupon.ts redeemCouponGuarded()` (guarded UPDATE + UNIQUE per-customer arbiter); `loyalty.ts earnPoints/redeemPointsGuarded/getBalance` (append-only ledger, `ON CONFLICT (order_id) WHERE kind='earn' DO NOTHING`); discount composes into `netSatang` before `buildPromptPayPayload`; whole-baht guard `netSatang % 100`. Admin `CouponComposer.vue`+`LoyaltySettings.vue` bundle in web-admin build. Tests: coupon, coupon-race, loyalty, checkout-discount — all green. |
-| 3 | Admin sends a segmented LINE broadcast and a conversational chatbot can take orders | ✓ VERIFIED | `broadcast.ts` audience = `DISTINCT ON (customer_id)` latest marketing consent `granted=true AND line_user_id NOT NULL`, ≤500 multicast chunking; `broadcasts.ts` compose/schedule/send + pg-boss worker; `webhook.ts` rule-based (no-LLM, per D-19/D-20) postback state machine after `validateSignature`, deep-links to LIFF to pay. Tests: broadcast-audience, webhook-bot, chatbot-router — all green. |
-| 4 | Delivery records carrier tracking number/status (Grab/Lalamove/general), and system recommends per-Monday planting quantities from demand history | ✓ VERIFIED | `carrier/{index,manual.adapter,types}.ts` env-selected adapter seam (grab/lalamove commented for later, no route rework); `tracking.ts` sets carrier+tracking, PATCH `deliveryStatus` enum, reuses `pushOrderUpdate` (guest-guarded). `crop-recommend.ts plantsToMeetDemand = ceil(demand*100/survivalPct)` (inverse of forecast.ts) + trailing demand + unmet (back-in-stock) demand; `GET /crop/planting-recommendation`; `PlantingMix.vue` prefill card. Tests: tracking, crop-recommend — all green. |
+| 1 | Customer browses + checks out through a public web storefront reusing the same order/reservation core | ✓ VERIFIED | `web-store/` Nuxt SSR checkout reuses `api.orders.post` → `GET /orders/:id/qr` → slip; cart stores no money; server re-resolves price + `reserve()`. Catalog images now render (04-11 `coverUrl` + card fallback confirmed in `StoreVarietyCard.vue:38-79`). |
+| 2 | Admin creates promotions/coupons and customers earn+redeem loyalty points | ✓ VERIFIED | `coupon.ts redeemCouponGuarded`, `loyalty.ts` append-only ledger; discount composes into `netSatang` before PromptPay; admin composers bundle. Tests green. |
+| 3 | Admin sends a segmented LINE broadcast and a conversational chatbot can take orders | ✓ VERIFIED | `broadcast.ts resolveAudience` = latest marketing consent `granted=true AND line_user_id NOT NULL`, ≤500 chunking (`MULTICAST_CHUNK=500`, unchanged by 04-12); now supports Flex via `buildBroadcastFlex` + `normalizeMessages`/`ensureAltText` altText guarantee; rule-based bot postback flow. Tests green + UAT test 3 pass. |
+| 4 | Delivery records carrier tracking, and system recommends per-Monday planting quantities | ✓ VERIFIED | `carrier/*` adapter seam; `tracking.ts` carrier+tracking+status enum; `crop-recommend.ts plantsToMeetDemand` inverse-forecast + `PlantingMix.vue` prefill. Tests green. |
 
-**Score:** 4/4 truths verified (0 present-behavior-unverified — every behavior-dependent invariant has a passing named test)
+**Score:** 4/4 truths verified (0 present-behavior-unverified).
 
-### Deferred Items
-
-Items not blocking goal achievement; addressed by an explicit deferred prereq or follow-up.
+### Deferred Items (non-blocking, tracked)
 
 | # | Item | Addressed In | Evidence |
 |---|------|-------------|----------|
-| 1 | SEO go-live on production domain | Deferred prereq D-06 (.com domain) | SEO artifacts present + build-verified; only live domain swap outstanding |
-| 2 | web-admin strict vue-tsc clean | Follow-up (deferred-items.md) | Real gate `vite build` passes (exit 0); CouponComposer.vue:86 pre-existing type strictness |
+| 1 | SEO go-live on production .com domain | Deferred prereq D-06 | SEO artifacts present + build-verified; only live domain swap outstanding |
+| 2 | web-admin strict vue-tsc clean | Follow-up (deferred-items.md) | `vite build` passes (exit 0); CouponComposer.vue:86 pre-existing (04-03), confirmed NOT caused by 04-11/04-12 |
 
-### Required Artifacts
+### Gap-Closure Verification (this re-verify)
 
-| Artifact | Expected | Status | Details |
-|----------|----------|--------|---------|
-| `api/drizzle/0005_phase4.sql` + `.down.sql` | Additive schema + rollback | ✓ VERIFIED | migrate.test.ts up/down/up green |
-| `api/src/services/coupon.ts` | Guarded redeem | ✓ VERIFIED | redeemCouponGuarded, wired in orders.ts |
-| `api/src/services/loyalty.ts` | Ledger earn/redeem/balance | ✓ VERIFIED | earnPoints on paid transition, ON CONFLICT once-per-order |
-| `api/src/services/broadcast.ts` | Consent-filtered audience | ✓ VERIFIED | DISTINCT ON latest marketing granted + line_user_id |
-| `api/src/services/carrier/*` | Adapter seam | ✓ VERIFIED | makeCarrierAdapter(manual); grab/lalamove seam |
-| `api/src/services/crop-recommend.ts` | Inverse-forecast kernel | ✓ VERIFIED | plantsToMeetDemand + trailing + unmet demand |
-| `api/src/services/consent.ts` | Append-only opt-out/re-consent | ✓ VERIFIED | optOutMarketing inserts granted=false; getConsentStatus |
-| `api/src/routes/{coupons,loyalty,broadcasts,tracking,product-images,crop,me-orders}.ts` | Real routes (no 501) | ✓ VERIFIED | All composed in index.ts; zero 501 stubs found |
-| `api/src/routes/catalog.ts` | Gallery payload | ✓ VERIFIED | variety_images/box_images cover-first gallery |
-| `web-store/` Nuxt SSR app | Storefront + checkout | ✓ VERIFIED | index/p[id]/checkout + cart store; build passes |
-| `web/src/components/{CouponField,PointsRedeem}.vue`, `ConsentSettings.vue` | LIFF coupon/points + opt-out | ✓ VERIFIED | Present; me-orders opt-out route wired |
-| web-admin views (6) | Admin surfaces | ✓ VERIFIED | All bundle in vite build (exit 0) |
-
-### Key Link Verification
-
-| From | To | Via | Status | Details |
-|------|----|----|--------|---------|
-| checkout.vue | POST /orders | api.orders.post (guest) | ✓ WIRED | reuses existing endpoint, no new order/payment API |
-| orders.ts | promptpay | discount→netSatang before buildPromptPayPayload | ✓ WIRED | whole-baht guard enforced |
-| payments.ts | slip verify | expectedAmountSatang subtracts discountSatang | ✓ WIRED | discounted slip auto-paid |
-| order-transition.ts | loyalty | earnPoints in-tx on paid, ON CONFLICT | ✓ WIRED | once-per-order |
-| broadcast.ts | consent_logs | DISTINCT ON latest marketing granted | ✓ WIRED | opt-out excludes (consent-optout.test) |
-| tracking.ts | notify.ts | pushOrderUpdate (guest-guarded) | ✓ WIRED | LINE push per status transition |
-| webhook.ts | LIFF | postback state machine after validateSignature | ✓ WIRED | signature block untouched |
-| crop.ts | crop-recommend.ts | plantsToMeetDemand inverse forecast | ✓ WIRED | PlantingMix prefill |
-| catalog GET | web-store + LIFF | one round model (D-04) | ✓ WIRED | same GET /catalog gallery |
+| Gap | Fix Artifact | Verified in Code | Prohibition Honored | Status |
+|-----|-------------|------------------|---------------------|--------|
+| ORD-05 catalog images | `catalog.ts` `coverUrl = gallery[0] ?? null` (L247/373/465) | ✓ additive; `imageUrl`+`gallery` unchanged | ✓ `product-images.ts` still writes only `variety_images/box_images`, never sets `varieties.imageUrl` — gallery-first model (D-27/28) intact | ✓ VERIFIED |
+| ORD-05 card render | `StoreVarietyCard.vue` `cover = coverUrl ?? imageUrl ?? gallery[0] ?? null` + placeholder; `pages/p/[id].vue` prefers coverUrl | ✓ confirmed | ✓ card falls back, upload not mutated | ✓ VERIFIED |
+| ORD-05 env doc | `api/.env.example` documents `R2_PUBLIC_BASE_URL` | ✓ (per 04-11, env-guard blocked direct read) | ✓ env-driven, never hardcoded | ✓ VERIFIED |
+| MKT-03/LINE-04 Flex | `broadcast.ts buildBroadcastFlex` + `ensureAltText`/`normalizeMessages` altText guarantee (L152-240) | ✓ confirmed | ✓ `resolveAudience`/consent/`MULTICAST_CHUNK=500` untouched (regression test 4/0); no Flex emitted without altText | ✓ VERIFIED |
+| MKT-03 composer | `BroadcastComposer.vue` text|Flex toggle + `flexPayload()` mirror | ✓ confirmed | ✓ plain-text `messagePayload()` fallback preserved | ✓ VERIFIED |
 
 ### Behavioral Spot-Checks
 
 | Behavior | Command | Result | Status |
 |----------|---------|--------|--------|
-| Full API suite | `bun test` | 369 pass / 0 fail (64 files) | ✓ PASS |
-| web-store build | `bun run build` | dist generated (cloudflare-pages) | ✓ PASS |
-| web-admin build | `bun run build` | built in 609ms (exit 0) | ✓ PASS |
-| No 501 stubs in new routers | grep 501 | none | ✓ PASS |
-| Migration up/down/up | migrate.test.ts | green | ✓ PASS |
+| Gap-fix tests | `bun test catalog + broadcast-flex + broadcast-audience` | 33 pass / 0 fail | ✓ PASS |
+| Full API suite (regression) | `bun test` | 383 pass / 0 fail (65 files) | ✓ PASS |
+| coverUrl derivation | grep `catalog.ts` | `gallery[0] ?? null` at variety/box/round maps | ✓ PASS |
+| altText guarantee | grep `broadcast.ts` | `ensureAltText` injects DEFAULT on empty Flex altText | ✓ PASS |
+| Upload prohibition | grep `product-images.ts` | no `varieties.imageUrl` write on upload | ✓ PASS |
 
 ### Requirements Coverage
 
-| Requirement | Source Plan(s) | Description | Status | Evidence |
-|-------------|---------------|-------------|--------|----------|
-| ORD-05 | 04-04, 04-08, 04-09 | เว็บสั่งซื้อ (ตะกร้า→checkout) | ✓ SATISFIED | web-store checkout + catalog gallery |
-| DEL-05 | 04-01, 04-05 | เลขพัสดุ/สถานะจัดส่ง | ✓ SATISFIED | tracking.ts + carrier seam + status enum |
-| CUST-03 | 04-01, 04-03, 04-10 | สมาชิก/สะสมแต้ม | ✓ SATISFIED | loyalty ledger earn/redeem |
-| MKT-01 | 04-01, 04-03, 04-10 | โปรโมชัน/คูปอง | ✓ SATISFIED | coupon guarded + admin composer |
-| MKT-03 | 04-01, 04-06, 04-10 | Broadcast ตามกลุ่ม | ✓ SATISFIED | consent-filtered multicast |
-| LINE-04 | 04-01, 04-06 | แชทบอตรับออเดอร์ + broadcast | ✓ SATISFIED | rule-based bot deep-link + broadcast |
-| CROP-07 | 04-07 | แนะนำการปลูกย้อนกลับ | ✓ SATISFIED | inverse-forecast recommendation |
+| Requirement | Description | REQUIREMENTS.md | Status | Evidence |
+|-------------|-------------|-----------------|--------|----------|
+| ORD-05 | เว็บสั่งซื้อ (ตะกร้า→checkout) + catalog imagery | Complete | ✓ SATISFIED | web-store checkout + 04-11 coverUrl/card fallback |
+| DEL-05 | เลขพัสดุ/สถานะจัดส่ง | Complete | ✓ SATISFIED | tracking.ts + carrier seam + status enum |
+| CUST-03 | สมาชิก/สะสมแต้ม | Complete | ✓ SATISFIED | loyalty ledger earn/redeem |
+| MKT-01 | โปรโมชัน/คูปอง | Complete | ✓ SATISFIED | coupon guarded + admin composer |
+| MKT-03 | Broadcast ตามกลุ่ม (+ Flex) | Complete | ✓ SATISFIED | consent-filtered multicast + 04-12 Flex |
+| LINE-04 | แชทบอตรับออเดอร์ + broadcast | Complete | ✓ SATISFIED | rule-based bot + Flex broadcast altText guarantee |
+| CROP-07 | แนะนำการปลูกย้อนกลับ | Complete | ✓ SATISFIED | inverse-forecast recommendation |
 
-All 7 phase requirements accounted for; no orphaned requirements.
+All 7 phase requirements satisfied; no orphaned requirements.
 
 ### Anti-Patterns Found
 
 | File | Line | Pattern | Severity | Impact |
 |------|------|---------|----------|--------|
-| — | — | No TBD/FIXME/XXX in phase-4 source | — | None |
-| — | — | No TODO/HACK/PLACEHOLDER (except EmptyState stub components, intended) | — | None |
-
-### Human Verification Required
-
-1. **Web-store PromptPay QR live scan** — scan the rendered NET whole-baht QR with a real bank app; confirm exact discounted amount, complete slip upload. (Owner-deferred; cannot automate.)
-2. **Web-store responsive render** — load on desktop + mobile; catalog SSR, product gallery imagery, mobile-first + 1200px desktop layout.
-3. **Segmented LINE broadcast live delivery** — send to a real consented test audience; confirm opted-out user is excluded.
+| — | — | No TBD/FIXME/XXX in phase-4 gap source | — | None |
+| — | — | CouponComposer.vue:86 typecheck | ℹ️ Info | Pre-existing (04-03), tracked in deferred-items.md, `vite build` passes — not a blocker |
 
 ### Gaps Summary
 
-No gaps. All 4 success criteria are implemented, wired end-to-end, and covered by passing tests (369 pass / 0 fail). Both web-store and web-admin production builds pass (the real gates). The two deferred items (SEO .com go-live D-06, web-admin strict vue-tsc) are non-blocking: artifacts exist, the real build gate passes, and both are explicitly tracked. Status is `human_needed` solely because three items require real-world confirmation (live PromptPay scan, responsive visual, live LINE multicast) — the owner has already deferred the PromptPay live scan.
+No gaps. All 4 success criteria implemented, wired end-to-end, and covered by passing tests (383 pass / 0 fail). Both prior UAT gaps (catalog images, Flex broadcast) are closed in code with prohibitions honored — the gallery-first upload model and the consent/≤500-chunk broadcast invariants are untouched, and no Flex can be multicast without an altText. All three previously-outstanding human items are resolved (UAT complete: 2 pass + 1 issue-now-fixed-and-re-verified; both gap plans' human-verify checkpoints approved on real infra). The two deferred items (SEO .com go-live D-06, web-admin strict vue-tsc) are non-blocking and explicitly tracked.
+
+**Verdict: PASS.** Phase 04 goal achieved.
 
 ---
 
-_Verified: 2026-07-18T02:05:00Z_
-_Verifier: Claude (gsd-verifier)_
+_Verified: 2026-07-18T14:30:00Z_
+_Verifier: Claude (gsd-verifier) — re-verification after 04-11 + 04-12 gap closure_
