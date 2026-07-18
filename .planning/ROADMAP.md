@@ -184,7 +184,7 @@ Plans:
   3. An admin sends a segmented LINE broadcast and a conversational chatbot can take orders.
   4. Delivery records carrier tracking number/status (Grab/Lalamove/general carrier), and the system recommends per-Monday planting quantities from demand history.
 
-**Plans**: 4/10 plans executed
+**Plans**: 5/10 plans executed
 **UI hint**: yes
 
 Plans:
@@ -197,7 +197,7 @@ Plans:
 
 - [x] 04-03-PLAN.md — Coupon + loyalty money path: guarded redeem + ledger earn/redeem + discount→QR invariant + admin (MKT-01, CUST-03) (wave 2)
 - [x] 04-04-PLAN.md — Product images: sharp+R2 upload + catalog gallery + admin uploader (ORD-05, D-26/27/28) (wave 2)
-- [ ] 04-05-PLAN.md — Multi-carrier tracking: adapter seam + status enum + LINE push + admin form (DEL-05) (wave 2)
+- [x] 04-05-PLAN.md — Multi-carrier tracking: adapter seam + status enum + LINE push + admin form (DEL-05) (wave 2)
 - [ ] 04-06-PLAN.md — Segmented broadcast (consent-filtered multicast + scheduler) + rule-based order bot (MKT-03, LINE-04) (wave 2)
 - [ ] 04-07-PLAN.md — Demand-driven planting recommendation: inverse-forecast kernel + trailing demand + prefill card (CROP-07) (wave 2)
 
@@ -221,4 +221,4 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 | 1. Commerce Core | 5/5 | Complete   | 2026-07-02 |
 | 2. LINE Storefront, Payments & Delivery | 9/9 | Complete    | 2026-07-04 |
 | 3. Back-office, Crop Planning & B2B/Subscription | 15/15 | Complete    | 2026-07-11 |
-| 4. Web Store, Marketing & Scale | 4/10 | In Progress|  |
+| 4. Web Store, Marketing & Scale | 5/10 | In Progress|  |
