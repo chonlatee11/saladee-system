@@ -184,7 +184,7 @@ Plans:
   3. An admin sends a segmented LINE broadcast and a conversational chatbot can take orders.
   4. Delivery records carrier tracking number/status (Grab/Lalamove/general carrier), and the system recommends per-Monday planting quantities from demand history.
 
-**Plans**: 10/10 plans complete
+**Plans**: 12/12 plans complete
 **UI hint**: yes
 
 Plans:
@@ -212,8 +212,8 @@ Plans:
 
 **Gap closure** *(from 04-UAT: test 2 image gap + test 3 Flex enhancement)*
 
-- [ ] 04-11-PLAN.md — Web-store catalog images: catalog coverUrl + card fallback/placeholder + R2_PUBLIC_BASE_URL config (ORD-05) (gap, wave 1)
-- [ ] 04-12-PLAN.md — LINE broadcast as styled Flex Message: builder + altText-hardened multicast + composer Flex fields (MKT-03, LINE-04) (gap, wave 2, depends 04-11)
+- [x] 04-11-PLAN.md — Web-store catalog images: catalog coverUrl + card fallback/placeholder + R2_PUBLIC_BASE_URL config (ORD-05) (gap, wave 1)
+- [x] 04-12-PLAN.md — LINE broadcast as styled Flex Message: builder + altText-hardened multicast + composer Flex fields (MKT-03, LINE-04) (gap, wave 2, depends 04-11)
 
 ## Progress
 
@@ -226,4 +226,4 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 | 1. Commerce Core | 5/5 | Complete   | 2026-07-02 |
 | 2. LINE Storefront, Payments & Delivery | 9/9 | Complete    | 2026-07-04 |
 | 3. Back-office, Crop Planning & B2B/Subscription | 15/15 | Complete    | 2026-07-11 |
-| 4. Web Store, Marketing & Scale | 10/10 | Complete   | 2026-07-18 |
+| 4. Web Store, Marketing & Scale | 12/12 | Complete   | 2026-07-18 |
