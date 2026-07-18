@@ -231,17 +231,20 @@ export function makeCatalogRoutes(database: CatalogDb = defaultDb) {
                 showB2b,
               ),
             );
+          // Cover-first gallery (D-27/28); coverUrl is its first element so cover
+          // and gallery can never disagree (single source of cover truth, 04-11).
+          const gallery = galleryFor(
+            v.imageUrl,
+            varietyImageRows.filter((r) => r.varietyId === v.id),
+          );
           return {
             id: v.id,
             name: v.name,
             category: v.category,
             description: v.description,
             imageUrl: v.imageUrl,
-            // Cover-first gallery (D-27/28) so the store/LIFF/Flex render real photos.
-            gallery: galleryFor(
-              v.imageUrl,
-              varietyImageRows.filter((r) => r.varietyId === v.id),
-            ),
+            gallery,
+            coverUrl: gallery[0] ?? null,
             avgGramsPerPlant: v.avgGramsPerPlant,
             deliveryClass: v.deliveryClass, // D-13/D-24 care surface
             storageTips: v.storageTips, // D-24 (nullable)
@@ -356,16 +359,18 @@ export function makeCatalogRoutes(database: CatalogDb = defaultDb) {
                   },
                 };
               });
+            // Cover-first gallery (D-27/28); coverUrl = its first element (04-11).
+            const boxGallery = galleryFor(
+              b.imageUrl,
+              boxImageRows.filter((r) => r.boxId === b.id),
+            );
             return {
               id: b.id,
               name: b.name,
               description: b.description,
               imageUrl: b.imageUrl,
-              // Cover-first gallery (D-27/28) so the store/LIFF/Flex render real photos.
-              gallery: galleryFor(
-                b.imageUrl,
-                boxImageRows.filter((r) => r.boxId === b.id),
-              ),
+              gallery: boxGallery,
+              coverUrl: boxGallery[0] ?? null,
               fixedPriceSatang: b.fixedPriceSatang,
               components: bomComponents,
               rounds: roundsOut,
@@ -445,17 +450,19 @@ export function makeCatalogRoutes(database: CatalogDb = defaultDb) {
               const v = vById.get(s.varietyId) as typeof varieties.$inferSelect;
               const vUnits = units.filter((u) => u.varietyId === v.id);
               const entry = roundEntry(s, round, vUnits, priceRows, today, showB2b);
+              // Cover-first gallery (D-27/28); coverUrl = its first element (04-11).
+              const gallery = galleryFor(
+                v.imageUrl,
+                varietyImageRows.filter((r) => r.varietyId === v.id),
+              );
               return {
                 id: v.id,
                 name: v.name,
                 category: v.category,
                 description: v.description,
                 imageUrl: v.imageUrl,
-                // Cover-first gallery (D-27/28) so the store/LIFF/Flex render real photos.
-                gallery: galleryFor(
-                  v.imageUrl,
-                  varietyImageRows.filter((r) => r.varietyId === v.id),
-                ),
+                gallery,
+                coverUrl: gallery[0] ?? null,
                 avgGramsPerPlant: v.avgGramsPerPlant,
                 deliveryClass: v.deliveryClass, // D-13/D-24 care surface
                 storageTips: v.storageTips, // D-24 (nullable)
